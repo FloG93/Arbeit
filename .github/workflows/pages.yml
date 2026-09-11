@@ -1,0 +1,51 @@
+# Publishes app/ to GitHub Pages. The app is plain HTML/CSS/JS, so there is
+# nothing to build — the folder is uploaded as-is.
+#
+# HTTPS matters here beyond the usual reasons: a service worker (and with it
+# offline use and "add to home screen") only works on a secure origin.
+name: Deploy Raumrechner to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - claude/inspiring-ritchie-kaz8vn
+    paths:
+      - 'app/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on the first time round, so the repository does not
+          # need the setting flipped by hand beforehand.
+          enablement: true
+
+      - name: Upload app/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
