@@ -904,7 +904,6 @@ function renderExportView() {
       el('button', { class: 'btn btn-primary', onClick: exportPdf }, 'PDF-Angebot'),
       el('button', { class: 'btn btn-ghost', onClick: exportCsv }, 'Excel / CSV herunterladen'),
     ]),
-    state.toast ? el('div', { class: 'toast', style: { marginTop: '4px' } }, state.toast) : null,
   ]);
 
   const sheet = el('div', { class: 'sheet' }, [
@@ -954,6 +953,9 @@ function render() {
   root.appendChild(el('div', { class: 'content' }, [currentView()]));
   const lb = renderLightbox();
   if (lb) root.appendChild(lb);
+  // Floating, so messages from photo import and PDF export are visible on
+  // every tab — not just on the one card that used to render them.
+  if (state.toast) root.appendChild(el('div', { class: 'toast' }, state.toast));
 }
 
 render();

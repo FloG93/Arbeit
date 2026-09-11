@@ -263,7 +263,16 @@ textarea.input{padding:12px 14px;font:400 14px/1.5 var(--font-ui);resize:vertica
 
 /* ─── export ─── */
 .export-copy{font:400 13px/1.5 var(--font-ui);color:var(--text-tertiary)}
-.toast{font:400 12px/1.5 var(--font-ui);color:var(--accent)}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:60;
+  max-width:min(calc(100% - 32px),460px);
+  padding:10px 16px;border-radius:var(--radius-pill);
+  background:rgba(20,24,31,.96);border:1px solid var(--border-medium);
+  box-shadow:0 8px 26px rgba(0,0,0,.45);backdrop-filter:blur(8px);
+  font:500 12px/1.45 var(--font-ui);color:var(--accent);text-align:center
+}
+@media print{ .toast{display:none!important} }
 
 .sheet{background:#fff;border-radius:8px;box-shadow:0 10px 34px rgba(0,0,0,.5);padding:22px 20px;display:flex;flex-direction:column;gap:16px;color:#1a1d22}
 .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:2px solid #1a1d22;padding-bottom:12px}
