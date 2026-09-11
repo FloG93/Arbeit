@@ -23,6 +23,29 @@ Auf dem Android-Smartphone: Seite über HTTPS aufrufen und im Chrome-Menü
 „Zum Startbildschirm hinzufügen“ wählen. Danach startet sie wie eine native
 App im Vollbild und rechnet auch ohne Netz weiter.
 
+## Hosting
+
+`.github/workflows/pages.yml` veröffentlicht den Ordner `app/` bei jedem Push
+auf GitHub Pages — ohne Build-Schritt, der Ordner wird so hochgeladen wie er
+ist. Zieladresse:
+
+```
+https://flogramsch-blip.github.io/Jungfernstieg/
+```
+
+**Einmalig von Hand nötig**, bevor der erste Deploy durchläuft:
+
+> Settings → Pages → Build and deployment → Source: **GitHub Actions**
+
+Der Workflow-Token darf Pages nicht selbst einschalten (die API antwortet mit
+`Resource not accessible by integration`), deshalb ist dieser eine Klick nicht
+automatisierbar. Jeder weitere Push läuft dann von allein durch.
+
+HTTPS ist hier nicht Kosmetik: ein Service Worker läuft nur auf einer sicheren
+Herkunft. Ohne echtes Hosting gibt es weder Offline-Betrieb noch Installation
+auf dem Startbildschirm.
+
+
 ## Funktionsumfang
 
 | Bereich | Stand |
