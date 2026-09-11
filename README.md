@@ -51,7 +51,7 @@ auf dem Startbildschirm.
 | Bereich | Stand |
 | --- | --- |
 | Projekte: mehrere nebeneinander, Name und Datum frei editierbar | fertig |
-| Räume: anlegen, duplizieren, zurücksetzen, löschen | fertig |
+| Räume: leer anlegen, duplizieren, auf Null zurücksetzen, löschen | fertig |
 | Rückgängig direkt nach jedem Löschen oder Zurücksetzen | fertig |
 | Raumformular: Höhe, 3–8 Wände, Nord/Ost/Süd/West, Ecken für L-Form | fertig |
 | Abzüge mit Presets (Fenster, Zimmertür, Terrassentür, freie Fläche) | fertig |
@@ -65,6 +65,12 @@ auf dem Startbildschirm.
 | Schriften mitgeliefert — offline identisches Schriftbild | fertig |
 
 ## Wissenswertes zur Umsetzung
+
+Ein neuer oder zurückgesetzter Raum ist wirklich leer: vier Wände mit Länge 0,
+alle Flächen 0,0 m². Ein vorbelegter 4 × 3-m-Raum sah aus, als hätte
+„Zurücksetzen" nichts getan. Erhalten bleiben nur der Name und die
+Standardhöhe des Projekts. Solange keine Maße erfasst sind, zeigen Grundriss
+und PDF einen Hinweis statt einer entarteten Zeichnung.
 
 Zahlenfelder sind bewusst **kein** `type="number"`. Dieses Feld verschluckt das
 Komma, das eine deutsche Tastatur liefert: aus „2,75" wurde 275, eine

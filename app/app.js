@@ -21,7 +21,10 @@ const PRESETS = [
   { key: 'frei', label: 'Freie Fläche', w: 1.00, h: 1.00, color: '#6f7682' },
 ];
 
-const BLANK_WALLS = [4.00, 3.00, 4.00, 3.00];
+/* A fresh or reset room starts genuinely empty: four walls at zero length,
+ * so every area reads 0,0 m² until measurements are entered. Pre-filling a
+ * 4×3 m room made "reset" look like it had done nothing. */
+const EMPTY_WALLS = [0, 0, 0, 0];
 const DEFAULT_HEIGHT = 2.50;
 const DEFAULT_PRICE = 12.5;
 
@@ -50,13 +53,13 @@ function formatDateDE(d) {
 function mkRoom(name, lens, height) {
   return {
     id: nid(), name, height,
-    walls: (lens || BLANK_WALLS).map(l => ({ id: nid(), len: l, turn: 'r' })),
+    walls: (lens || EMPTY_WALLS).map(l => ({ id: nid(), len: l, turn: 'r' })),
     openings: [], photos: [], note: '',
   };
 }
 
 function mkProject(name, height, price) {
-  const room = mkRoom('Raum 1', BLANK_WALLS, height || DEFAULT_HEIGHT);
+  const room = mkRoom('Raum 1', EMPTY_WALLS, height || DEFAULT_HEIGHT);
   return {
     id: nid(),
     name: name || 'Neues Projekt',
@@ -127,7 +130,7 @@ function loadState() {
           ...pr,
           price: isFinite(pr.price) ? pr.price : DEFAULT_PRICE,
           defaultHeight: isFinite(pr.defaultHeight) ? pr.defaultHeight : DEFAULT_HEIGHT,
-          rooms: (Array.isArray(pr.rooms) && pr.rooms.length ? pr.rooms : [mkRoom('Raum 1', BLANK_WALLS, DEFAULT_HEIGHT)]).map(normalizeRoom),
+          rooms: (Array.isArray(pr.rooms) && pr.rooms.length ? pr.rooms : [mkRoom('Raum 1', EMPTY_WALLS, DEFAULT_HEIGHT)]).map(normalizeRoom),
         }));
         parsed.toast = '';
         return parsed;
@@ -217,7 +220,7 @@ function flash(msg, opts) {
 
 function addRoom() {
   const p = getProject();
-  const r = mkRoom('Raum ' + (p.rooms.length + 1), BLANK_WALLS, p.defaultHeight);
+  const r = mkRoom('Raum ' + (p.rooms.length + 1), EMPTY_WALLS, p.defaultHeight);
   patchProject(pr => ({ ...pr, rooms: [...pr.rooms, r], activeRoomId: r.id }));
   setState({ tab: 'raum' });
   flash('Neuer Raum angelegt.');
@@ -230,7 +233,8 @@ function resetRoom(id) {
   const room = p.rooms.find(r => r.id === id);
   if (!room) return;
   snapshot('reset-room');
-  const fresh = mkRoom(room.name, BLANK_WALLS, p.defaultHeight);
+  // Everything to zero except the name and the project's standard height.
+  const fresh = mkRoom(room.name, EMPTY_WALLS, p.defaultHeight);
   fresh.id = room.id;
   patchProject(pr => ({ ...pr, rooms: pr.rooms.map(r => (r.id === id ? fresh : r)) }));
   flash('„' + room.name + '" zurückgesetzt.', { undo: true });
@@ -290,7 +294,7 @@ function resetProject() {
   const p = getProject();
   if (!p) return;
   snapshot('reset-project');
-  const room = mkRoom('Raum 1', BLANK_WALLS, p.defaultHeight);
+  const room = mkRoom('Raum 1', EMPTY_WALLS, p.defaultHeight);
   patchProject(pr => ({ ...pr, rooms: [room], activeRoomId: room.id, date: formatDateDE(new Date()) }));
   setState({ tab: 'projekt' });
   flash('Projekt zurückgesetzt.', { undo: true });
@@ -496,6 +500,7 @@ function buildPrintSheet(photoUrls) {
   const roomPages = project.rooms.map(room => {
     const c = calc(room, project.price);
     const p = plan(room, c);
+    const hasMeasure = c.g.segs.some(seg => seg.len > 0);
 
     const masse = el('div', { class: 'p-table p-table-tight' }, [
       printRow(['Kennzahl', 'Wert'], 'p-row-head'),
@@ -545,13 +550,15 @@ function buildPrintSheet(photoUrls) {
       el('div', { class: 'p-two-col' }, [
         el('div', {}, [el('div', { class: 'p-sub' }, 'Maße und Kalkulation'), masse]),
         el('div', {}, [
-          el('div', { class: 'p-sub' }, 'Grundriss · M 1:' + p.scale),
-          el('div', { class: 'p-plan' }, [planSvg(room, c, p, 'print')]),
-          el('div', { class: 'p-legend' }, [
+          el('div', { class: 'p-sub' }, hasMeasure ? 'Grundriss · M 1:' + p.scale : 'Grundriss'),
+          hasMeasure
+            ? el('div', { class: 'p-plan' }, [planSvg(room, c, p, 'print')])
+            : el('p', { class: 'p-note' }, 'Für diesen Raum sind noch keine Maße erfasst.'),
+          hasMeasure ? el('div', { class: 'p-legend' }, [
             el('span', {}, [el('i', { style: { background: '#5BA8F0' } }), 'Fenster']),
             el('span', {}, [el('i', { style: { background: '#5BD6A0' } }), 'Tür']),
             el('span', {}, [el('i', { style: { background: '#6f7682' } }), 'Fläche']),
-          ]),
+          ]) : null,
         ]),
       ]),
       el('div', { class: 'p-sub' }, 'Wände'),
@@ -1142,6 +1149,9 @@ function renderPlanView() {
   if (!room) return el('div', { class: 'view' }, 'Kein Raum ausgewählt.');
   const c = calc(room);
   const p = plan(room, c);
+  // A reset room has four zero-length walls: drawing that stacks four
+  // "0,00 m" labels in one corner, which reads as a broken plan.
+  const hasMeasure = c.g.segs.some(seg => seg.len > 0);
 
   const svg = planSvg(room, c, p, 'screen');
 
@@ -1149,18 +1159,26 @@ function renderPlanView() {
     el('div', { class: 'card-row' }, [
       el('div', { class: 'header-row' }, [
         el('div', { class: 'card-title' }, 'Grundriss ' + room.name),
-        el('div', { style: { font: "500 11px/1 'Space Grotesk',sans-serif", color: 'var(--text-muted)' } }, 'M 1:' + p.scale),
+        hasMeasure ? el('div', { style: { font: "500 11px/1 'Space Grotesk',sans-serif", color: 'var(--text-muted)' } }, 'M 1:' + p.scale) : null,
       ]),
-      el('div', { class: 'plan-frame' }, [svg]),
-      !c.g.closed ? el('div', { class: 'warn-box' }, [
+      hasMeasure
+        ? el('div', { class: 'plan-frame' }, [svg])
+        : el('div', { class: 'plan-frame empty' }, [
+            el('div', { class: 'plan-empty' }, [
+              el('div', { class: 'icon' }, '▱'),
+              el('div', { class: 'title' }, 'Noch keine Maße'),
+              el('div', { class: 'sub' }, 'Trage unter „Raum" die Wandlängen ein — der Grundriss zeichnet sich dann von selbst.'),
+            ]),
+          ]),
+      hasMeasure && !c.g.closed ? el('div', { class: 'warn-box' }, [
         el('span', { class: 'dot' }),
         el('div', { class: 'msg' }, 'Umriss nicht geschlossen — Längen oder Ecken anpassen. Flächen werden trotzdem berechnet.'),
       ]) : null,
-      el('div', { class: 'legend' }, [
+      hasMeasure ? el('div', { class: 'legend' }, [
         el('div', { class: 'item' }, [el('span', { class: 'swatch', style: { background: '#5BA8F0' } }), 'Fenster']),
         el('div', { class: 'item' }, [el('span', { class: 'swatch', style: { background: '#5BD6A0' } }), 'Tür']),
         el('div', { class: 'item' }, [el('span', { class: 'swatch', style: { background: '#6f7682' } }), 'Fläche']),
-      ]),
+      ]) : null,
     ]),
   ]);
 

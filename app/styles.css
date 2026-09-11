@@ -453,6 +453,12 @@ textarea.input{padding:12px 14px;font:400 14px/1.5 var(--font-ui);resize:vertica
 .btn-row .btn{flex:1 1 130px}
 /* Align the inputs, not the labels: one label wrapping to a second line
    would otherwise push its field out of step with its neighbour. */
+.plan-frame.empty{display:grid;place-items:center;min-height:220px}
+.plan-empty{text-align:center;max-width:260px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.plan-empty .icon{font:400 26px/1 sans-serif;color:var(--text-muted-2)}
+.plan-empty .title{font:600 14px/1.2 var(--font-ui);color:var(--text-secondary-3)}
+.plan-empty .sub{font:400 12px/1.5 var(--font-ui);color:var(--text-tertiary-2)}
+
 .field-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
 .field-pair .field{height:100%;justify-content:space-between}
 
