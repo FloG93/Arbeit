@@ -1,11 +1,13 @@
 'use strict';
-const CACHE = 'raumrechner-v2';
+const CACHE = 'raumrechner-v3';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.webmanifest',
+  './fonts/hanken-grotesk-latin.woff2',
+  './fonts/space-grotesk-latin.woff2',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-192-maskable.png',

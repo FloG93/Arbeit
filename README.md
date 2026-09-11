@@ -50,17 +50,26 @@ auf dem Startbildschirm.
 
 | Bereich | Stand |
 | --- | --- |
-| Projekt mit mehreren Räumen, Summenzeile | fertig |
+| Projekte: mehrere nebeneinander, Name und Datum frei editierbar | fertig |
+| Räume: anlegen, duplizieren, zurücksetzen, löschen | fertig |
+| Rückgängig direkt nach jedem Löschen oder Zurücksetzen | fertig |
 | Raumformular: Höhe, 3–8 Wände, Nord/Ost/Süd/West, Ecken für L-Form | fertig |
 | Abzüge mit Presets (Fenster, Zimmertür, Terrassentür, freie Fläche) | fertig |
 | Netto groß / brutto klein, Decke und Boden getrennt | fertig |
-| Preis pro m² → Summe je Raum und Projekt | fertig |
+| Ein Preis pro m² und eine Standardhöhe fürs ganze Projekt | fertig |
 | Grundriss automatisch aus der Wandliste, Öffnungen mit Abstand ab Ecke | fertig |
-| Speicherung auf dem Gerät (localStorage) | fertig |
+| Speicherung auf dem Gerät, Fotos in IndexedDB | fertig |
 | Excel-/CSV-Export mit Abzügen im Detail | fertig |
-| Angebotsblatt als Vorschau | fertig |
 | PDF-Angebot: Deckblatt + eine Seite je Raum mit Grundriss und Fotos | fertig |
 | Fotos pro Raum: Kamera und Galerie, Vollbild-Ansicht | fertig |
+| Schriften mitgeliefert — offline identisches Schriftbild | fertig |
+
+## Wissenswertes zur Umsetzung
+
+Zahlenfelder sind bewusst **kein** `type="number"`. Dieses Feld verschluckt das
+Komma, das eine deutsche Tastatur liefert: aus „2,75" wurde 275, eine
+Raumhöhe von 275 Metern — ohne jede Fehlermeldung. Stattdessen `type="text"`
+mit `inputmode="decimal"`: der Ziffernblock bleibt, beide Trennzeichen gehen.
 
 Das PDF entsteht über den Druckdialog des Browsers („Als PDF speichern"), nicht
 über eine mitgelieferte Bibliothek — das ist der einzige Weg, der auf Android
@@ -69,11 +78,17 @@ und am Rechner gleich funktioniert.
 Fotos werden beim Aufnehmen auf max. 1600 px verkleinert. Das Vollbild liegt in
 IndexedDB, in localStorage steht nur ein kleines Vorschaubild: ein paar Dutzend
 Baustellenfotos als base64 würden sonst das ~5-MB-Limit sprengen und das ganze
-Projekt am Speichern hindern.
+Projekt am Speichern hindern. Gelöschte Fotos bleiben zunächst liegen, damit
+Rückgängig sie zurückholen kann; verwaiste Bilder räumt der nächste Start weg.
 
-Die Schriften (Hanken Grotesk, Space Grotesk) kommen von Google Fonts. Ohne
-Netz fällt die App sauber auf die Systemschrift zurück; wer die Schriften auch
-offline will, muss sie mit ausliefern.
+Die Schriften liegen als variable Fonts im Ordner `app/fonts` und werden
+mitgeliefert statt von einem CDN geholt — ein Service Worker cacht nur
+Anfragen an die eigene Herkunft, sonst sähe die installierte App offline
+anders aus. Je Familie reicht eine Datei für alle Schnitte (zusammen ~57 kB).
+
+Gespeicherte Projekte aus der ersten Fassung werden beim ersten Start
+automatisch ins neue Format überführt; der alte Eintrag bleibt als Sicherung
+liegen.
 
 ## Aufbau
 

@@ -9,7 +9,8 @@
  * logic from the approved design draft (Raumrechner.dc.html).
  * ───────────────────────────────────────────────────────────── */
 
-const STORAGE_KEY = 'raumrechner.v1';
+const STORAGE_KEY = 'raumrechner.v2';
+const LEGACY_KEY = 'raumrechner.v1';
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const DIRNAME = ['Nord', 'Ost', 'Süd', 'West'];
@@ -20,9 +21,26 @@ const PRESETS = [
   { key: 'frei', label: 'Freie Fläche', w: 1.00, h: 1.00, color: '#6f7682' },
 ];
 
+const BLANK_WALLS = [4.00, 3.00, 4.00, 3.00];
+const DEFAULT_HEIGHT = 2.50;
+const DEFAULT_PRICE = 12.5;
+
 let uid = Date.now();
 const nid = () => ++uid;
 const nf = (v, d = 2) => (isFinite(v) ? v : 0).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* Plain German decimal for input fields — deliberately without thousands
+ * separators, so what is shown always parses back unambiguously. */
+const inputNum = v => (isFinite(v) ? String(Math.round(v * 1000) / 1000).replace('.', ',') : '');
+
+/* Accepts what a German keyboard actually produces. A number input used to
+ * swallow the comma outright, turning "2,75" into 275. */
+function parseNum(raw, fallback) {
+  let t = String(raw).trim().replace(/\s/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(t);
+  return isFinite(v) ? v : fallback;
+}
 
 function formatDateDE(d) {
   const p = n => String(n).padStart(2, '0');
@@ -32,40 +50,92 @@ function formatDateDE(d) {
 function mkRoom(name, lens, height) {
   return {
     id: nid(), name, height,
-    walls: lens.map(l => ({ id: nid(), len: l, turn: 'r' })),
-    openings: [], photos: [], note: '', price: 12.5,
+    walls: (lens || BLANK_WALLS).map(l => ({ id: nid(), len: l, turn: 'r' })),
+    openings: [], photos: [], note: '',
   };
 }
 
-function defaultState() {
+function mkProject(name, height, price) {
+  const room = mkRoom('Raum 1', BLANK_WALLS, height || DEFAULT_HEIGHT);
+  return {
+    id: nid(),
+    name: name || 'Neues Projekt',
+    date: formatDateDE(new Date()),
+    price: price == null ? DEFAULT_PRICE : price,
+    defaultHeight: height || DEFAULT_HEIGHT,
+    activeRoomId: room.id,
+    rooms: [room],
+  };
+}
+
+function demoProject() {
   const r1 = mkRoom('Wohnzimmer', [5.20, 4.10, 5.20, 4.10], 2.55);
   r1.openings = [
     { id: nid(), key: 'fenster', label: 'Fenster', w: 1.40, h: 1.35, count: 2, wall: 0, offset: 0.80, color: '#5BA8F0' },
     { id: nid(), key: 'terrasse', label: 'Terrassentür', w: 1.80, h: 2.10, count: 1, wall: 1, offset: 1.20, color: '#5BD6A0' },
     { id: nid(), key: 'tuer', label: 'Zimmertür', w: 0.885, h: 2.01, count: 1, wall: 2, offset: 0.60, color: '#5BD6A0' },
   ];
+  const rooms = [r1, mkRoom('Schlafzimmer', [4.00, 3.40, 4.00, 3.40], 2.55), mkRoom('Flur', [3.60, 1.30, 3.60, 1.30], 2.55)];
   return {
-    tab: 'projekt',
-    projectName: 'Mein Projekt',
-    projectDate: formatDateDE(new Date()),
-    activeId: r1.id,
-    toast: '',
-    rooms: [
-      r1,
-      mkRoom('Schlafzimmer', [4.00, 3.40, 4.00, 3.40], 2.55),
-      mkRoom('Flur', [3.60, 1.30, 3.60, 1.30], 2.55),
-    ],
+    id: nid(), name: 'Beispielprojekt', date: formatDateDE(new Date()),
+    price: DEFAULT_PRICE, defaultHeight: 2.55,
+    activeRoomId: r1.id, rooms,
   };
+}
+
+function defaultState() {
+  const p = demoProject();
+  return { schema: 2, tab: 'projekt', activeProjectId: p.id, toast: '', projects: [p] };
+}
+
+function normalizeRoom(r) {
+  return {
+    id: r.id == null ? nid() : r.id,
+    name: r.name || 'Raum',
+    height: isFinite(r.height) ? r.height : DEFAULT_HEIGHT,
+    walls: Array.isArray(r.walls) && r.walls.length ? r.walls : mkRoom('x').walls,
+    openings: Array.isArray(r.openings) ? r.openings : [],
+    photos: Array.isArray(r.photos) ? r.photos : [],
+    note: r.note || '',
+  };
+}
+
+/* v1 kept one project inline and a price on every room; fold that into the
+ * project shape rather than making the user start over. */
+function migrateV1(old) {
+  if (!old || !Array.isArray(old.rooms) || !old.rooms.length) return null;
+  const rooms = old.rooms.map(normalizeRoom);
+  const project = {
+    id: nid(),
+    name: old.projectName || 'Mein Projekt',
+    date: old.projectDate || formatDateDE(new Date()),
+    price: isFinite(old.rooms[0].price) ? old.rooms[0].price : DEFAULT_PRICE,
+    defaultHeight: rooms[0].height,
+    activeRoomId: old.activeId != null && rooms.some(r => r.id === old.activeId) ? old.activeId : rooms[0].id,
+    rooms,
+  };
+  return { schema: 2, tab: old.tab || 'projekt', activeProjectId: project.id, toast: '', projects: [project] };
 }
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.rooms) || !parsed.rooms.length) return null;
-    parsed.rooms = parsed.rooms.map(r => ({ ...r, photos: Array.isArray(r.photos) ? r.photos : [] }));
-    return parsed;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.projects) && parsed.projects.length) {
+        parsed.projects = parsed.projects.map(pr => ({
+          ...pr,
+          price: isFinite(pr.price) ? pr.price : DEFAULT_PRICE,
+          defaultHeight: isFinite(pr.defaultHeight) ? pr.defaultHeight : DEFAULT_HEIGHT,
+          rooms: (Array.isArray(pr.rooms) && pr.rooms.length ? pr.rooms : [mkRoom('Raum 1', BLANK_WALLS, DEFAULT_HEIGHT)]).map(normalizeRoom),
+        }));
+        parsed.toast = '';
+        return parsed;
+      }
+    }
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) return migrateV1(JSON.parse(legacy));
+    return null;
   } catch {
     return null;
   }
@@ -74,6 +144,7 @@ function loadState() {
 let state = loadState() || defaultState();
 let flashTimer = null;
 let storageFailed = false;
+let undoEntry = null;
 
 function save() {
   try {
@@ -93,32 +164,152 @@ function setState(updater) {
   render();
 }
 
+/* ─── project / room access ─── */
+
+function getProject() {
+  return state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
+}
+
 function getActiveRoom() {
-  return state.rooms.find(r => r.id === state.activeId) || state.rooms[0];
+  const p = getProject();
+  if (!p) return null;
+  return p.rooms.find(r => r.id === p.activeRoomId) || p.rooms[0];
+}
+
+function patchProject(fn) {
+  const p = getProject();
+  if (!p) return;
+  setState(s => ({ projects: s.projects.map(x => (x.id === p.id ? fn({ ...x }) : x)) }));
 }
 
 function patchRoom(fn) {
   const room = getActiveRoom();
   if (!room) return;
   const id = room.id;
-  setState(s => ({ rooms: s.rooms.map(r => (r.id === id ? fn({ ...r }) : r)) }));
+  patchProject(p => ({ ...p, rooms: p.rooms.map(r => (r.id === id ? fn({ ...r }) : r)) }));
 }
 
-function numFromEvent(e, fallback) {
-  const v = parseFloat(String(e.target.value).replace(',', '.'));
-  return isFinite(v) ? v : fallback;
+/* ─── undo ─── */
+
+/* One snapshot deep enough to put back anything a single destructive action
+ * removed. Photos stay in IndexedDB until the orphan sweep on next start, so
+ * restoring a deleted room brings its pictures back too. */
+function snapshot(label) {
+  undoEntry = { label, state: JSON.parse(JSON.stringify(state)) };
 }
 
-function flash(msg) {
-  setState({ toast: msg });
+function undoLast() {
+  if (!undoEntry) return;
+  state = undoEntry.state;
+  undoEntry = null;
+  save();
+  flash('Rückgängig gemacht.');
+}
+
+function flash(msg, opts) {
+  const undoable = !!(opts && opts.undo);
+  setState({ toast: msg, toastUndo: undoable });
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => setState({ toast: '' }), 4000);
+  flashTimer = setTimeout(() => setState({ toast: '', toastUndo: false }), undoable ? 8000 : 4000);
 }
+
+/* ─── room actions ─── */
 
 function addRoom() {
-  const active = getActiveRoom();
-  const r = mkRoom('Raum ' + (state.rooms.length + 1), [4.00, 3.00, 4.00, 3.00], active ? active.height : 2.50);
-  setState(s => ({ rooms: [...s.rooms, r], activeId: r.id, tab: 'raum' }));
+  const p = getProject();
+  const r = mkRoom('Raum ' + (p.rooms.length + 1), BLANK_WALLS, p.defaultHeight);
+  patchProject(pr => ({ ...pr, rooms: [...pr.rooms, r], activeRoomId: r.id }));
+  setState({ tab: 'raum' });
+  flash('Neuer Raum angelegt.');
+}
+
+/* Back to a blank room, keeping only the name — for the common case of
+ * having mistyped your way into a mess and wanting a clean sheet. */
+function resetRoom(id) {
+  const p = getProject();
+  const room = p.rooms.find(r => r.id === id);
+  if (!room) return;
+  snapshot('reset-room');
+  const fresh = mkRoom(room.name, BLANK_WALLS, p.defaultHeight);
+  fresh.id = room.id;
+  patchProject(pr => ({ ...pr, rooms: pr.rooms.map(r => (r.id === id ? fresh : r)) }));
+  flash('„' + room.name + '" zurückgesetzt.', { undo: true });
+}
+
+function duplicateRoom(id) {
+  const p = getProject();
+  const room = p.rooms.find(r => r.id === id);
+  if (!room) return;
+  const copy = {
+    ...JSON.parse(JSON.stringify(room)),
+    id: nid(),
+    name: room.name + ' (Kopie)',
+    walls: room.walls.map(w => ({ ...w, id: nid() })),
+    openings: room.openings.map(o => ({ ...o, id: nid() })),
+    photos: [],   // pictures belong to the room they were taken in
+  };
+  const at = p.rooms.findIndex(r => r.id === id) + 1;
+  patchProject(pr => {
+    const rooms = [...pr.rooms];
+    rooms.splice(at, 0, copy);
+    return { ...pr, rooms, activeRoomId: copy.id };
+  });
+  flash('Raum dupliziert.');
+}
+
+function deleteRoom(id) {
+  const p = getProject();
+  if (p.rooms.length <= 1) { flash('Der letzte Raum lässt sich nicht löschen — nutze „Zurücksetzen".'); return; }
+  const room = p.rooms.find(r => r.id === id);
+  if (!room) return;
+  snapshot('delete-room');
+  patchProject(pr => {
+    const rooms = pr.rooms.filter(r => r.id !== id);
+    return { ...pr, rooms, activeRoomId: pr.activeRoomId === id ? rooms[0].id : pr.activeRoomId };
+  });
+  flash('„' + room.name + '" gelöscht.', { undo: true });
+}
+
+function selectRoom(id) {
+  patchProject(p => ({ ...p, activeRoomId: id }));
+  setState({ tab: 'raum' });
+}
+
+/* ─── project actions ─── */
+
+function addProject() {
+  const p = getProject();
+  const np = mkProject('Projekt ' + (state.projects.length + 1), p ? p.defaultHeight : DEFAULT_HEIGHT, p ? p.price : DEFAULT_PRICE);
+  setState(s => ({ projects: [...s.projects, np], activeProjectId: np.id, tab: 'projekt' }));
+  flash('Neues Projekt angelegt.');
+}
+
+/* Empties the project back to a single blank room but keeps its name, price
+ * and standard height — the usual "same customer, start over" case. */
+function resetProject() {
+  const p = getProject();
+  if (!p) return;
+  snapshot('reset-project');
+  const room = mkRoom('Raum 1', BLANK_WALLS, p.defaultHeight);
+  patchProject(pr => ({ ...pr, rooms: [room], activeRoomId: room.id, date: formatDateDE(new Date()) }));
+  setState({ tab: 'projekt' });
+  flash('Projekt zurückgesetzt.', { undo: true });
+}
+
+function deleteProject(id) {
+  if (state.projects.length <= 1) { flash('Das letzte Projekt lässt sich nicht löschen — nutze „Zurücksetzen".'); return; }
+  const pr = state.projects.find(p => p.id === id);
+  if (!pr) return;
+  snapshot('delete-project');
+  setState(s => {
+    const projects = s.projects.filter(p => p.id !== id);
+    return { projects, activeProjectId: s.activeProjectId === id ? projects[0].id : s.activeProjectId };
+  });
+  flash('Projekt „' + pr.name + '" gelöscht.', { undo: true });
+}
+
+function selectProject(id) {
+  setState({ activeProjectId: id, tab: 'projekt' });
 }
 
 /* ─── geometry / area engine ─── */
@@ -142,7 +333,8 @@ function geo(room) {
   return { segs, floor, closed };
 }
 
-function calc(room) {
+function calc(room, price) {
+  if (price == null) { const p = getProject(); price = p ? p.price : 0; }
   const g = geo(room);
   const umfang = g.segs.reduce((s, w) => s + w.len, 0);
   const brutto = umfang * (room.height || 0);
@@ -150,12 +342,13 @@ function calc(room) {
   const netto = Math.max(0, brutto - abzug);
   const decke = g.floor;
   const abrechnung = netto + decke;
-  return { g, umfang, brutto, abzug, netto, decke, boden: g.floor, abrechnung, preis: abrechnung * (room.price || 0) };
+  return { g, umfang, brutto, abzug, netto, decke, boden: g.floor, abrechnung, preis: abrechnung * (price || 0) };
 }
 
 function totals() {
-  return state.rooms.reduce((a, r) => {
-    const c = calc(r);
+  const project = getProject();
+  return project.rooms.reduce((a, r) => {
+    const c = calc(r, project.price);
     return { brutto: a.brutto + c.brutto, netto: a.netto + c.netto, abzug: a.abzug + c.abzug, decke: a.decke + c.decke, preis: a.preis + c.preis };
   }, { brutto: 0, netto: 0, abzug: 0, decke: 0, preis: 0 });
 }
@@ -205,9 +398,10 @@ function plan(room, c) {
 function exportCsv() {
   const sep = ';';
   const lines = [['Raum', 'Hoehe m', 'Umfang m', 'Brutto m2', 'Abzuege m2', 'Netto m2', 'Decke m2', 'Boden m2', 'Preis/m2', 'Summe EUR'].join(sep)];
-  state.rooms.forEach(r => {
+  const project = getProject();
+  project.rooms.forEach(r => {
     const c = calc(r);
-    lines.push([r.name, nf(r.height), nf(c.umfang), nf(c.brutto), nf(c.abzug), nf(c.netto), nf(c.decke), nf(c.boden), nf(r.price), nf(c.preis)].join(sep));
+    lines.push([r.name, nf(r.height), nf(c.umfang), nf(c.brutto), nf(c.abzug), nf(c.netto), nf(c.decke), nf(c.boden), nf(project.price), nf(c.preis)].join(sep));
     r.openings.forEach(o => lines.push(['  Abzug: ' + o.label, '', '', nf(o.w) + ' x ' + nf(o.h), 'Anzahl ' + o.count, nf(o.w * o.h * o.count), '', '', '', ''].join(sep)));
   });
   const t = totals();
@@ -216,7 +410,7 @@ function exportCsv() {
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url;
-  a.download = 'Flaechen_' + state.projectName.replace(/[^\w]+/g, '_') + '.csv';
+  a.download = 'Flaechen_' + project.name.replace(/[^\w]+/g, '_') + '.csv';
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -235,7 +429,7 @@ async function exportPdf() {
   // IndexedDB and fully decoded before the dialog opens — otherwise the PDF
   // gets blank boxes where the pictures should be.
   const photoUrls = new Map();
-  for (const r of state.rooms) {
+  for (const r of getProject().rooms) {
     for (const ph of (r.photos || [])) {
       photoUrls.set(ph.id, (await getPhoto(ph.id)) || ph.thumb);
     }
@@ -268,25 +462,26 @@ function printRow(cells, cls) {
 
 function buildPrintSheet(photoUrls) {
   const t = totals();
+  const project = getProject();
 
   const cover = el('section', { class: 'p-page' }, [
     el('header', { class: 'p-head' }, [
       el('div', {}, [
         el('div', { class: 'p-title' }, 'Flächenaufstellung'),
-        el('div', { class: 'p-project' }, state.projectName),
+        el('div', { class: 'p-project' }, project.name),
       ]),
-      el('div', { class: 'p-date' }, state.projectDate),
+      el('div', { class: 'p-date' }, project.date),
     ]),
     el('div', { class: 'p-tiles' }, [
       printTile('Netto-Wandfläche', nf(t.netto, 1) + ' m²'),
       printTile('Brutto-Wandfläche', nf(t.brutto, 1) + ' m²'),
       printTile('Deckenfläche', nf(t.decke, 1) + ' m²'),
-      printTile('Räume', String(state.rooms.length)),
+      printTile('Räume', String(project.rooms.length)),
     ]),
     el('div', { class: 'p-table' }, [
       printRow(['Raum', 'Brutto m²', 'Abzüge m²', 'Netto m²', 'Decke m²', 'Summe €'], 'p-row-head'),
-      ...state.rooms.map(r => {
-        const c = calc(r);
+      ...project.rooms.map(r => {
+        const c = calc(r, project.price);
         return printRow([r.name, nf(c.brutto, 1), nf(c.abzug, 1), nf(c.netto, 1), nf(c.decke, 1), nf(c.preis)]);
       }),
       printRow(['Gesamt', nf(t.brutto, 1), nf(t.abzug, 1), nf(t.netto, 1), nf(t.decke, 1), nf(t.preis)], 'p-row-sum'),
@@ -298,8 +493,8 @@ function buildPrintSheet(photoUrls) {
     el('p', { class: 'p-legal' }, 'Netto = Brutto-Wandfläche abzüglich Fenster, Türen und freier Flächen. Abgerechnet werden Netto-Wandfläche und Deckenfläche. Alle Maße in Metern, Flächen in m². Angebot freibleibend.'),
   ]);
 
-  const roomPages = state.rooms.map(room => {
-    const c = calc(room);
+  const roomPages = project.rooms.map(room => {
+    const c = calc(room, project.price);
     const p = plan(room, c);
 
     const masse = el('div', { class: 'p-table p-table-tight' }, [
@@ -312,7 +507,7 @@ function buildPrintSheet(photoUrls) {
       printRow(['Deckenfläche', nf(c.decke, 2) + ' m²']),
       printRow(['Bodenfläche', nf(c.boden, 2) + ' m²']),
       printRow(['Abrechenbar (Wand + Decke)', nf(c.abrechnung, 2) + ' m²']),
-      printRow(['Preis pro m²', nf(room.price) + ' €']),
+      printRow(['Preis pro m²', nf(project.price) + ' €']),
       printRow(['Summe', nf(c.preis) + ' €'], 'p-row-sum'),
     ]);
 
@@ -342,7 +537,7 @@ function buildPrintSheet(photoUrls) {
     return el('section', { class: 'p-page' }, [
       el('header', { class: 'p-head p-head-room' }, [
         el('div', {}, [
-          el('div', { class: 'p-eyebrow' }, state.projectName),
+          el('div', { class: 'p-eyebrow' }, project.name),
           el('div', { class: 'p-title' }, room.name),
         ]),
         el('div', { class: 'p-date' }, nf(c.netto, 1) + ' m² netto'),
@@ -489,19 +684,18 @@ async function addPhotos(roomId, fileList) {
   }
 
   if (!added.length) { flash('Foto konnte nicht verarbeitet werden.'); return; }
-  setState(s => ({
-    rooms: s.rooms.map(r => (r.id === roomId ? { ...r, photos: [...(r.photos || []), ...added] } : r)),
-  }));
+  patchProject(p => ({ ...p, rooms: p.rooms.map(r => (r.id === roomId ? { ...r, photos: [...(r.photos || []), ...added] } : r)) }));
   flash(allPersisted
     ? (added.length === 1 ? 'Foto hinzugefügt.' : added.length + ' Fotos hinzugefügt.')
     : 'Foto übernommen — konnte aber nicht dauerhaft gespeichert werden.');
 }
 
 function removePhoto(roomId, photoId) {
-  dropPhoto(photoId);
-  setState(s => ({
-    rooms: s.rooms.map(r => (r.id === roomId ? { ...r, photos: (r.photos || []).filter(p => p.id !== photoId) } : r)),
-  }));
+  // The blob stays in IndexedDB so undo can bring it back; the orphan sweep
+  // on next start clears anything no project references any more.
+  snapshot('delete-photo');
+  patchProject(p => ({ ...p, rooms: p.rooms.map(r => (r.id === roomId ? { ...r, photos: (r.photos || []).filter(x => x.id !== photoId) } : r)) }));
+  flash('Foto entfernt.', { undo: true });
 }
 
 let lightbox = null;
@@ -553,15 +747,53 @@ function svgEl(tag, attrs, children) {
 
 /* ─── views ─── */
 
+/* Text input that keeps focus and caret across the re-render each keystroke
+ * triggers — the app rebuilds its DOM wholesale, so a naive input would drop
+ * the cursor after every character. */
+function liveInput(cls, value, onInput, extra) {
+  const node = el('input', Object.assign({
+    class: cls, type: 'text', value,
+    onInput: e => {
+      const el_ = e.target, pos = el_.selectionStart;
+      onInput(el_.value);
+      const again = document.querySelector('.' + cls.split(' ').join('.'));
+      if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch { /* not supported */ } }
+    },
+  }, extra || {}));
+  return node;
+}
+
+/* Numeric field. Deliberately NOT type="number": that control drops the
+ * comma a German keyboard produces, so "2,75" arrived as 275. text +
+ * inputmode keeps the numeric keypad on Android and lets us parse both
+ * separators ourselves. */
+function numInput(value, onCommit, opts) {
+  const o = opts || {};
+  return el('input', {
+    class: 'input mono', type: 'text',
+    inputmode: o.integer ? 'numeric' : 'decimal',
+    enterkeyhint: 'done',
+    value: o.integer ? String(Math.round(value)) : inputNum(value),
+    onFocus: e => e.target.select(),
+    onChange: e => {
+      const v = parseNum(e.target.value, value);
+      onCommit(o.integer ? Math.max(o.min == null ? 1 : o.min, Math.round(v)) : v);
+    },
+  });
+}
+
 function renderHeader() {
   const tabs = [['projekt', 'Projekt'], ['raum', 'Raum'], ['plan', 'Grundriss'], ['export', 'Export']];
+  const project = getProject();
   return el('div', { class: 'header' }, [
     el('div', { class: 'header-row' }, [
-      el('div', {}, [
+      el('div', { class: 'header-main' }, [
         el('div', { class: 'eyebrow' }, 'Projekt'),
-        el('div', { class: 'project-name' }, state.projectName),
+        liveInput('project-name-input', project.name, v => patchProject(p => ({ ...p, name: v })),
+          { placeholder: 'Projektname', 'aria-label': 'Projektname' }),
       ]),
-      el('div', { class: 'project-date' }, state.projectDate),
+      liveInput('project-date-input', project.date, v => patchProject(p => ({ ...p, date: v })),
+        { placeholder: 'Datum', 'aria-label': 'Datum' }),
     ]),
     el('div', { class: 'tabbar' }, tabs.map(([k, label]) =>
       el('button', {
@@ -574,6 +806,7 @@ function renderHeader() {
 
 function renderProjektView() {
   const t = totals();
+  const project = getProject();
   const active = getActiveRoom();
 
   const hero = el('div', { class: 'card hero' }, [
@@ -585,7 +818,7 @@ function renderProjektView() {
     el('div', { class: 'sub-line' }, `brutto ${nf(t.brutto, 1)} m² · Abzüge ${nf(t.abzug, 1)} m²`),
     el('div', { class: 'tile-grid' }, [
       el('div', { class: 'tile' }, [el('div', { class: 'tile-label' }, 'Decke'), el('div', { class: 'tile-value' }, nf(t.decke, 1) + ' m²')]),
-      el('div', { class: 'tile' }, [el('div', { class: 'tile-label' }, 'Räume'), el('div', { class: 'tile-value' }, String(state.rooms.length))]),
+      el('div', { class: 'tile' }, [el('div', { class: 'tile-label' }, 'Räume'), el('div', { class: 'tile-value' }, String(project.rooms.length))]),
     ]),
     el('div', { class: 'tile-row' }, [
       el('div', { class: 'k' }, 'Summe'),
@@ -594,24 +827,60 @@ function renderProjektView() {
   ]);
 
   const list = el('div', { class: 'room-list' },
-    state.rooms.map(r => {
-      const rc = calc(r);
-      return el('button', {
-        class: 'room-card' + (active && r.id === active.id ? ' active' : ''),
-        onClick: () => setState({ activeId: r.id, tab: 'raum' }),
-      }, [
-        el('div', { class: 'info' }, [
-          el('div', { class: 'name' }, r.name),
-          el('div', { class: 'meta' }, `${r.walls.length} Wände · ${nf(r.height)} m hoch · ${r.openings.length} Abzüge`),
+    project.rooms.map(r => {
+      const rc = calc(r, project.price);
+      return el('div', { class: 'room-card' + (active && r.id === active.id ? ' active' : '') }, [
+        el('button', { class: 'room-open', onClick: () => selectRoom(r.id) }, [
+          el('div', { class: 'info' }, [
+            el('div', { class: 'name' }, r.name),
+            el('div', { class: 'meta' }, `${r.walls.length} Wände · ${nf(r.height)} m hoch · ${r.openings.length} Abzüge`),
+          ]),
+          el('div', { class: 'amounts' }, [
+            el('div', { class: 'netto' }, nf(rc.netto, 1)),
+            el('div', { class: 'brutto' }, nf(rc.brutto, 1) + ' m² brutto'),
+          ]),
+          el('div', { class: 'chevron' }, '›'),
         ]),
-        el('div', { class: 'amounts' }, [
-          el('div', { class: 'netto' }, nf(rc.netto, 1)),
-          el('div', { class: 'brutto' }, nf(rc.brutto, 1) + ' m² brutto'),
+        el('div', { class: 'room-actions' }, [
+          el('button', { class: 'mini-btn', onClick: () => duplicateRoom(r.id) }, 'Duplizieren'),
+          el('button', { class: 'mini-btn', onClick: () => resetRoom(r.id) }, 'Zurücksetzen'),
+          el('button', {
+            class: 'mini-btn danger' + (project.rooms.length <= 1 ? ' off' : ''),
+            onClick: () => deleteRoom(r.id),
+          }, 'Löschen'),
         ]),
-        el('div', { class: 'chevron' }, '›'),
       ]);
     })
   );
+
+  const projectCard = el('div', { class: 'card' }, [
+    el('div', { class: 'card-title' }, 'Projekt'),
+    el('div', { class: 'card-row', style: { marginTop: '12px' } }, [
+      state.projects.length > 1 ? el('label', { class: 'field' }, [
+        el('span', { class: 'field-label' }, 'Aktives Projekt'),
+        el('select', { class: 'input', onChange: e => selectProject(Number(e.target.value)) },
+          state.projects.map(p => el('option', { value: String(p.id), selected: p.id === project.id }, p.name))),
+      ]) : null,
+      el('div', { class: 'field-pair' }, [
+        el('label', { class: 'field' }, [
+          el('span', { class: 'field-label' }, 'Preis pro m² · ganzes Projekt'),
+          numInput(project.price, v => patchProject(p => ({ ...p, price: v }))),
+        ]),
+        el('label', { class: 'field' }, [
+          el('span', { class: 'field-label' }, 'Standardhöhe m'),
+          numInput(project.defaultHeight, v => patchProject(p => ({ ...p, defaultHeight: v }))),
+        ]),
+      ]),
+      el('div', { class: 'btn-row' }, [
+        el('button', { class: 'btn btn-ghost', onClick: addProject }, '+ Neues Projekt'),
+        el('button', { class: 'btn btn-ghost', onClick: resetProject }, 'Projekt zurücksetzen'),
+        el('button', {
+          class: 'btn btn-ghost danger' + (state.projects.length <= 1 ? ' off' : ''),
+          onClick: () => deleteProject(project.id),
+        }, 'Projekt löschen'),
+      ]),
+    ]),
+  ]);
 
   return el('div', { class: 'view' }, [
     storageFailed ? el('div', { class: 'warn-box' }, [
@@ -622,13 +891,15 @@ function renderProjektView() {
     el('div', { class: 'section-head' }, [el('div', { class: 'card-title' }, 'Räume'), el('div', { class: 'hint' }, 'netto · brutto')]),
     list,
     el('button', { class: 'btn-add-room', onClick: addRoom }, '+ Raum hinzufügen'),
+    projectCard,
   ]);
 }
 
 function renderRaumView() {
   const room = getActiveRoom();
   if (!room) return el('div', { class: 'view' }, 'Kein Raum ausgewählt.');
-  const c = calc(room);
+  const project = getProject();
+  const c = calc(room, project.price);
 
   const hero = el('div', { class: 'card hero' }, [
     el('div', { class: 'live-dot' }, [el('span', { class: 'dot' }), el('div', { class: 'card-title' }, 'Ergebnis ' + room.name)]),
@@ -664,7 +935,7 @@ function renderRaumView() {
       ]),
       el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Raumhöhe in m'),
-        el('input', { class: 'input mono', type: 'number', step: '0.01', value: room.height, onChange: e => patchRoom(r => ({ ...r, height: numFromEvent(e, room.height) })) }),
+        numInput(room.height, v => patchRoom(r => ({ ...r, height: v }))),
       ]),
       el('div', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Anzahl Wände'),
@@ -676,8 +947,9 @@ function renderRaumView() {
   const wallRows = c.g.segs.map((s, i) => el('div', { class: 'wall-row' }, [
     el('div', { class: 'tag' }, [el('div', { class: 'dir' }, s.label), el('div', { class: 'nr' }, 'Wand ' + s.nr)]),
     el('input', {
-      class: 'input mono', type: 'number', step: '0.01', value: s.wall.len,
-      onChange: e => { const v = numFromEvent(e, s.wall.len); patchRoom(r => ({ ...r, walls: r.walls.map((w, j) => (j === i ? { ...w, len: v } : w)) })); },
+      class: 'input mono', type: 'text', inputmode: 'decimal', enterkeyhint: 'done', value: inputNum(s.wall.len),
+      onFocus: e => e.target.select(),
+      onChange: e => { const v = parseNum(e.target.value, s.wall.len); patchRoom(r => ({ ...r, walls: r.walls.map((w, j) => (j === i ? { ...w, len: v } : w)) })); },
     }),
     el('div', { class: 'unit' }, 'm'),
     el('button', {
@@ -715,13 +987,13 @@ function renderRaumView() {
         el('button', { class: 'remove-btn', onClick: () => patchRoom(r => ({ ...r, openings: r.openings.filter((x, j) => j !== i) })) }, '✕'),
       ]),
       el('div', { class: 'opening-grid3' }, [
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Breite m'), el('input', { class: 'input mono', type: 'number', step: '0.01', value: o.w, onChange: e => patch({ w: numFromEvent(e, o.w) }) })]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Höhe m'), el('input', { class: 'input mono', type: 'number', step: '0.01', value: o.h, onChange: e => patch({ h: numFromEvent(e, o.h) }) })]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Anzahl'), el('input', { class: 'input mono', type: 'number', step: '1', min: '1', value: o.count, onChange: e => patch({ count: Math.max(1, Math.round(numFromEvent(e, o.count))) } ) })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Breite m'), numInput(o.w, v => patch({ w: v }))]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Höhe m'), numInput(o.h, v => patch({ h: v }))]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Anzahl'), numInput(o.count, v => patch({ count: v }), { integer: true, min: 1 })]),
       ]),
       el('div', { class: 'opening-grid2' }, [
         el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Wand'), wallSelect]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Abstand ab Ecke m'), el('input', { class: 'input mono', type: 'number', step: '0.05', value: o.offset, onChange: e => patch({ offset: numFromEvent(e, o.offset) }) })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Abstand ab Ecke m'), numInput(o.offset, v => patch({ offset: v }), { min: 0 })]),
       ]),
     ]);
   });
@@ -739,8 +1011,8 @@ function renderRaumView() {
     el('div', { class: 'card-title' }, 'Kalkulation & Notizen'),
     el('div', { class: 'card-row', style: { marginTop: '14px' } }, [
       el('label', { class: 'field' }, [
-        el('span', { class: 'field-label' }, 'Preis pro m² (Wand + Decke)'),
-        el('input', { class: 'input mono', type: 'number', step: '0.1', value: room.price, onChange: e => patchRoom(r => ({ ...r, price: numFromEvent(e, room.price) })) }),
+        el('span', { class: 'field-label' }, 'Preis pro m² · gilt fürs ganze Projekt'),
+        numInput(project.price, v => patchProject(p => ({ ...p, price: v }))),
       ]),
       el('div', { class: 'tile-row', style: { marginTop: 0 } }, [
         el('div', { class: 'k' }, nf(c.abrechnung, 1) + ' m² abrechenbar'),
@@ -754,8 +1026,22 @@ function renderRaumView() {
     ]),
   ]);
 
+  const roomActions = el('div', { class: 'card' }, [
+    el('div', { class: 'card-title' }, 'Diesen Raum'),
+    el('div', { class: 'btn-row', style: { marginTop: '12px' } }, [
+      el('button', { class: 'btn btn-ghost', onClick: () => duplicateRoom(room.id) }, 'Duplizieren'),
+      el('button', { class: 'btn btn-outline', onClick: () => resetRoom(room.id) }, 'Zurücksetzen'),
+      el('button', {
+        class: 'btn btn-ghost danger' + (project.rooms.length <= 1 ? ' off' : ''),
+        onClick: () => deleteRoom(room.id),
+      }, 'Löschen'),
+    ]),
+    el('div', { class: 'export-copy', style: { marginTop: '10px' } },
+      'Zurücksetzen leert Wände, Abzüge, Fotos und Notiz — der Name bleibt. Rückgängig geht direkt danach über den Hinweis.'),
+  ]);
+
   return el('div', { class: 'view' }, [
-    hero, raumdaten, waende, abzuege, kalkulation,
+    hero, raumdaten, waende, abzuege, kalkulation, roomActions,
     el('button', { class: 'btn btn-primary btn-block', onClick: () => setState({ tab: 'plan' }) }, 'Grundriss ansehen'),
   ]);
 }
@@ -896,6 +1182,7 @@ function renderPlanView() {
 
 function renderExportView() {
   const t = totals();
+  const project = getProject();
 
   const exportCard = el('div', { class: 'card' }, [
     el('div', { class: 'card-title' }, 'Export'),
@@ -910,14 +1197,14 @@ function renderExportView() {
     el('div', { class: 'sheet-head' }, [
       el('div', {}, [
         el('div', { class: 'title' }, 'Flächenaufstellung'),
-        el('div', { class: 'sub' }, state.projectName),
+        el('div', { class: 'sub' }, project.name),
       ]),
-      el('div', { class: 'date' }, state.projectDate),
+      el('div', { class: 'date' }, project.date),
     ]),
     el('div', {}, [
       el('div', { class: 'sheet-table-head' }, [el('div', {}, 'Raum'), el('div', {}, 'Brutto'), el('div', {}, 'Netto'), el('div', {}, 'Decke')]),
-      ...state.rooms.map(r => {
-        const rc = calc(r);
+      ...project.rooms.map(r => {
+        const rc = calc(r, project.price);
         return el('div', { class: 'sheet-row' }, [
           el('div', { class: 'name' }, r.name),
           el('div', { class: 'brutto' }, nf(rc.brutto, 1)),
@@ -955,14 +1242,38 @@ function render() {
   if (lb) root.appendChild(lb);
   // Floating, so messages from photo import and PDF export are visible on
   // every tab — not just on the one card that used to render them.
-  if (state.toast) root.appendChild(el('div', { class: 'toast' }, state.toast));
+  if (state.toast) {
+    root.appendChild(el('div', { class: 'toast' }, [
+      el('span', {}, state.toast),
+      state.toastUndo && undoEntry
+        ? el('button', { class: 'toast-undo', onClick: undoLast }, 'Rückgängig')
+        : null,
+    ]));
+  }
 }
 
+/* Write once on start: a project migrated from v1 otherwise lives only in
+ * memory until the user happens to change something, and the old key would
+ * be re-read on every launch. */
+save();
 render();
+sweepOrphanPhotos();
 
 /* Free the print DOM (base64 photos are heavy on a phone) once the dialog is
  * gone — but deferred: Chromium fires afterprint around the capture itself,
  * and clearing synchronously can empty the sheet before it is serialised. */
+/* Deleting a room or photo leaves its blob in IndexedDB so undo can put it
+ * back. Anything still unreferenced at the next start is gone for good. */
+async function sweepOrphanPhotos() {
+  try {
+    const referenced = new Set();
+    state.projects.forEach(p => p.rooms.forEach(r => (r.photos || []).forEach(ph => referenced.add(ph.id))));
+    const keys = await photoTx('readonly', st => st.getAllKeys());
+    const orphans = keys.filter(k => !referenced.has(k));
+    for (const k of orphans) await dropPhoto(k);
+  } catch { /* storage unavailable — nothing to sweep */ }
+}
+
 window.addEventListener('afterprint', () => {
   setTimeout(() => {
     const root = document.getElementById('print-root');
