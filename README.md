@@ -72,6 +72,13 @@ alle Flächen 0,0 m². Ein vorbelegter 4 × 3-m-Raum sah aus, als hätte
 Standardhöhe des Projekts. Solange keine Maße erfasst sind, zeigen Grundriss
 und PDF einen Hinweis statt einer entarteten Zeichnung.
 
+`render()` wirft die gesamte Oberfläche weg und baut sie neu auf. Jedes Feld
+trägt deshalb ein stabiles `data-fkey`, über das Fokus und Cursorposition
+danach wiederhergestellt werden — sonst reißt jede Neuzeichnung den Nutzer aus
+dem Feld, in dem er gerade tippt. Der Hinweis-Balken liegt aus demselben Grund
+außerhalb von `#app` und außerhalb des App-Zustands: sein Ausblende-Timer hat
+früher die ganze Seite neu gebaut.
+
 Zahlenfelder sind bewusst **kein** `type="number"`. Dieses Feld verschluckt das
 Komma, das eine deutsche Tastatur liefert: aus „2,75" wurde 275, eine
 Raumhöhe von 275 Metern — ohne jede Fehlermeldung. Stattdessen `type="text"`

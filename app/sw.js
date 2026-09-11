@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'raumrechner-v4';
+const CACHE = 'raumrechner-v5';
 const ASSETS = [
   './',
   './index.html',

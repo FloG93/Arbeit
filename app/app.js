@@ -88,7 +88,7 @@ function demoProject() {
 
 function defaultState() {
   const p = demoProject();
-  return { schema: 2, tab: 'projekt', activeProjectId: p.id, toast: '', projects: [p] };
+  return { schema: 2, tab: 'projekt', activeProjectId: p.id, projects: [p] };
 }
 
 function normalizeRoom(r) {
@@ -117,7 +117,7 @@ function migrateV1(old) {
     activeRoomId: old.activeId != null && rooms.some(r => r.id === old.activeId) ? old.activeId : rooms[0].id,
     rooms,
   };
-  return { schema: 2, tab: old.tab || 'projekt', activeProjectId: project.id, toast: '', projects: [project] };
+  return { schema: 2, tab: old.tab || 'projekt', activeProjectId: project.id, projects: [project] };
 }
 
 function loadState() {
@@ -132,7 +132,6 @@ function loadState() {
           defaultHeight: isFinite(pr.defaultHeight) ? pr.defaultHeight : DEFAULT_HEIGHT,
           rooms: (Array.isArray(pr.rooms) && pr.rooms.length ? pr.rooms : [mkRoom('Raum 1', EMPTY_WALLS, DEFAULT_HEIGHT)]).map(normalizeRoom),
         }));
-        parsed.toast = '';
         return parsed;
       }
     }
@@ -209,11 +208,31 @@ function undoLast() {
   flash('Rückgängig gemacht.');
 }
 
+/* The toast lives outside the app's DOM and outside its state. It used to be
+ * part of state, so its dismissal timer re-rendered everything four seconds
+ * later — wiping out whatever field the user was typing in at the time. */
+let toast = null;
+let toastNode = null;
+
+function renderToast() {
+  if (!toastNode) {
+    toastNode = el('div', { class: 'toast-host' });
+    document.body.appendChild(toastNode);
+  }
+  toastNode.innerHTML = '';
+  if (!toast) { toastNode.hidden = true; return; }
+  toastNode.hidden = false;
+  toastNode.appendChild(el('div', { class: 'toast' }, [
+    el('span', {}, toast.msg),
+    toast.undo && undoEntry ? el('button', { class: 'toast-undo', onClick: undoLast }, 'Rückgängig') : null,
+  ]));
+}
+
 function flash(msg, opts) {
-  const undoable = !!(opts && opts.undo);
-  setState({ toast: msg, toastUndo: undoable });
+  toast = { msg, undo: !!(opts && opts.undo) };
+  renderToast();
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => setState({ toast: '', toastUndo: false }), undoable ? 8000 : 4000);
+  flashTimer = setTimeout(() => { toast = null; renderToast(); }, toast.undo ? 8000 : 4000);
 }
 
 /* ─── room actions ─── */
@@ -754,20 +773,13 @@ function svgEl(tag, attrs, children) {
 
 /* ─── views ─── */
 
-/* Text input that keeps focus and caret across the re-render each keystroke
- * triggers — the app rebuilds its DOM wholesale, so a naive input would drop
- * the cursor after every character. */
-function liveInput(cls, value, onInput, extra) {
-  const node = el('input', Object.assign({
-    class: cls, type: 'text', value,
-    onInput: e => {
-      const el_ = e.target, pos = el_.selectionStart;
-      onInput(el_.value);
-      const again = document.querySelector('.' + cls.split(' ').join('.'));
-      if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch { /* not supported */ } }
-    },
+/* Fields carry a stable data-fkey so render() can put the caret back exactly
+ * where it was; see restoreFocus below. */
+function liveInput(cls, fkey, value, onInput, extra) {
+  return el('input', Object.assign({
+    class: cls, type: 'text', value, 'data-fkey': fkey,
+    onInput: e => onInput(e.target.value),
   }, extra || {}));
-  return node;
 }
 
 /* Numeric field. Deliberately NOT type="number": that control drops the
@@ -777,7 +789,7 @@ function liveInput(cls, value, onInput, extra) {
 function numInput(value, onCommit, opts) {
   const o = opts || {};
   return el('input', {
-    class: 'input mono', type: 'text',
+    class: 'input mono', type: 'text', 'data-fkey': o.fkey || null,
     inputmode: o.integer ? 'numeric' : 'decimal',
     enterkeyhint: 'done',
     value: o.integer ? String(Math.round(value)) : inputNum(value),
@@ -796,10 +808,10 @@ function renderHeader() {
     el('div', { class: 'header-row' }, [
       el('div', { class: 'header-main' }, [
         el('div', { class: 'eyebrow' }, 'Projekt'),
-        liveInput('project-name-input', project.name, v => patchProject(p => ({ ...p, name: v })),
+        liveInput('project-name-input', 'proj-name', project.name, v => patchProject(p => ({ ...p, name: v })),
           { placeholder: 'Projektname', 'aria-label': 'Projektname' }),
       ]),
-      liveInput('project-date-input', project.date, v => patchProject(p => ({ ...p, date: v })),
+      liveInput('project-date-input', 'proj-date', project.date, v => patchProject(p => ({ ...p, date: v })),
         { placeholder: 'Datum', 'aria-label': 'Datum' }),
     ]),
     el('div', { class: 'tabbar' }, tabs.map(([k, label]) =>
@@ -865,17 +877,17 @@ function renderProjektView() {
     el('div', { class: 'card-row', style: { marginTop: '12px' } }, [
       state.projects.length > 1 ? el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Aktives Projekt'),
-        el('select', { class: 'input', onChange: e => selectProject(Number(e.target.value)) },
+        el('select', { class: 'input', 'data-fkey': 'proj-select', onChange: e => selectProject(Number(e.target.value)) },
           state.projects.map(p => el('option', { value: String(p.id), selected: p.id === project.id }, p.name))),
       ]) : null,
       el('div', { class: 'field-pair' }, [
         el('label', { class: 'field' }, [
           el('span', { class: 'field-label' }, 'Preis pro m² · ganzes Projekt'),
-          numInput(project.price, v => patchProject(p => ({ ...p, price: v }))),
+          numInput(project.price, v => patchProject(p => ({ ...p, price: v })), { fkey: 'proj-price' }),
         ]),
         el('label', { class: 'field' }, [
           el('span', { class: 'field-label' }, 'Standardhöhe m'),
-          numInput(project.defaultHeight, v => patchProject(p => ({ ...p, defaultHeight: v }))),
+          numInput(project.defaultHeight, v => patchProject(p => ({ ...p, defaultHeight: v })), { fkey: 'proj-height' }),
         ]),
       ]),
       el('div', { class: 'btn-row' }, [
@@ -938,11 +950,11 @@ function renderRaumView() {
     el('div', { class: 'card-row', style: { marginTop: '14px' } }, [
       el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Bezeichnung'),
-        el('input', { class: 'input', value: room.name, onChange: e => patchRoom(r => ({ ...r, name: e.target.value })) }),
+        el('input', { class: 'input', 'data-fkey': 'room-name', value: room.name, onInput: e => patchRoom(r => ({ ...r, name: e.target.value })) }),
       ]),
       el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Raumhöhe in m'),
-        numInput(room.height, v => patchRoom(r => ({ ...r, height: v }))),
+        numInput(room.height, v => patchRoom(r => ({ ...r, height: v })), { fkey: 'room-height' }),
       ]),
       el('div', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Anzahl Wände'),
@@ -954,7 +966,8 @@ function renderRaumView() {
   const wallRows = c.g.segs.map((s, i) => el('div', { class: 'wall-row' }, [
     el('div', { class: 'tag' }, [el('div', { class: 'dir' }, s.label), el('div', { class: 'nr' }, 'Wand ' + s.nr)]),
     el('input', {
-      class: 'input mono', type: 'text', inputmode: 'decimal', enterkeyhint: 'done', value: inputNum(s.wall.len),
+      class: 'input mono', type: 'text', inputmode: 'decimal', enterkeyhint: 'done',
+      'data-fkey': 'wall-' + s.wall.id, value: inputNum(s.wall.len),
       onFocus: e => e.target.select(),
       onChange: e => { const v = parseNum(e.target.value, s.wall.len); patchRoom(r => ({ ...r, walls: r.walls.map((w, j) => (j === i ? { ...w, len: v } : w)) })); },
     }),
@@ -983,7 +996,8 @@ function renderRaumView() {
   const openingRows = room.openings.map((o, i) => {
     const patch = upd => patchRoom(r => ({ ...r, openings: r.openings.map((x, j) => (j === i ? { ...x, ...upd } : x)) }));
     const wallSelect = el('select', {
-      class: 'input', onChange: e => patch({ wall: parseInt(e.target.value, 10) || 0 }),
+      class: 'input', 'data-fkey': 'op-' + o.id + '-wall',
+      onChange: e => patch({ wall: parseInt(e.target.value, 10) || 0 }),
     }, wallOptions.map(wo => el('option', { value: wo.value }, wo.label)));
     wallSelect.value = String(o.wall);
 
@@ -994,13 +1008,13 @@ function renderRaumView() {
         el('button', { class: 'remove-btn', onClick: () => patchRoom(r => ({ ...r, openings: r.openings.filter((x, j) => j !== i) })) }, '✕'),
       ]),
       el('div', { class: 'opening-grid3' }, [
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Breite m'), numInput(o.w, v => patch({ w: v }))]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Höhe m'), numInput(o.h, v => patch({ h: v }))]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Anzahl'), numInput(o.count, v => patch({ count: v }), { integer: true, min: 1 })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Breite m'), numInput(o.w, v => patch({ w: v }), { fkey: 'op-' + o.id + '-w' })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Höhe m'), numInput(o.h, v => patch({ h: v }), { fkey: 'op-' + o.id + '-h' })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Anzahl'), numInput(o.count, v => patch({ count: v }), { integer: true, min: 1, fkey: 'op-' + o.id + '-n' })]),
       ]),
       el('div', { class: 'opening-grid2' }, [
         el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Wand'), wallSelect]),
-        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Abstand ab Ecke m'), numInput(o.offset, v => patch({ offset: v }), { min: 0 })]),
+        el('label', { class: 'field' }, [el('span', { class: 'field-label' }, 'Abstand ab Ecke m'), numInput(o.offset, v => patch({ offset: v }), { min: 0, fkey: 'op-' + o.id + '-off' })]),
       ]),
     ]);
   });
@@ -1019,7 +1033,7 @@ function renderRaumView() {
     el('div', { class: 'card-row', style: { marginTop: '14px' } }, [
       el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Preis pro m² · gilt fürs ganze Projekt'),
-        numInput(project.price, v => patchProject(p => ({ ...p, price: v }))),
+        numInput(project.price, v => patchProject(p => ({ ...p, price: v })), { fkey: 'room-price' }),
       ]),
       el('div', { class: 'tile-row', style: { marginTop: 0 } }, [
         el('div', { class: 'k' }, nf(c.abrechnung, 1) + ' m² abrechenbar'),
@@ -1027,7 +1041,7 @@ function renderRaumView() {
       ]),
       el('label', { class: 'field' }, [
         el('span', { class: 'field-label' }, 'Notiz'),
-        el('textarea', { class: 'input', rows: 3, value: room.note, onChange: e => patchRoom(r => ({ ...r, note: e.target.value })) }),
+        el('textarea', { class: 'input', 'data-fkey': 'room-note', rows: 3, value: room.note, onInput: e => patchRoom(r => ({ ...r, note: e.target.value })) }),
       ]),
       renderPhotos(room),
     ]),
@@ -1251,23 +1265,41 @@ function currentView() {
   }
 }
 
+/* render() throws away the whole DOM, so anything the user is in the middle
+ * of typing would lose its caret — and, once a stray timer fired, its focus
+ * entirely. Capture the focused field by its stable key and restore it. */
+function captureFocus() {
+  const a = document.activeElement;
+  if (!a || !a.getAttribute) return null;
+  const key = a.getAttribute('data-fkey');
+  if (!key) return null;
+  let start = null, end = null;
+  try { start = a.selectionStart; end = a.selectionEnd; } catch { /* select has no range */ }
+  return { key, start, end };
+}
+
+function restoreFocus(mark) {
+  if (!mark) return;
+  const node = document.querySelector('[data-fkey="' + mark.key + '"]');
+  if (!node) return;
+  node.focus();
+  if (mark.start != null) {
+    try { node.setSelectionRange(mark.start, mark.end); } catch { /* not a text field */ }
+  }
+}
+
 function render() {
+  const mark = captureFocus();
   const root = document.getElementById('app');
   root.innerHTML = '';
   root.appendChild(renderHeader());
   root.appendChild(el('div', { class: 'content' }, [currentView()]));
   const lb = renderLightbox();
   if (lb) root.appendChild(lb);
+  restoreFocus(mark);
   // Floating, so messages from photo import and PDF export are visible on
   // every tab — not just on the one card that used to render them.
-  if (state.toast) {
-    root.appendChild(el('div', { class: 'toast' }, [
-      el('span', {}, state.toast),
-      state.toastUndo && undoEntry
-        ? el('button', { class: 'toast-undo', onClick: undoLast }, 'Rückgängig')
-        : null,
-    ]));
-  }
+
 }
 
 /* Write once on start: a project migrated from v1 otherwise lives only in

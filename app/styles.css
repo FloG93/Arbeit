@@ -291,7 +291,7 @@ textarea.input{padding:12px 14px;font:400 14px/1.5 var(--font-ui);resize:vertica
   box-shadow:0 8px 26px rgba(0,0,0,.45);backdrop-filter:blur(8px);
   font:500 12px/1.45 var(--font-ui);color:var(--accent);text-align:center
 }
-@media print{ .toast{display:none!important} }
+@media print{ .toast,.toast-host{display:none!important} }
 
 .sheet{background:#fff;border-radius:8px;box-shadow:0 10px 34px rgba(0,0,0,.5);padding:22px 20px;display:flex;flex-direction:column;gap:16px;color:#1a1d22}
 .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:2px solid #1a1d22;padding-bottom:12px}
@@ -465,6 +465,10 @@ textarea.input{padding:12px 14px;font:400 14px/1.5 var(--font-ui);resize:vertica
 select.input{appearance:none;-webkit-appearance:none;cursor:pointer}
 
 /* ─── toast with undo ─── */
+/* Lives in <body>, outside #app, so the app can re-render without touching
+   it — and so its dismissal timer no longer rebuilds the page. */
+.toast-host{display:contents}
+.toast-host[hidden]{display:none!important}
 .toast{display:flex;align-items:center;gap:10px;justify-content:center}
 .toast-undo{
   flex:none;border:1px solid var(--border-strong);background:var(--surface-control);
