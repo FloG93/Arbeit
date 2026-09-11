@@ -1,0 +1,11 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Build / tooling output (the app itself has no build step)
+node_modules/
+dist/
+*.log

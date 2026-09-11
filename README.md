@@ -1,25 +1,69 @@
-# CODING AGENTS: READ THIS FIRST
+# Raumrechner
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+Kleine Web-App, um unterwegs Wand-, Decken- und Bodenflächen zu berechnen —
+mit Abzügen für Fenster und Türen, automatisch gezeichnetem Grundriss und
+Export für Angebot und Kalkulation.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+Läuft ohne Build-Schritt: reines HTML/CSS/JavaScript, installierbar auf dem
+Android-Homescreen, funktioniert offline.
 
-## What you should do — IMPORTANT
+## Starten
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+Die App braucht einen HTTP-Server (wegen Service Worker und Manifest —
+direktes Öffnen der Datei per `file://` reicht nicht):
 
-**Read `project/Raumrechner.dc.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+```bash
+cd app
+python3 -m http.server 8000
+```
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+Dann `http://localhost:8000/` im Browser öffnen.
 
-## About the design files
+Auf dem Android-Smartphone: Seite über HTTPS aufrufen und im Chrome-Menü
+„Zum Startbildschirm hinzufügen“ wählen. Danach startet sie wie eine native
+App im Vollbild und rechnet auch ohne Netz weiter.
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## Funktionsumfang
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+| Bereich | Stand |
+| --- | --- |
+| Projekt mit mehreren Räumen, Summenzeile | fertig |
+| Raumformular: Höhe, 3–8 Wände, Nord/Ost/Süd/West, Ecken für L-Form | fertig |
+| Abzüge mit Presets (Fenster, Zimmertür, Terrassentür, freie Fläche) | fertig |
+| Netto groß / brutto klein, Decke und Boden getrennt | fertig |
+| Preis pro m² → Summe je Raum und Projekt | fertig |
+| Grundriss automatisch aus der Wandliste, Öffnungen mit Abstand ab Ecke | fertig |
+| Speicherung auf dem Gerät (localStorage) | fertig |
+| Excel-/CSV-Export mit Abzügen im Detail | fertig |
+| Angebotsblatt als Vorschau | fertig |
+| **PDF-Druck** | Attrappe — Button zeigt nur einen Hinweis |
+| **Foto pro Raum** | Attrappe — Kamera noch nicht angebunden |
 
-## Bundle contents
+Die Schriften (Hanken Grotesk, Space Grotesk) kommen von Google Fonts. Ohne
+Netz fällt die App sauber auf die Systemschrift zurück; wer die Schriften auch
+offline will, muss sie mit ausliefern.
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `Raumflächen-Rechner App` project files (HTML prototypes, assets, components)
+## Aufbau
+
+```
+app/                    die eigentliche App
+  index.html            Einstiegspunkt
+  app.js                UI, Geometrie- und Flächenberechnung, Export
+  styles.css            Design-Tokens und Layout
+  sw.js                 Service Worker, Cache-first für den App-Shell
+  manifest.webmanifest  Installierbarkeit auf Android
+  icons/                Launcher-Icons (192/512, normal und maskable)
+
+project/                Entwurf aus Claude Design (Referenz, nicht ausgeliefert)
+  Raumrechner.dc.html   der freigegebene Entwurf
+  HANDOFF.md            Original-Hinweise aus dem Design-Handoff
+  _ds/                  Design-System-Tokens des Entwurfs
+
+chats/                  Gesprächsverlauf aus dem Entwurf — hier steht,
+                        was gewünscht war und wo die Entscheidungen fielen
+```
+
+Die Rechenlogik steckt in `app/app.js` in `geo()` und `calc()`:
+`geo()` läuft die Wandliste ab, dreht an jeder Ecke nach links oder rechts und
+bildet daraus das Polygon (Bodenfläche über die Gaußsche Trapezformel);
+`calc()` macht daraus Umfang, Brutto-Wandfläche, Abzüge, Netto und Preis.
