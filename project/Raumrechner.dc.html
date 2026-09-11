@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/tokens/colors.css">
+<link rel="stylesheet" href="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/tokens/typography.css">
+<link rel="stylesheet" href="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/tokens/effects.css">
+<link rel="stylesheet" href="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/styles.css">
+<script src="_ds/zuhause-design-system-1f76e654-a6b6-4b91-b53c-c6d54de65251/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07080b;font-family:'Hanken Grotesk',system-ui,sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{color:#fff}
+input,select,textarea{font-family:inherit}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:36px 24px 56px;background:radial-gradient(1200px 700px at 50% -10%,#14181f,#07080b);display:flex;flex-direction:column;align-items:center;gap:26px">
+
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;max-width:560px">
+    <div style="font:600 13px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Zuhause · Entwurf</div>
+    <div style="font:600 26px/1.2 'Space Grotesk',sans-serif;color:#f7f8fa">Raumrechner</div>
+    <div style="font:400 14px/1.5 'Hanken Grotesk',sans-serif;color:#9aa0ac">Klickbarer Durchlauf aller drei Bausteine: Flächen, Grundriss, Export. Alles im Entwurf bedienbar &mdash; Werte ändern und die Zahlen rechnen mit.</div>
+  </div>
+
+  <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ isDark }}" hint-size="412px,892px">
+
+    <div style="display:flex;flex-direction:column;height:100%;background:linear-gradient(180deg,#14181f,#0a0c10);font-family:'Hanken Grotesk',sans-serif">
+
+      <div style="position:sticky;top:0;z-index:5;background:rgba(10,12,16,.92);border-bottom:1px solid rgba(255,255,255,.07);padding:14px 16px 10px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Projekt</div>
+            <div style="font:600 17px/1.2 'Space Grotesk',sans-serif;color:#f7f8fa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ projectName }}</div>
+          </div>
+          <div style="font:500 12px/1 'Space Grotesk',sans-serif;color:#8a909b;padding-top:14px;flex:none">{{ projectDate }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#0f1217;border:1px solid rgba(255,255,255,.07);border-radius:99px;padding:4px">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <button onClick="{{ t.onPick }}" style="min-height:36px;border:none;border-radius:99px;cursor:pointer;font:600 12px/1 'Hanken Grotesk',sans-serif;transition:background .2s ease,color .2s ease;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:16px 16px 28px;display:flex;flex-direction:column;gap:14px">
+
+        <!-- ═══ PROJEKT ═══ -->
+        <sc-if value="{{ isProject }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 34px rgba(0,0,0,.4);padding:20px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682;margin-bottom:14px">Summe Projekt</div>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div style="font:600 40px/1 'Space Grotesk',sans-serif;color:var(--accent)">{{ sumNetto }}</div>
+                <div style="font:500 14px/1 'Space Grotesk',sans-serif;color:#9aa0ac">m² netto Wand</div>
+              </div>
+              <div style="font:400 12px/1.4 'Hanken Grotesk',sans-serif;color:#6f7682;margin-top:5px">brutto {{ sumBrutto }} m² · Abzüge {{ sumAbzug }} m²</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">
+                <div style="background:#191c23;border-radius:15px;padding:12px 14px">
+                  <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b;margin-bottom:5px">Decke</div>
+                  <div style="font:600 18px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ sumDecke }} m²</div>
+                </div>
+                <div style="background:#191c23;border-radius:15px;padding:12px 14px">
+                  <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b;margin-bottom:5px">Räume</div>
+                  <div style="font:600 18px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ roomCount }}</div>
+                </div>
+              </div>
+              <sc-if value="{{ priceOn }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:8px;background:#191c23;border-radius:15px;padding:12px 14px">
+                  <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Summe</div>
+                  <div style="font:600 20px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ sumPreis }} €</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Räume</div>
+              <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#565d68">netto · brutto</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ roomCards }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.onOpen }}" style="width:100%;text-align:left;cursor:pointer;background:#13161d;border:1px solid {{ r.border }};border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px;min-height:64px;transition:border-color .2s ease">
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                    <div style="font:600 15px/1.2 'Hanken Grotesk',sans-serif;color:#f3f4f7">{{ r.name }}</div>
+                    <div style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">{{ r.meta }}</div>
+                  </div>
+                  <div style="text-align:right;flex:none">
+                    <div style="font:600 18px/1 'Space Grotesk',sans-serif;color:var(--accent)">{{ r.netto }}</div>
+                    <div style="font:400 11px/1 'Space Grotesk',sans-serif;color:#6f7682;margin-top:4px">{{ r.brutto }}</div>
+                  </div>
+                  <div style="font:400 18px/1 sans-serif;color:#565d68;flex:none">›</div>
+                </button>
+              </sc-for>
+            </div>
+
+            <button onClick="{{ addRoom }}" style="min-height:48px;cursor:pointer;background:transparent;border:1px dashed rgba(255,255,255,.18);border-radius:99px;color:#9aa0ac;font:600 13px/1 'Hanken Grotesk',sans-serif">+ Raum hinzufügen</button>
+          </div>
+        </sc-if>
+
+        <!-- ═══ RAUM ═══ -->
+        <sc-if value="{{ isRoom }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 34px rgba(0,0,0,.4);padding:20px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                <span style="width:7px;height:7px;border-radius:99px;background:var(--accent);animation:fdpulse 2s ease-in-out infinite"></span>
+                <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Ergebnis {{ roomName }}</div>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <div style="font:600 46px/1 'Space Grotesk',sans-serif;color:var(--accent)">{{ netto }}</div>
+                <div style="font:500 14px/1 'Space Grotesk',sans-serif;color:#9aa0ac">m² netto</div>
+              </div>
+              <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px">
+                <div style="font:400 12px/1.4 'Hanken Grotesk',sans-serif;color:#8a909b">brutto <span style="color:#dfe2e8;font-family:'Space Grotesk',sans-serif">{{ brutto }}</span> m²</div>
+                <div style="font:400 12px/1.4 'Hanken Grotesk',sans-serif;color:#8a909b">Abzüge <span style="color:#dfe2e8;font-family:'Space Grotesk',sans-serif">−{{ abzug }}</span> m²</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">
+                <div style="background:#191c23;border-radius:15px;padding:12px 14px">
+                  <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b;margin-bottom:5px">Decke</div>
+                  <div style="font:600 18px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ decke }} m²</div>
+                </div>
+                <div style="background:#191c23;border-radius:15px;padding:12px 14px">
+                  <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b;margin-bottom:5px">Boden</div>
+                  <div style="font:600 18px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ boden }} m²</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:8px;background:#191c23;border-radius:15px;padding:12px 14px">
+                <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Umfang</div>
+                <div style="font:600 16px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ umfang }} m</div>
+              </div>
+            </div>
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Raumdaten</div>
+              <label style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Bezeichnung</span>
+                <input value="{{ roomName }}" onChange="{{ onName }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 15px/1 'Hanken Grotesk',sans-serif;padding:0 14px;outline:none">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Raumhöhe in m</span>
+                <input type="number" step="0.01" value="{{ roomHeight }}" onChange="{{ onHeight }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 15px/1 'Space Grotesk',sans-serif;padding:0 14px;outline:none">
+              </label>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Anzahl Wände</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ wallCountOptions }}" as="o" hint-placeholder-count="6">
+                    <button onClick="{{ o.onPick }}" style="min-width:44px;min-height:44px;cursor:pointer;border-radius:99px;font:600 14px/1 'Space Grotesk',sans-serif;transition:background .2s ease,color .2s ease,border-color .2s ease;background:{{ o.bg }};border:1px solid {{ o.border }};color:{{ o.fg }}">{{ o.n }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Wände</div>
+                <div style="font:400 11px/1 'Hanken Grotesk',sans-serif;color:#565d68">Länge · Richtung</div>
+              </div>
+              <sc-for list="{{ walls }}" as="w" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;background:#191c23;border-radius:15px;padding:10px 12px">
+                  <div style="width:52px;flex:none">
+                    <div style="font:600 13px/1 'Hanken Grotesk',sans-serif;color:#e7e9ee">{{ w.label }}</div>
+                    <div style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#6f7682;margin-top:4px">Wand {{ w.nr }}</div>
+                  </div>
+                  <input type="number" step="0.01" value="{{ w.len }}" onChange="{{ w.onLen }}" style="flex:1;min-width:0;min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 15px/1 'Space Grotesk',sans-serif;padding:0 12px;outline:none">
+                  <div style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#6f7682;flex:none">m</div>
+                  <button onClick="{{ w.onTurn }}" title="Ecke nach links/rechts" style="width:44px;height:44px;flex:none;cursor:pointer;background:#23272f;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#dfe2e8;font:600 15px/1 sans-serif">{{ w.turnGlyph }}</button>
+                </div>
+              </sc-for>
+              <div style="font:400 11px/1.5 'Hanken Grotesk',sans-serif;color:#565d68">Die Richtung nach jeder Wand bestimmt die Raumform &mdash; für L-Form oder Erker einzelne Ecken umstellen.</div>
+            </div>
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Abzüge</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ presets }}" as="p" hint-placeholder-count="4">
+                  <button onClick="{{ p.onAdd }}" style="min-height:44px;padding:0 14px;cursor:pointer;background:#23272f;border:1px solid rgba(255,255,255,.1);border-radius:99px;color:#e7e9ee;font:600 12px/1 'Hanken Grotesk',sans-serif;transition:background .2s ease">+ {{ p.label }}</button>
+                </sc-for>
+              </div>
+              <sc-for list="{{ openings }}" as="o" hint-placeholder-count="2">
+                <div style="background:#191c23;border-radius:15px;padding:12px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="flex:1;min-width:0;font:600 13px/1.2 'Hanken Grotesk',sans-serif;color:#e7e9ee">{{ o.label }}</div>
+                    <div style="font:500 12px/1 'Space Grotesk',sans-serif;color:var(--accent)">−{{ o.area }} m²</div>
+                    <button onClick="{{ o.onRemove }}" style="width:32px;height:32px;flex:none;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#8a909b;font:400 13px/1 sans-serif">✕</button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                    <label style="display:flex;flex-direction:column;gap:5px">
+                      <span style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Breite m</span>
+                      <input type="number" step="0.01" value="{{ o.w }}" onChange="{{ o.onW }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 14px/1 'Space Grotesk',sans-serif;padding:0 10px;outline:none;min-width:0">
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:5px">
+                      <span style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Höhe m</span>
+                      <input type="number" step="0.01" value="{{ o.h }}" onChange="{{ o.onH }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 14px/1 'Space Grotesk',sans-serif;padding:0 10px;outline:none;min-width:0">
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:5px">
+                      <span style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Anzahl</span>
+                      <input type="number" step="1" value="{{ o.count }}" onChange="{{ o.onCount }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 14px/1 'Space Grotesk',sans-serif;padding:0 10px;outline:none;min-width:0">
+                    </label>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <label style="display:flex;flex-direction:column;gap:5px">
+                      <span style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Wand</span>
+                      <select value="{{ o.wall }}" onChange="{{ o.onWall }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 14px/1 'Hanken Grotesk',sans-serif;padding:0 8px;outline:none;min-width:0">
+                        <sc-for list="{{ wallOptions }}" as="wo" hint-placeholder-count="4">
+                          <option value="{{ wo.value }}">{{ wo.label }}</option>
+                        </sc-for>
+                      </select>
+                    </label>
+                    <label style="display:flex;flex-direction:column;gap:5px">
+                      <span style="font:400 10px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Abstand ab Ecke m</span>
+                      <input type="number" step="0.05" value="{{ o.offset }}" onChange="{{ o.onOffset }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 14px/1 'Space Grotesk',sans-serif;padding:0 10px;outline:none;min-width:0">
+                    </label>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noOpenings }}" hint-placeholder-val="{{ false }}">
+                <div style="font:400 12px/1.5 'Hanken Grotesk',sans-serif;color:#565d68;padding:4px 0">Noch keine Abzüge &mdash; netto entspricht brutto.</div>
+              </sc-if>
+            </div>
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Kalkulation &amp; Notizen</div>
+              <sc-if value="{{ priceOn }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <label style="display:flex;flex-direction:column;gap:6px">
+                    <span style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Preis pro m² (Wand + Decke)</span>
+                    <input type="number" step="0.1" value="{{ price }}" onChange="{{ onPrice }}" style="min-height:44px;background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:500 15px/1 'Space Grotesk',sans-serif;padding:0 14px;outline:none">
+                  </label>
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;background:#191c23;border-radius:15px;padding:12px 14px">
+                    <div style="font:400 11px/1.4 'Hanken Grotesk',sans-serif;color:#8a909b">{{ abrechnung }} m² abrechenbar</div>
+                    <div style="font:600 20px/1 'Space Grotesk',sans-serif;color:#eef0f3">{{ roomPreis }} €</div>
+                  </div>
+                </div>
+              </sc-if>
+              <label style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">Notiz</span>
+                <textarea rows="3" value="{{ note }}" onChange="{{ onNote }}" style="background:#0f1217;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f7f8fa;font:400 14px/1.5 'Hanken Grotesk',sans-serif;padding:12px 14px;outline:none;resize:vertical"></textarea>
+              </label>
+              <div style="display:flex;align-items:center;gap:12px;border:1px dashed rgba(255,255,255,.18);border-radius:15px;padding:14px;min-height:72px">
+                <div style="width:44px;height:44px;flex:none;border-radius:10px;background:#23272f;display:flex;align-items:center;justify-content:center;font:400 15px/1 sans-serif;color:#8a909b">▢</div>
+                <div style="min-width:0">
+                  <div style="font:600 13px/1.2 'Hanken Grotesk',sans-serif;color:#dfe2e8">Foto hinzufügen</div>
+                  <div style="font:400 11px/1.4 'Hanken Grotesk',sans-serif;color:#6f7682;margin-top:3px">Platzhalter &mdash; Kamera folgt im Bau</div>
+                </div>
+              </div>
+            </div>
+
+            <button onClick="{{ goPlan }}" style="min-height:48px;cursor:pointer;background:var(--accent);border:none;border-radius:99px;color:#0c0e12;font:600 14px/1 'Hanken Grotesk',sans-serif">Grundriss ansehen</button>
+          </div>
+        </sc-if>
+
+        <!-- ═══ GRUNDRISS ═══ -->
+        <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 34px rgba(0,0,0,.4);padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Grundriss {{ roomName }}</div>
+                <div style="font:500 11px/1 'Space Grotesk',sans-serif;color:#6f7682">M 1:{{ scaleLabel }}</div>
+              </div>
+
+              <div style="background:#0f1217;border:1px solid rgba(255,255,255,.07);border-radius:15px;padding:10px">
+                <svg viewBox="0 0 320 300" style="width:100%;height:auto;display:block">
+                  <g>
+                    <sc-for list="{{ planWalls }}" as="s" hint-placeholder-count="4">
+                      <line x1="{{ s.x1 }}" y1="{{ s.y1 }}" x2="{{ s.x2 }}" y2="{{ s.y2 }}" stroke="#5b6472" stroke-width="7" stroke-linecap="square"></line>
+                    </sc-for>
+                    <sc-for list="{{ planOpenings }}" as="o" hint-placeholder-count="2">
+                      <line x1="{{ o.x1 }}" y1="{{ o.y1 }}" x2="{{ o.x2 }}" y2="{{ o.y2 }}" stroke="{{ o.color }}" stroke-width="7" stroke-linecap="butt"></line>
+                    </sc-for>
+                    <sc-for list="{{ planLabels }}" as="l" hint-placeholder-count="4">
+                      <text x="{{ l.x }}" y="{{ l.y }}" text-anchor="middle" dominant-baseline="middle" fill="#9aa0ac" style="font:500 11px 'Space Grotesk',sans-serif">{{ l.text }}</text>
+                    </sc-for>
+                    <text x="{{ centroidX }}" y="{{ centroidY }}" text-anchor="middle" dominant-baseline="middle" fill="#dfe2e8" style="font:600 14px 'Space Grotesk',sans-serif">{{ boden }} m²</text>
+                  </g>
+                </svg>
+              </div>
+
+              <sc-if value="{{ notClosed }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;background:#191c23;border:1px solid rgba(233,180,76,.35);border-radius:15px;padding:12px 14px">
+                  <span style="width:7px;height:7px;flex:none;border-radius:99px;background:#E9B44C"></span>
+                  <div style="font:400 12px/1.4 'Hanken Grotesk',sans-serif;color:#dfe2e8">Umriss nicht geschlossen &mdash; Längen oder Ecken anpassen. Flächen werden trotzdem gerechnet.</div>
+                </div>
+              </sc-if>
+
+              <div style="display:flex;gap:14px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:7px;font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b"><span style="width:14px;height:4px;background:#5BA8F0;border-radius:2px"></span>Fenster</div>
+                <div style="display:flex;align-items:center;gap:7px;font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b"><span style="width:14px;height:4px;background:#5BD6A0;border-radius:2px"></span>Tür</div>
+                <div style="display:flex;align-items:center;gap:7px;font:400 11px/1 'Hanken Grotesk',sans-serif;color:#8a909b"><span style="width:14px;height:4px;background:#6f7682;border-radius:2px"></span>Fläche</div>
+              </div>
+            </div>
+
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:10px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Wandliste</div>
+              <sc-for list="{{ wallRows }}" as="w" hint-placeholder-count="4">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(255,255,255,.07);padding:9px 0">
+                  <div style="font:500 13px/1 'Hanken Grotesk',sans-serif;color:#e7e9ee">{{ w.label }}</div>
+                  <div style="font:400 12px/1 'Hanken Grotesk',sans-serif;color:#8a909b">{{ w.detail }}</div>
+                  <div style="font:600 13px/1 'Space Grotesk',sans-serif;color:#f3f4f7">{{ w.area }} m²</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <button onClick="{{ goRoom }}" style="min-height:48px;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:99px;color:#dfe2e8;font:600 13px/1 'Hanken Grotesk',sans-serif">Maße bearbeiten</button>
+          </div>
+        </sc-if>
+
+        <!-- ═══ EXPORT ═══ -->
+        <sc-if value="{{ isExport }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="background:#13161d;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682">Export</div>
+              <div style="font:400 13px/1.5 'Hanken Grotesk',sans-serif;color:#9aa0ac">Ein Angebotsblatt pro Projekt mit Datum und Gesamtsumme, je Raum eine Zeile mit Grundriss. Excel als Tabelle mit Abzügen im Detail.</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button onClick="{{ onPdf }}" style="min-height:48px;cursor:pointer;background:var(--accent);border:none;border-radius:99px;color:#0c0e12;font:600 14px/1 'Hanken Grotesk',sans-serif">PDF-Angebot</button>
+                <button onClick="{{ onCsv }}" style="min-height:48px;cursor:pointer;background:#23272f;border:1px solid rgba(255,255,255,.1);border-radius:99px;color:#f3f4f7;font:600 14px/1 'Hanken Grotesk',sans-serif">Excel / CSV herunterladen</button>
+              </div>
+              <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+                <div style="font:400 12px/1.5 'Hanken Grotesk',sans-serif;color:var(--accent)">{{ toastText }}</div>
+              </sc-if>
+            </div>
+
+            <div style="font:600 11px/1 'Hanken Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6f7682;padding:0 4px">Vorschau Angebotsblatt</div>
+
+            <div style="background:#fff;border-radius:8px;box-shadow:0 10px 34px rgba(0,0,0,.5);padding:22px 20px;display:flex;flex-direction:column;gap:16px;color:#1a1d22">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:2px solid #1a1d22;padding-bottom:12px">
+                <div>
+                  <div style="font:600 16px/1.2 'Space Grotesk',sans-serif">Flächenaufstellung</div>
+                  <div style="font:400 11px/1.4 'Hanken Grotesk',sans-serif;color:#5a6070;margin-top:4px">{{ projectName }}</div>
+                </div>
+                <div style="font:500 11px/1.4 'Space Grotesk',sans-serif;color:#5a6070;text-align:right;flex:none">{{ projectDate }}</div>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <div style="display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr;gap:6px;font:600 9px/1.2 'Hanken Grotesk',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8b91a0;border-bottom:1px solid #dcdfe6;padding-bottom:6px">
+                  <div>Raum</div><div style="text-align:right">Brutto</div><div style="text-align:right">Netto</div><div style="text-align:right">Decke</div>
+                </div>
+                <sc-for list="{{ sheetRows }}" as="s" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr;gap:6px;border-bottom:1px solid #eceef2;padding:8px 0;align-items:baseline">
+                    <div style="font:500 11px/1.3 'Hanken Grotesk',sans-serif">{{ s.name }}</div>
+                    <div style="text-align:right;font:400 11px/1.3 'Space Grotesk',sans-serif;color:#5a6070">{{ s.brutto }}</div>
+                    <div style="text-align:right;font:600 11px/1.3 'Space Grotesk',sans-serif">{{ s.netto }}</div>
+                    <div style="text-align:right;font:400 11px/1.3 'Space Grotesk',sans-serif;color:#5a6070">{{ s.decke }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-top:2px solid #1a1d22;padding-top:12px">
+                <div style="font:600 11px/1.2 'Hanken Grotesk',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5a6070">Gesamtsumme</div>
+                <div style="font:600 20px/1 'Space Grotesk',sans-serif">{{ sumPreis }} €</div>
+              </div>
+              <div style="font:400 9px/1.5 'Hanken Grotesk',sans-serif;color:#8b91a0">Netto = Brutto-Wandfläche abzüglich Fenster, Türen und freier Flächen. Alle Maße in Metern, Flächen in m².</div>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </x-import>
+
+  <div style="max-width:480px;font:400 12px/1.6 'Hanken Grotesk',sans-serif;color:#565d68;text-align:center">Offene Punkte: Foto-Aufnahme, echter PDF-Druck, Speichern auf dem Gerät und Presets zum Selbstanlegen sind im Entwurf nur angedeutet.</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:560,&quot;height&quot;:1100},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;amber&quot;,&quot;emerald&quot;,&quot;azure&quot;],&quot;default&quot;:&quot;amber&quot;,&quot;tsType&quot;:&quot;'amber'|'emerald'|'azure'&quot;},&quot;priceEnabled&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Funktionen&quot;}}">
+const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
+const DIRNAME = ['Nord','Ost','Süd','West'];
+const PRESETS = [
+  {key:'fenster', label:'Fenster', w:1.20, h:1.30, color:'#5BA8F0'},
+  {key:'tuer', label:'Zimmertür', w:0.885, h:2.01, color:'#5BD6A0'},
+  {key:'terrasse', label:'Terrassentür', w:1.00, h:2.10, color:'#5BD6A0'},
+  {key:'frei', label:'Freie Fläche', w:1.00, h:1.00, color:'#6f7682'},
+];
+let uid = 100;
+const nid = () => ++uid;
+const nf = (v, d = 2) => (isFinite(v) ? v : 0).toLocaleString('de-DE', {minimumFractionDigits: d, maximumFractionDigits: d});
+
+function mkRoom(name, lens, height) {
+  return {
+    id: nid(), name, height,
+    walls: lens.map(l => ({id: nid(), len: l, turn: 'r'})),
+    openings: [], note: '', price: 12.5,
+  };
+}
+
+class Component extends DCLogic {
+  state = {
+    tab: 'projekt',
+    projectName: 'Neubau Musterstraße 14',
+    projectDate: '11.09.2026',
+    activeId: null,
+    toast: '',
+    rooms: [
+      (() => { const r = mkRoom('Wohnzimmer', [5.20, 4.10, 5.20, 4.10], 2.55);
+        r.openings = [
+          {id: nid(), key: 'fenster', label: 'Fenster', w: 1.40, h: 1.35, count: 2, wall: 0, offset: 0.80, color: '#5BA8F0'},
+          {id: nid(), key: 'terrasse', label: 'Terrassentür', w: 1.80, h: 2.10, count: 1, wall: 1, offset: 1.20, color: '#5BD6A0'},
+          {id: nid(), key: 'tuer', label: 'Zimmertür', w: 0.885, h: 2.01, count: 1, wall: 2, offset: 0.60, color: '#5BD6A0'},
+        ]; return r; })(),
+      mkRoom('Schlafzimmer', [4.00, 3.40, 4.00, 3.40], 2.55),
+      mkRoom('Flur', [3.60, 1.30, 3.60, 1.30], 2.55),
+    ],
+  };
+
+  componentDidMount() { this.applyAccent(); }
+  componentDidUpdate() { this.applyAccent(); }
+  applyAccent() {
+    const a = this.props.accent || 'amber';
+    document.documentElement.style.setProperty('--accent', 'var(--accent-' + a + ')');
+  }
+
+  // ─── data helpers ───
+  room() {
+    const rs = this.state.rooms;
+    return rs.find(r => r.id === this.state.activeId) || rs[0];
+  }
+  patchRoom(fn) {
+    const id = this.room().id;
+    this.setState(s => ({rooms: s.rooms.map(r => r.id === id ? fn({...r}) : r)}));
+  }
+  num(e, fallback) { const v = parseFloat(String(e.target.value).replace(',', '.')); return isFinite(v) ? v : fallback; }
+
+  // ─── geometry ───
+  geo(room) {
+    let x = 0, y = 0, d = 0;
+    const segs = [];
+    room.walls.forEach((w, i) => {
+      const [dx, dy] = DIRS[d];
+      const len = Math.max(0, w.len || 0);
+      const seg = {x1: x, y1: y, x2: x + dx * len, y2: y + dy * len, len, dir: d, nr: i + 1, label: DIRNAME[d], wall: w};
+      segs.push(seg);
+      x = seg.x2; y = seg.y2;
+      d = (d + (w.turn === 'l' ? 3 : 1)) % 4;
+    });
+    let a = 0;
+    for (let i = 0; i < segs.length; i++) { const p = segs[i], q = segs[(i + 1) % segs.length]; a += p.x1 * q.x1 * 0; }
+    const pts = segs.map(s => [s.x1, s.y1]);
+    let sh = 0;
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; sh += p[0] * q[1] - q[0] * p[1]; }
+    const floor = Math.abs(sh) / 2;
+    const closed = segs.length > 0 && Math.abs(x) < 0.02 && Math.abs(y) < 0.02;
+    return {segs, floor, closed};
+  }
+
+  calc(room) {
+    const g = this.geo(room);
+    const umfang = g.segs.reduce((s, w) => s + w.len, 0);
+    const brutto = umfang * (room.height || 0);
+    const abzug = room.openings.reduce((s, o) => s + (o.w || 0) * (o.h || 0) * (o.count || 0), 0);
+    const netto = Math.max(0, brutto - abzug);
+    const decke = g.floor;
+    const abrechnung = netto + decke;
+    return {g, umfang, brutto, abzug, netto, decke, boden: g.floor, abrechnung, preis: abrechnung * (room.price || 0)};
+  }
+
+  // ─── plan projection ───
+  plan(room, calc) {
+    const segs = calc.g.segs;
+    const xs = segs.flatMap(s => [s.x1, s.x2]), ys = segs.flatMap(s => [s.y1, s.y2]);
+    const minX = Math.min(...xs, 0), maxX = Math.max(...xs, 0);
+    const minY = Math.min(...ys, 0), maxY = Math.max(...ys, 0);
+    const w = Math.max(0.5, maxX - minX), h = Math.max(0.5, maxY - minY);
+    const pad = 40, W = 320, H = 300;
+    const k = Math.min((W - pad * 2) / w, (H - pad * 2) / h);
+    const ox = (W - w * k) / 2 - minX * k, oy = (H - h * k) / 2 - minY * k;
+    const px = v => ox + v * k, py = v => oy + v * k;
+
+    const planWalls = segs.map(s => ({x1: px(s.x1), y1: py(s.y1), x2: px(s.x2), y2: py(s.y2)}));
+    const planOpenings = [];
+    room.openings.forEach(o => {
+      const s = segs[o.wall];
+      if (!s || !s.len) return;
+      const [dx, dy] = DIRS[s.dir];
+      const n = Math.max(1, o.count || 1);
+      for (let i = 0; i < n; i++) {
+        const a = Math.min(s.len, (o.offset || 0) + i * ((o.w || 0) + 0.4));
+        const b = Math.min(s.len, a + (o.w || 0));
+        if (b <= a) continue;
+        planOpenings.push({
+          x1: px(s.x1 + dx * a), y1: py(s.y1 + dy * a),
+          x2: px(s.x1 + dx * b), y2: py(s.y1 + dy * b),
+          color: o.color || '#6f7682',
+        });
+      }
+    });
+    const planLabels = segs.map(s => {
+      const off = 18;
+      const nx = s.dir === 1 ? off : s.dir === 3 ? -off : 0;
+      const ny = s.dir === 0 ? -off : s.dir === 2 ? off : 0;
+      return {x: px((s.x1 + s.x2) / 2) + nx, y: py((s.y1 + s.y2) / 2) + ny, text: nf(s.len) + ' m'};
+    });
+    const cx = segs.length ? px(segs.reduce((a, s) => a + (s.x1 + s.x2) / 2, 0) / segs.length) : 160;
+    const cy = segs.length ? py(segs.reduce((a, s) => a + (s.y1 + s.y2) / 2, 0) / segs.length) : 150;
+    return {planWalls, planOpenings, planLabels, cx, cy, scale: Math.round(100 / (k / 100) / 10) * 10 || 50};
+  }
+
+  // ─── export ───
+  csv() {
+    const sep = ';';
+    const lines = [['Raum', 'Hoehe m', 'Umfang m', 'Brutto m2', 'Abzuege m2', 'Netto m2', 'Decke m2', 'Boden m2', 'Preis/m2', 'Summe EUR'].join(sep)];
+    this.state.rooms.forEach(r => {
+      const c = this.calc(r);
+      lines.push([r.name, nf(r.height), nf(c.umfang), nf(c.brutto), nf(c.abzug), nf(c.netto), nf(c.decke), nf(c.boden), nf(r.price), nf(c.preis)].join(sep));
+      r.openings.forEach(o => lines.push(['  Abzug: ' + o.label, '', '', nf(o.w) + ' x ' + nf(o.h), 'Anzahl ' + o.count, nf(o.w * o.h * o.count), '', '', '', ''].join(sep)));
+    });
+    const t = this.totals();
+    lines.push(['Summe', '', '', nf(t.brutto), nf(t.abzug), nf(t.netto), nf(t.decke), '', '', nf(t.preis)].join(sep));
+    const blob = new Blob(['\ufeff' + lines.join('\n')], {type: 'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Flaechen_' + this.state.projectName.replace(/[^\w]+/g, '_') + '.csv';
+    a.click();
+    this.flash('CSV heruntergeladen — in Excel mit Semikolon-Trennung öffnen.');
+  }
+  flash(msg) { this.setState({toast: msg}); clearTimeout(this._t); this._t = setTimeout(() => this.setState({toast: ''}), 4000); }
+  totals() {
+    return this.state.rooms.reduce((a, r) => {
+      const c = this.calc(r);
+      return {brutto: a.brutto + c.brutto, netto: a.netto + c.netto, abzug: a.abzug + c.abzug, decke: a.decke + c.decke, preis: a.preis + c.preis};
+    }, {brutto: 0, netto: 0, abzug: 0, decke: 0, preis: 0});
+  }
+
+  renderVals() {
+    const priceOn = this.props.priceEnabled !== false;
+    const room = this.room();
+    const c = this.calc(room);
+    const p = this.plan(room, c);
+    const t = this.totals();
+    const tab = this.state.tab;
+    const go = k => () => this.setState({tab: k});
+
+    const tabs = [['projekt', 'Projekt'], ['raum', 'Raum'], ['plan', 'Grundriss'], ['export', 'Export']].map(([k, label]) => ({
+      label, onPick: go(k),
+      bg: tab === k ? 'var(--accent)' : 'transparent',
+      fg: tab === k ? '#0c0e12' : '#9aa0ac',
+    }));
+
+    return {
+      isDark: true, priceOn, tabs,
+      isProject: tab === 'projekt', isRoom: tab === 'raum', isPlan: tab === 'plan', isExport: tab === 'export',
+      projectName: this.state.projectName, projectDate: this.state.projectDate,
+      toast: !!this.state.toast, toastText: this.state.toast,
+
+      // project
+      sumNetto: nf(t.netto, 1), sumBrutto: nf(t.brutto, 1), sumAbzug: nf(t.abzug, 1),
+      sumDecke: nf(t.decke, 1), sumPreis: nf(t.preis), roomCount: this.state.rooms.length,
+      roomCards: this.state.rooms.map(r => {
+        const rc = this.calc(r);
+        return {
+          name: r.name, netto: nf(rc.netto, 1), brutto: nf(rc.brutto, 1) + ' m² brutto',
+          meta: r.walls.length + ' Wände · ' + nf(r.height) + ' m hoch · ' + r.openings.length + ' Abzüge',
+          border: r.id === room.id ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.07)',
+          onOpen: () => this.setState({activeId: r.id, tab: 'raum'}),
+        };
+      }),
+      addRoom: () => {
+        const r = mkRoom('Raum ' + (this.state.rooms.length + 1), [4.00, 3.00, 4.00, 3.00], room.height);
+        this.setState(s => ({rooms: [...s.rooms, r], activeId: r.id, tab: 'raum'}));
+      },
+
+      // room
+      roomName: room.name, roomHeight: room.height, note: room.note, price: room.price,
+      netto: nf(c.netto, 1), brutto: nf(c.brutto, 1), abzug: nf(c.abzug, 1),
+      decke: nf(c.decke, 1), boden: nf(c.boden, 1), umfang: nf(c.umfang), 
+      abrechnung: nf(c.abrechnung, 1), roomPreis: nf(c.preis),
+      onName: e => { const v = e.target.value; this.patchRoom(r => ({...r, name: v})); },
+      onHeight: e => { const v = this.num(e, room.height); this.patchRoom(r => ({...r, height: v})); },
+      onNote: e => { const v = e.target.value; this.patchRoom(r => ({...r, note: v})); },
+      onPrice: e => { const v = this.num(e, room.price); this.patchRoom(r => ({...r, price: v})); },
+      goPlan: go('plan'), goRoom: go('raum'),
+
+      wallCountOptions: [3, 4, 5, 6, 7, 8].map(n => ({
+        n, bg: room.walls.length === n ? 'var(--accent)' : '#23272f',
+        border: room.walls.length === n ? 'var(--accent)' : 'rgba(255,255,255,.1)',
+        fg: room.walls.length === n ? '#0c0e12' : '#e7e9ee',
+        onPick: () => this.patchRoom(r => {
+          const ws = r.walls.slice(0, n);
+          while (ws.length < n) ws.push({id: nid(), len: 2.00, turn: 'r'});
+          return {...r, walls: ws, openings: r.openings.map(o => ({...o, wall: Math.min(o.wall, n - 1)}))};
+        }),
+      })),
+
+      walls: c.g.segs.map((s, i) => ({
+        nr: s.nr, label: s.label, len: s.wall.len,
+        turnGlyph: s.wall.turn === 'l' ? '↰' : '↱',
+        onLen: e => { const v = this.num(e, s.wall.len); this.patchRoom(r => ({...r, walls: r.walls.map((w, j) => j === i ? {...w, len: v} : w)})); },
+        onTurn: () => this.patchRoom(r => ({...r, walls: r.walls.map((w, j) => j === i ? {...w, turn: w.turn === 'l' ? 'r' : 'l'} : w)})),
+      })),
+      wallOptions: c.g.segs.map((s, i) => ({value: i, label: s.label + ' (' + s.nr + ')'})),
+      wallRows: c.g.segs.map(s => ({
+        label: s.label + ' · Wand ' + s.nr,
+        detail: nf(s.len) + ' × ' + nf(room.height) + ' m',
+        area: nf(s.len * room.height, 1),
+      })),
+
+      presets: PRESETS.map(pr => ({
+        label: pr.label,
+        onAdd: () => this.patchRoom(r => ({...r, openings: [...r.openings, {id: nid(), key: pr.key, label: pr.label, w: pr.w, h: pr.h, count: 1, wall: 0, offset: 0.50, color: pr.color}]})),
+      })),
+      noOpenings: room.openings.length === 0,
+      openings: room.openings.map((o, i) => {
+        const patch = upd => this.patchRoom(r => ({...r, openings: r.openings.map((x, j) => j === i ? {...x, ...upd} : x)}));
+        return {
+          label: o.label, w: o.w, h: o.h, count: o.count, wall: o.wall, offset: o.offset,
+          area: nf(o.w * o.h * o.count),
+          onW: e => patch({w: this.num(e, o.w)}),
+          onH: e => patch({h: this.num(e, o.h)}),
+          onCount: e => patch({count: Math.max(1, Math.round(this.num(e, o.count)))}),
+          onWall: e => patch({wall: parseInt(e.target.value, 10) || 0}),
+          onOffset: e => patch({offset: this.num(e, o.offset)}),
+          onRemove: () => this.patchRoom(r => ({...r, openings: r.openings.filter((x, j) => j !== i)})),
+        };
+      }),
+
+      // plan
+      planWalls: p.planWalls, planOpenings: p.planOpenings, planLabels: p.planLabels,
+      centroidX: p.cx, centroidY: p.cy, scaleLabel: p.scale,
+      notClosed: !c.g.closed,
+
+      // export
+      onPdf: () => this.flash('PDF-Layout ist im Entwurf nur Vorschau — echter Druck kommt mit dem Export-Schritt.'),
+      onCsv: () => this.csv(),
+      sheetRows: this.state.rooms.map(r => {
+        const rc = this.calc(r);
+        return {name: r.name, brutto: nf(rc.brutto, 1), netto: nf(rc.netto, 1), decke: nf(rc.decke, 1)};
+      }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

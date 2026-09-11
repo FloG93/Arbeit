@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root{
+  --font-ui: 'Hanken Grotesk', system-ui, sans-serif;      /* body copy, labels, buttons */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;  /* numerals, clocks, headings, data */
+
+  /* Display / numeric scale (Space Grotesk) */
+  --text-display-xl: 600 clamp(40px,5vw,58px)/1 var(--font-display);   /* hero stat, e.g. current kW */
+  --text-display-lg: 500 clamp(34px,4vw,46px)/1 var(--font-display);   /* clock, weather temp */
+  --text-display-md: 600 clamp(26px,3.4vw,38px)/1.05 var(--font-display); /* H1 greeting */
+  --text-display-sm: 600 19px/1.2 var(--font-display);                 /* dialog titles, subtotals */
+  --text-num-md: 600 14px var(--font-display);                         /* tabular numbers in rows */
+
+  /* UI scale (Hanken Grotesk) */
+  --text-body: 500 15px var(--font-ui);
+  --text-ui-strong: 600 15px var(--font-ui);
+  --text-label: 600 14px var(--font-ui);       /* buttons, tabs */
+  --text-caption: 500 13px var(--font-ui);     /* secondary row text */
+  --text-caption-strong: 600 13px var(--font-ui);
+  --text-micro: 500 12px var(--font-ui);       /* meta text */
+  --text-micro-strong: 600 12px var(--font-ui);
+  --text-eyebrow: 600 13px var(--font-ui);     /* uppercase section labels */
+  --eyebrow-tracking: .1em;                    /* .14em for the very top page eyebrow */
+
+  font-variant-numeric: tabular-nums; /* apply wherever live numbers tick (clocks, kWh, %) */
+}

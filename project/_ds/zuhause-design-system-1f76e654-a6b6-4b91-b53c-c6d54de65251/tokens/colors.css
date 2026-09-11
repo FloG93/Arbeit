@@ -1,0 +1,51 @@
+:root{
+  /* ---- Surfaces ---- */
+  --surface-app-1: #14181f;
+  --surface-app-2: #0a0c10;
+  --surface-card: #13161d;
+  --surface-tile: #191c23;
+  --surface-input: #0f1217;
+  --surface-dialog: #15181f;
+  --surface-control: #23272f;
+  --surface-control-alt: #20242c;
+  --surface-track: #23272f;
+  --surface-track-off: #2a2f39;
+
+  /* ---- Borders ---- */
+  --border-subtle: rgba(255,255,255,.07);
+  --border-medium: rgba(255,255,255,.1);
+  --border-strong: rgba(255,255,255,.14);
+  --border-dashed: rgba(255,255,255,.18);
+
+  /* ---- Text ---- */
+  --text-primary: #f7f8fa;
+  --text-primary-2: #f3f4f7;
+  --text-secondary: #eef0f3;
+  --text-secondary-2: #dfe2e8;
+  --text-secondary-3: #e7e9ee;
+  --text-tertiary: #9aa0ac;
+  --text-tertiary-2: #8a909b;
+  --text-muted: #6f7682;
+  --text-muted-2: #565d68;
+  --text-on-accent: #0c0e12;
+
+  /* ---- Accent (tweakable brand color, 3 curated options) ---- */
+  --accent-amber: #E9B44C;
+  --accent-emerald: #5BD6A0;
+  --accent-azure: #5BA8F0;
+  --accent: var(--accent-amber);
+
+  /* ---- Semantic status ---- */
+  --status-positive: #5BD6A0;
+  --status-info: #5BA8F0;
+  --status-warning: #E9B44C;
+  --status-danger: #f06363;
+  --status-neutral-dot: #4a5160;
+
+  /* ---- People (avatar identity colors) ---- */
+  --person-a: #E6A0C4;
+  --person-f: #74AEEF;
+
+  /* ---- Scrollbar ---- */
+  --scrollbar-thumb: #2a2f39;
+}

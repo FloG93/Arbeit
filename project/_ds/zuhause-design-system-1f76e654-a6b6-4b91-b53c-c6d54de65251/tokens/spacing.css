@@ -1,0 +1,21 @@
+:root{
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 20px;
+  --space-11: 22px;
+  --space-12: 24px;
+
+  --card-padding: var(--space-12);      /* 24px — standard section card padding */
+  --card-gap: var(--space-9);           /* 18px — gap between top-level sections */
+  --tile-padding: 15px;                 /* room/socket tiles */
+  --tile-gap: var(--space-6);           /* 12px */
+  --control-min-height: 44px;           /* minimum tap target for any button/control */
+  --page-max-width: 1480px;
+}
