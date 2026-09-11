@@ -36,8 +36,17 @@ App im Vollbild und rechnet auch ohne Netz weiter.
 | Speicherung auf dem Gerät (localStorage) | fertig |
 | Excel-/CSV-Export mit Abzügen im Detail | fertig |
 | Angebotsblatt als Vorschau | fertig |
-| **PDF-Druck** | Attrappe — Button zeigt nur einen Hinweis |
-| **Foto pro Raum** | Attrappe — Kamera noch nicht angebunden |
+| PDF-Angebot: Deckblatt + eine Seite je Raum mit Grundriss und Fotos | fertig |
+| Fotos pro Raum: Kamera und Galerie, Vollbild-Ansicht | fertig |
+
+Das PDF entsteht über den Druckdialog des Browsers („Als PDF speichern"), nicht
+über eine mitgelieferte Bibliothek — das ist der einzige Weg, der auf Android
+und am Rechner gleich funktioniert.
+
+Fotos werden beim Aufnehmen auf max. 1600 px verkleinert. Das Vollbild liegt in
+IndexedDB, in localStorage steht nur ein kleines Vorschaubild: ein paar Dutzend
+Baustellenfotos als base64 würden sonst das ~5-MB-Limit sprengen und das ganze
+Projekt am Speichern hindern.
 
 Die Schriften (Hanken Grotesk, Space Grotesk) kommen von Google Fonts. Ohne
 Netz fällt die App sauber auf die Systemschrift zurück; wer die Schriften auch

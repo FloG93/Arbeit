@@ -33,7 +33,7 @@ function mkRoom(name, lens, height) {
   return {
     id: nid(), name, height,
     walls: lens.map(l => ({ id: nid(), len: l, turn: 'r' })),
-    openings: [], note: '', price: 12.5,
+    openings: [], photos: [], note: '', price: 12.5,
   };
 }
 
@@ -64,6 +64,7 @@ function loadState() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.rooms) || !parsed.rooms.length) return null;
+    parsed.rooms = parsed.rooms.map(r => ({ ...r, photos: Array.isArray(r.photos) ? r.photos : [] }));
     return parsed;
   } catch {
     return null;
@@ -72,9 +73,17 @@ function loadState() {
 
 let state = loadState() || defaultState();
 let flashTimer = null;
+let storageFailed = false;
 
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* storage unavailable — keep running in-memory */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    storageFailed = false;
+  } catch {
+    // Quota or private mode: the app keeps running in memory, but the user
+    // needs to know the project is no longer being kept.
+    storageFailed = true;
+  }
 }
 
 function setState(updater) {
@@ -215,9 +224,297 @@ function exportCsv() {
   flash('CSV heruntergeladen — in Excel mit Semikolon-Trennung öffnen.');
 }
 
-function exportPdf() {
-  flash('PDF-Druck kommt in einem späteren Schritt.');
+/* PDF comes out of the browser's own print-to-PDF: no library to ship, and
+ * it is the one route that works the same on Android Chrome and desktop.
+ * The sheet is built into #print-root, which only @media print reveals. */
+async function exportPdf() {
+  const btnLabel = 'Angebot wird aufbereitet …';
+  flash(btnLabel);
+
+  // window.print() is synchronous, so every photo has to be resolved out of
+  // IndexedDB and fully decoded before the dialog opens — otherwise the PDF
+  // gets blank boxes where the pictures should be.
+  const photoUrls = new Map();
+  for (const r of state.rooms) {
+    for (const ph of (r.photos || [])) {
+      photoUrls.set(ph.id, (await getPhoto(ph.id)) || ph.thumb);
+    }
+  }
+
+  const root = document.getElementById('print-root');
+  if (!root) { flash('Druckbereich fehlt — bitte Seite neu laden.'); return; }
+  root.innerHTML = '';
+  root.appendChild(buildPrintSheet(photoUrls));
+
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await Promise.all(Array.from(root.querySelectorAll('img')).map(img =>
+    img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })
+  ));
+
+  window.print();
+  flash('Im Druckdialog „Als PDF speichern" wählen.');
 }
+
+function printTile(label, value) {
+  return el('div', { class: 'p-tile' }, [
+    el('div', { class: 'p-tile-label' }, label),
+    el('div', { class: 'p-tile-value' }, value),
+  ]);
+}
+
+function printRow(cells, cls) {
+  return el('div', { class: 'p-row' + (cls ? ' ' + cls : '') }, cells.map(c => el('div', {}, c)));
+}
+
+function buildPrintSheet(photoUrls) {
+  const t = totals();
+
+  const cover = el('section', { class: 'p-page' }, [
+    el('header', { class: 'p-head' }, [
+      el('div', {}, [
+        el('div', { class: 'p-title' }, 'Flächenaufstellung'),
+        el('div', { class: 'p-project' }, state.projectName),
+      ]),
+      el('div', { class: 'p-date' }, state.projectDate),
+    ]),
+    el('div', { class: 'p-tiles' }, [
+      printTile('Netto-Wandfläche', nf(t.netto, 1) + ' m²'),
+      printTile('Brutto-Wandfläche', nf(t.brutto, 1) + ' m²'),
+      printTile('Deckenfläche', nf(t.decke, 1) + ' m²'),
+      printTile('Räume', String(state.rooms.length)),
+    ]),
+    el('div', { class: 'p-table' }, [
+      printRow(['Raum', 'Brutto m²', 'Abzüge m²', 'Netto m²', 'Decke m²', 'Summe €'], 'p-row-head'),
+      ...state.rooms.map(r => {
+        const c = calc(r);
+        return printRow([r.name, nf(c.brutto, 1), nf(c.abzug, 1), nf(c.netto, 1), nf(c.decke, 1), nf(c.preis)]);
+      }),
+      printRow(['Gesamt', nf(t.brutto, 1), nf(t.abzug, 1), nf(t.netto, 1), nf(t.decke, 1), nf(t.preis)], 'p-row-sum'),
+    ]),
+    el('div', { class: 'p-total' }, [
+      el('div', { class: 'k' }, 'Gesamtsumme'),
+      el('div', { class: 'v' }, nf(t.preis) + ' €'),
+    ]),
+    el('p', { class: 'p-legal' }, 'Netto = Brutto-Wandfläche abzüglich Fenster, Türen und freier Flächen. Abgerechnet werden Netto-Wandfläche und Deckenfläche. Alle Maße in Metern, Flächen in m². Angebot freibleibend.'),
+  ]);
+
+  const roomPages = state.rooms.map(room => {
+    const c = calc(room);
+    const p = plan(room, c);
+
+    const masse = el('div', { class: 'p-table p-table-tight' }, [
+      printRow(['Kennzahl', 'Wert'], 'p-row-head'),
+      printRow(['Raumhöhe', nf(room.height) + ' m']),
+      printRow(['Umfang', nf(c.umfang) + ' m']),
+      printRow(['Brutto-Wandfläche', nf(c.brutto, 2) + ' m²']),
+      printRow(['Abzüge', '− ' + nf(c.abzug, 2) + ' m²']),
+      printRow(['Netto-Wandfläche', nf(c.netto, 2) + ' m²'], 'p-row-sum'),
+      printRow(['Deckenfläche', nf(c.decke, 2) + ' m²']),
+      printRow(['Bodenfläche', nf(c.boden, 2) + ' m²']),
+      printRow(['Abrechenbar (Wand + Decke)', nf(c.abrechnung, 2) + ' m²']),
+      printRow(['Preis pro m²', nf(room.price) + ' €']),
+      printRow(['Summe', nf(c.preis) + ' €'], 'p-row-sum'),
+    ]);
+
+    const walls = el('div', { class: 'p-table p-table-tight' }, [
+      printRow(['Wand', 'Länge × Höhe', 'Fläche'], 'p-row-head'),
+      ...c.g.segs.map(sg => printRow([
+        sg.label + ' · Wand ' + sg.nr,
+        nf(sg.len) + ' × ' + nf(room.height) + ' m',
+        nf(sg.len * room.height, 2) + ' m²',
+      ])),
+    ]);
+
+    const openings = room.openings.length
+      ? el('div', { class: 'p-table p-table-tight' }, [
+          printRow(['Abzug', 'Maß', 'Anzahl', 'Fläche'], 'p-row-head'),
+          ...room.openings.map(o => printRow([
+            o.label,
+            nf(o.w) + ' × ' + nf(o.h) + ' m',
+            String(o.count),
+            nf((o.w || 0) * (o.h || 0) * (o.count || 0), 2) + ' m²',
+          ])),
+        ])
+      : el('p', { class: 'p-note' }, 'Keine Abzüge — netto entspricht brutto.');
+
+    const photos = (room.photos || []).filter(ph => photoUrls.get(ph.id));
+
+    return el('section', { class: 'p-page' }, [
+      el('header', { class: 'p-head p-head-room' }, [
+        el('div', {}, [
+          el('div', { class: 'p-eyebrow' }, state.projectName),
+          el('div', { class: 'p-title' }, room.name),
+        ]),
+        el('div', { class: 'p-date' }, nf(c.netto, 1) + ' m² netto'),
+      ]),
+      el('div', { class: 'p-two-col' }, [
+        el('div', {}, [el('div', { class: 'p-sub' }, 'Maße und Kalkulation'), masse]),
+        el('div', {}, [
+          el('div', { class: 'p-sub' }, 'Grundriss · M 1:' + p.scale),
+          el('div', { class: 'p-plan' }, [planSvg(room, c, p, 'print')]),
+          el('div', { class: 'p-legend' }, [
+            el('span', {}, [el('i', { style: { background: '#5BA8F0' } }), 'Fenster']),
+            el('span', {}, [el('i', { style: { background: '#5BD6A0' } }), 'Tür']),
+            el('span', {}, [el('i', { style: { background: '#6f7682' } }), 'Fläche']),
+          ]),
+        ]),
+      ]),
+      el('div', { class: 'p-sub' }, 'Wände'),
+      walls,
+      el('div', { class: 'p-sub' }, 'Abzüge'),
+      openings,
+      room.note ? el('div', {}, [el('div', { class: 'p-sub' }, 'Notiz'), el('p', { class: 'p-note' }, room.note)]) : null,
+      photos.length ? el('div', {}, [
+        el('div', { class: 'p-sub' }, 'Fotos'),
+        el('div', { class: 'p-photos' }, photos.map(ph =>
+          el('img', { src: photoUrls.get(ph.id), alt: 'Foto ' + room.name })
+        )),
+      ]) : null,
+    ]);
+  });
+
+  return el('div', { class: 'p-doc' }, [cover, ...roomPages]);
+}
+
+/* ─── photos ─── */
+
+/* Full-size photos live in IndexedDB; localStorage keeps only the small
+ * thumbnails. A handful of site photos as base64 would otherwise blow the
+ * ~5 MB localStorage quota and take the whole project down with it. */
+
+const PHOTO_DB = 'raumrechner';
+const PHOTO_STORE = 'photos';
+const photoCache = new Map();
+let photoDbPromise = null;
+
+function photoDb() {
+  if (photoDbPromise) return photoDbPromise;
+  photoDbPromise = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) { reject(new Error('IndexedDB nicht verfügbar')); return; }
+    const req = indexedDB.open(PHOTO_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('IndexedDB konnte nicht geöffnet werden'));
+  }).catch(err => { photoDbPromise = null; throw err; });
+  return photoDbPromise;
+}
+
+function photoTx(mode, fn) {
+  return photoDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, mode);
+    const req = fn(tx.objectStore(PHOTO_STORE));
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Transaktion fehlgeschlagen'));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+async function putPhoto(id, dataUrl) {
+  photoCache.set(id, dataUrl);
+  try { await photoTx('readwrite', st => st.put(dataUrl, id)); return true; }
+  catch { return false; }
+}
+
+async function getPhoto(id) {
+  if (photoCache.has(id)) return photoCache.get(id);
+  try {
+    const v = await photoTx('readonly', st => st.get(id));
+    if (v) photoCache.set(id, v);
+    return v || null;
+  } catch { return null; }
+}
+
+async function dropPhoto(id) {
+  photoCache.delete(id);
+  try { await photoTx('readwrite', st => st.delete(id)); } catch { /* best effort */ }
+}
+
+/* Decode via createImageBitmap where available so EXIF-rotated phone photos
+ * come out upright; fall back to an <img> for older browsers. */
+function decodeImage(file) {
+  if ('createImageBitmap' in window) {
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => decodeViaImg(file));
+  }
+  return decodeViaImg(file);
+}
+
+function decodeViaImg(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Bild konnte nicht gelesen werden'));
+      img.src = fr.result;
+    };
+    fr.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'));
+    fr.readAsDataURL(file);
+  });
+}
+
+function resizeToDataUrl(src, maxEdge, quality) {
+  const sw = src.naturalWidth || src.width;
+  const sh = src.naturalHeight || src.height;
+  const k = Math.min(1, maxEdge / Math.max(sw, sh));
+  const w = Math.max(1, Math.round(sw * k));
+  const h = Math.max(1, Math.round(sh * k));
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  cv.getContext('2d').drawImage(src, 0, 0, w, h);
+  return { url: cv.toDataURL('image/jpeg', quality), w, h };
+}
+
+async function addPhotos(roomId, fileList) {
+  const files = Array.from(fileList || []).filter(f => f && f.type && f.type.startsWith('image/'));
+  if (!files.length) return;
+  flash(files.length === 1 ? 'Foto wird verarbeitet …' : files.length + ' Fotos werden verarbeitet …');
+
+  const added = [];
+  let allPersisted = true;
+  for (const file of files) {
+    try {
+      const bmp = await decodeImage(file);
+      const full = resizeToDataUrl(bmp, 1600, 0.75);
+      const thumb = resizeToDataUrl(bmp, 240, 0.6);
+      if (bmp.close) bmp.close();
+      const id = 'p' + nid();
+      if (!(await putPhoto(id, full.url))) allPersisted = false;
+      added.push({ id, thumb: thumb.url, w: full.w, h: full.h });
+    } catch {
+      allPersisted = false;
+    }
+  }
+
+  if (!added.length) { flash('Foto konnte nicht verarbeitet werden.'); return; }
+  setState(s => ({
+    rooms: s.rooms.map(r => (r.id === roomId ? { ...r, photos: [...(r.photos || []), ...added] } : r)),
+  }));
+  flash(allPersisted
+    ? (added.length === 1 ? 'Foto hinzugefügt.' : added.length + ' Fotos hinzugefügt.')
+    : 'Foto übernommen — konnte aber nicht dauerhaft gespeichert werden.');
+}
+
+function removePhoto(roomId, photoId) {
+  dropPhoto(photoId);
+  setState(s => ({
+    rooms: s.rooms.map(r => (r.id === roomId ? { ...r, photos: (r.photos || []).filter(p => p.id !== photoId) } : r)),
+  }));
+}
+
+let lightbox = null;
+
+function openLightbox(photo) {
+  lightbox = { id: photo.id, url: photo.thumb };
+  render();
+  getPhoto(photo.id).then(url => {
+    if (lightbox && lightbox.id === photo.id && url) { lightbox.url = url; render(); }
+  });
+}
+
+function closeLightbox() { lightbox = null; render(); }
 
 /* ─── DOM helpers ─── */
 
@@ -317,6 +614,10 @@ function renderProjektView() {
   );
 
   return el('div', { class: 'view' }, [
+    storageFailed ? el('div', { class: 'warn-box' }, [
+      el('span', { class: 'dot' }),
+      el('div', { class: 'msg' }, 'Projekt konnte nicht auf dem Gerät gespeichert werden — Speicher voll oder privater Modus.'),
+    ]) : null,
     hero,
     el('div', { class: 'section-head' }, [el('div', { class: 'card-title' }, 'Räume'), el('div', { class: 'hint' }, 'netto · brutto')]),
     list,
@@ -449,13 +750,7 @@ function renderRaumView() {
         el('span', { class: 'field-label' }, 'Notiz'),
         el('textarea', { class: 'input', rows: 3, value: room.note, onChange: e => patchRoom(r => ({ ...r, note: e.target.value })) }),
       ]),
-      el('div', { class: 'photo-drop' }, [
-        el('div', { class: 'icon' }, '▢'),
-        el('div', {}, [
-          el('div', { class: 'title' }, 'Foto hinzufügen'),
-          el('div', { class: 'sub' }, 'Platzhalter — Kamera folgt in einem späteren Schritt.'),
-        ]),
-      ]),
+      renderPhotos(room),
     ]),
   ]);
 
@@ -465,29 +760,104 @@ function renderRaumView() {
   ]);
 }
 
+/* Draws the floor plan for one room. The print sheet reuses this with a
+ * light palette so the PDF shows the same geometry on white paper. */
+function planSvg(room, c, p, theme) {
+  const col = theme === 'print'
+    ? { wall: '#464e5b', label: '#5c636e', area: '#1b1f27' }
+    : { wall: '#5b6472', label: '#9aa0ac', area: '#dfe2e8' };
+
+  const group = svgEl('g', {}, [
+    ...p.planWalls.map(s => svgEl('line', { x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2, stroke: col.wall, 'stroke-width': 7, 'stroke-linecap': 'square' })),
+    ...p.planOpenings.map(o => svgEl('line', { x1: o.x1, y1: o.y1, x2: o.x2, y2: o.y2, stroke: o.color, 'stroke-width': 7, 'stroke-linecap': 'butt' })),
+    ...p.planLabels.map(l => {
+      const t = svgEl('text', { x: l.x, y: l.y, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: col.label });
+      t.style.font = "500 11px 'Space Grotesk',sans-serif";
+      t.textContent = l.text;
+      return t;
+    }),
+    (() => {
+      const t = svgEl('text', { x: p.cx, y: p.cy, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: col.area });
+      t.style.font = "600 14px 'Space Grotesk',sans-serif";
+      t.textContent = nf(c.boden, 1) + ' m²';
+      return t;
+    })(),
+  ]);
+  return svgEl('svg', { viewBox: '0 0 320 300' }, [group]);
+}
+
+/* Camera and gallery are separate inputs on purpose: Android sends
+ * capture="environment" straight to the camera and ignores multiple, so a
+ * single combined button would make picking existing photos impossible.
+ *
+ * Both inputs are created once and kept in the document. Picking a photo can
+ * take a while, and a re-render in the meantime would detach an input built
+ * per render — the file would then land on an orphaned element. */
+const photoInputs = {};
+let photoTargetRoom = null;
+
+function photoInput(capture) {
+  const key = capture ? 'cam' : 'gallery';
+  if (photoInputs[key]) return photoInputs[key];
+  const input = el('input', {
+    type: 'file', accept: 'image/*', multiple: !capture,
+    style: { display: 'none' },
+    onChange: e => {
+      // Copy first: e.target.files is live, so resetting value would empty
+      // the very list being handed on (and the input has to be reset so the
+      // same photo can be picked twice in a row).
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      if (photoTargetRoom != null && files.length) addPhotos(photoTargetRoom, files);
+    },
+  });
+  if (capture) input.setAttribute('capture', 'environment');
+  document.body.appendChild(input);
+  photoInputs[key] = input;
+  return input;
+}
+
+function pickPhotos(roomId, capture) {
+  photoTargetRoom = roomId;
+  photoInput(capture).click();
+}
+
+function renderPhotos(room) {
+  const photos = room.photos || [];
+
+  return el('div', { class: 'photo-block' }, [
+    el('div', { class: 'field-label' }, 'Fotos'),
+    el('div', { class: 'photo-actions' }, [
+      el('button', { class: 'btn btn-outline', onClick: () => pickPhotos(room.id, true) }, 'Foto aufnehmen'),
+      el('button', { class: 'btn btn-ghost', onClick: () => pickPhotos(room.id, false) }, 'Aus Galerie'),
+    ]),
+    photos.length
+      ? el('div', { class: 'photo-grid' }, photos.map(ph => el('div', { class: 'photo-thumb' }, [
+          el('img', { src: ph.thumb, alt: 'Foto ' + room.name, loading: 'lazy', onClick: () => openLightbox(ph) }),
+          el('button', {
+            class: 'photo-del', title: 'Foto entfernen', 'aria-label': 'Foto entfernen',
+            onClick: () => removePhoto(room.id, ph.id),
+          }, '✕'),
+        ])))
+      : el('div', { class: 'empty-note' }, 'Noch keine Fotos — sie erscheinen im PDF unter dem Raum.'),
+  ]);
+}
+
+function renderLightbox() {
+  if (!lightbox) return null;
+  return el('div', { class: 'lightbox', onClick: closeLightbox }, [
+    el('img', { src: lightbox.url, alt: 'Foto' }),
+    el('button', { class: 'lightbox-close', 'aria-label': 'Schließen' }, '✕'),
+  ]);
+}
+
 function renderPlanView() {
   const room = getActiveRoom();
   if (!room) return el('div', { class: 'view' }, 'Kein Raum ausgewählt.');
   const c = calc(room);
   const p = plan(room, c);
 
-  const svgGroup = svgEl('g', {}, [
-    ...p.planWalls.map(s => svgEl('line', { x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2, stroke: '#5b6472', 'stroke-width': 7, 'stroke-linecap': 'square' })),
-    ...p.planOpenings.map(o => svgEl('line', { x1: o.x1, y1: o.y1, x2: o.x2, y2: o.y2, stroke: o.color, 'stroke-width': 7, 'stroke-linecap': 'butt' })),
-    ...p.planLabels.map(l => {
-      const t = svgEl('text', { x: l.x, y: l.y, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#9aa0ac' });
-      t.style.font = "500 11px 'Space Grotesk',sans-serif";
-      t.textContent = l.text;
-      return t;
-    }),
-    (() => {
-      const t = svgEl('text', { x: p.cx, y: p.cy, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: '#dfe2e8' });
-      t.style.font = "600 14px 'Space Grotesk',sans-serif";
-      t.textContent = nf(c.boden, 1) + ' m²';
-      return t;
-    })(),
-  ]);
-  const svg = svgEl('svg', { viewBox: '0 0 320 300' }, [svgGroup]);
+  const svg = planSvg(room, c, p, 'screen');
 
   const hero = el('div', { class: 'card hero' }, [
     el('div', { class: 'card-row' }, [
@@ -582,9 +952,21 @@ function render() {
   root.innerHTML = '';
   root.appendChild(renderHeader());
   root.appendChild(el('div', { class: 'content' }, [currentView()]));
+  const lb = renderLightbox();
+  if (lb) root.appendChild(lb);
 }
 
 render();
+
+/* Free the print DOM (base64 photos are heavy on a phone) once the dialog is
+ * gone — but deferred: Chromium fires afterprint around the capture itself,
+ * and clearing synchronously can empty the sheet before it is serialised. */
+window.addEventListener('afterprint', () => {
+  setTimeout(() => {
+    const root = document.getElementById('print-root');
+    if (root) root.innerHTML = '';
+  }, 2000);
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
