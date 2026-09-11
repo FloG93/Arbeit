@@ -1,0 +1,458 @@
+(function () {
+  const U = Poster.util;
+  const api = Poster.api;
+
+  const els = {
+    searchForm: document.getElementById('search-form'),
+    searchInput: document.getElementById('search-input'),
+    searchStatus: document.getElementById('search-status'),
+    searchResults: document.getElementById('search-results'),
+    manualBtn: document.getElementById('manual-btn'),
+
+    spotifyId: document.getElementById('spotify-id'),
+    spotifySecret: document.getElementById('spotify-secret'),
+    spotifySave: document.getElementById('spotify-save'),
+    spotifyClear: document.getElementById('spotify-clear'),
+    spotifyStatus: document.getElementById('spotify-status'),
+
+    editorFields: document.getElementById('editor-fields'),
+    stylePicker: document.getElementById('style-picker'),
+    fieldTitle: document.getElementById('field-title'),
+    fieldArtist: document.getElementById('field-artist'),
+    fieldSubtitle: document.getElementById('field-subtitle'),
+    coverPreview: document.getElementById('cover-preview'),
+    coverUpload: document.getElementById('cover-upload'),
+    codePicker: document.getElementById('code-picker'),
+    codeHint: document.getElementById('code-hint'),
+    paletteRow: document.getElementById('palette-row'),
+    accentCustom: document.getElementById('accent-custom'),
+    sizePicker: document.getElementById('size-picker'),
+    exportPng: document.getElementById('export-png'),
+    exportPdf: document.getElementById('export-pdf'),
+    exportStatus: document.getElementById('export-status'),
+
+    posterCanvas: document.getElementById('poster-canvas'),
+    previewStage: document.getElementById('preview-stage'),
+    toggleBtns: document.querySelectorAll('.toggle-btn'),
+  };
+
+  const PREVIEW_W = 720;
+  const PREVIEW_H = Math.round(PREVIEW_W * Math.SQRT2);
+
+  const model = {
+    title: '', artist: '', subtitle: '', duration: '',
+    coverImg: null,
+    accent: '#1db954', palette: [],
+    style: 'minimal',
+    codeType: 'qr',
+    spotifyUri: null,
+    appleUrl: null,
+    size: 'A4',
+  };
+  let codeGeneration = 0;
+  let renderTimer = null;
+
+  function placeholderCover() {
+    const c = document.createElement('canvas');
+    c.width = 600; c.height = 600;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 600, 600);
+    g.addColorStop(0, '#2a2d34');
+    g.addColorStop(1, '#12141a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 600, 600);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(230, 380, 46, 0, Math.PI * 2);
+    ctx.arc(400, 340, 46, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(266, 160, 14, 224);
+    ctx.fillRect(436, 120, 14, 224);
+    ctx.fillRect(266, 160, 184, 14);
+    const img = new Image();
+    img.src = c.toDataURL('image/png');
+    return img;
+  }
+
+  async function loadFonts() {
+    const specs = [
+      '400 16px "Hanken Grotesk"', '700 16px "Hanken Grotesk"',
+      '400 16px "Space Grotesk"', '700 16px "Space Grotesk"',
+      '400 16px "Abril Fatface"',
+      '400 16px "Vollkorn"', '700 16px "Vollkorn"',
+      '400 16px "Anton"',
+      '400 16px "Special Elite"',
+    ];
+    await Promise.all(specs.map((s) => document.fonts.load(s).catch(() => {})));
+    try { await document.fonts.ready; } catch (e) { /* older browsers */ }
+  }
+
+  function setStatus(el, text, kind) {
+    el.textContent = text || '';
+    el.dataset.kind = kind || '';
+  }
+
+  // --- Search -------------------------------------------------------------
+
+  function searchEntity() {
+    const el = els.searchForm.querySelector('input[name="search-entity"]:checked');
+    return el ? el.value : 'song';
+  }
+
+  async function doSearch(term) {
+    if (!term.trim()) return;
+    setStatus(els.searchStatus, 'Suche läuft…');
+    els.searchResults.innerHTML = '';
+    try {
+      const { results, source } = await api.search(term.trim(), searchEntity());
+      renderResults(results);
+      setStatus(
+        els.searchStatus,
+        results.length
+          ? results.length + ' Treffer (' + (source === 'spotify' ? 'Spotify' : 'iTunes') + ')'
+          : 'Keine Treffer.'
+      );
+    } catch (e) {
+      console.error(e);
+      setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + e.message, 'error');
+    }
+  }
+
+  function renderResults(results) {
+    els.searchResults.innerHTML = '';
+    results.forEach((r) => {
+      const li = document.createElement('li');
+      li.className = 'result-item';
+      li.tabIndex = 0;
+      li.innerHTML =
+        '<img src="' + (r.coverUrl || '') + '" alt="" loading="lazy">' +
+        '<span class="result-text">' +
+        '<strong>' + escapeHtml(r.title) + '</strong>' +
+        '<span>' + escapeHtml(r.artist) + '</span>' +
+        '</span>' +
+        '<span class="result-badge">' + (r.type === 'album' ? 'Album' : 'Song') + '</span>';
+      li.addEventListener('click', () => selectResult(r));
+      li.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectResult(r); }
+      });
+      els.searchResults.appendChild(li);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  async function selectResult(r) {
+    model.title = r.title || '';
+    model.artist = r.artist || '';
+    model.duration = U.formatDuration(r.durationMs);
+    model.subtitle = [r.type === 'track' ? r.albumName : '', r.year].filter(Boolean).join(' · ');
+    model.spotifyUri = r.spotifyUri || null;
+    model.appleUrl = r.appleUrl || null;
+
+    syncFieldsFromModel();
+    els.editorFields.hidden = false;
+
+    await loadCover(r);
+    updatePaletteUI();
+
+    if (!model.spotifyUri && api.Spotify.isConfigured()) {
+      api.Spotify.resolveUri(model.artist, model.title, r.type).then((uri) => {
+        if (uri) { model.spotifyUri = uri; updateCodeOptionsUI(); prepareCodeAssets(); }
+      });
+    }
+    updateCodeOptionsUI();
+    prepareCodeAssets();
+  }
+
+  async function loadCover(r) {
+    const candidates = [r.coverUrlHigh, r.coverUrl].filter(Boolean);
+    for (const url of candidates) {
+      try {
+        const img = await U.loadImage(url, 'anonymous');
+        applyCover(img);
+        return;
+      } catch (e) { /* try next candidate */ }
+    }
+    setStatus(els.exportStatus, 'Cover wird über MusicBrainz gesucht…');
+    const mbUrl = await api.findCoverViaMusicBrainz(model.artist, model.title);
+    if (mbUrl) {
+      try {
+        const img = await U.loadImage(mbUrl, 'anonymous');
+        applyCover(img);
+        setStatus(els.exportStatus, '');
+        return;
+      } catch (e) { /* fall through to placeholder */ }
+    }
+    applyCover(placeholderCover());
+    setStatus(els.exportStatus, 'Kein Cover gefunden — bitte manuell hochladen.', 'error');
+  }
+
+  function applyCover(img) {
+    model.coverImg = img;
+    els.coverPreview.src = img.src;
+    const { accent, palette } = Poster.color.extractPalette(img);
+    model.accent = accent;
+    model.palette = palette;
+    els.accentCustom.value = accent;
+    updatePaletteUI();
+    scheduleRender();
+  }
+
+  els.coverUpload.addEventListener('change', () => {
+    const file = els.coverUpload.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      U.loadImage(reader.result).then(applyCover);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  els.manualBtn.addEventListener('click', () => {
+    model.title = model.title || 'Songtitel';
+    model.artist = model.artist || 'Künstler:in';
+    model.subtitle = model.subtitle || '';
+    if (!model.coverImg) applyCover(placeholderCover());
+    syncFieldsFromModel();
+    els.editorFields.hidden = false;
+    updateCodeOptionsUI();
+    prepareCodeAssets();
+  });
+
+  // --- Editor fields --------------------------------------------------------
+
+  function syncFieldsFromModel() {
+    els.fieldTitle.value = model.title;
+    els.fieldArtist.value = model.artist;
+    els.fieldSubtitle.value = model.subtitle;
+    [...els.sizePicker.querySelectorAll('input')].forEach((i) => { i.checked = i.value === model.size; });
+    [...els.stylePicker.querySelectorAll('input')].forEach((i) => { i.checked = i.value === model.style; });
+  }
+
+  els.fieldTitle.addEventListener('input', () => { model.title = els.fieldTitle.value; scheduleRender(); });
+  els.fieldArtist.addEventListener('input', () => { model.artist = els.fieldArtist.value; scheduleRender(); });
+  els.fieldSubtitle.addEventListener('input', () => { model.subtitle = els.fieldSubtitle.value; scheduleRender(); });
+
+  els.stylePicker.addEventListener('change', (e) => {
+    if (e.target.name !== 'style') return;
+    model.style = e.target.value;
+    scheduleRender();
+  });
+
+  els.sizePicker.addEventListener('change', (e) => {
+    if (e.target.name !== 'size') return;
+    model.size = e.target.value;
+  });
+
+  function updatePaletteUI() {
+    els.paletteRow.innerHTML = '';
+    model.palette.forEach((hex) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch-btn';
+      b.style.background = hex;
+      b.title = hex;
+      if (hex.toLowerCase() === model.accent.toLowerCase()) b.classList.add('active');
+      b.addEventListener('click', () => {
+        model.accent = hex;
+        els.accentCustom.value = hex;
+        [...els.paletteRow.children].forEach((c) => c.classList.remove('active'));
+        b.classList.add('active');
+        prepareCodeAssets();
+      });
+      els.paletteRow.appendChild(b);
+    });
+  }
+
+  els.accentCustom.addEventListener('input', () => {
+    model.accent = els.accentCustom.value;
+    [...els.paletteRow.children].forEach((c) => c.classList.remove('active'));
+    prepareCodeAssets();
+  });
+
+  function updateCodeOptionsUI() {
+    const spotifyRadio = els.codePicker.querySelector('input[value="spotify"]');
+    spotifyRadio.disabled = !model.spotifyUri;
+    if (!model.spotifyUri && model.codeType === 'spotify') {
+      model.codeType = 'qr';
+      els.codePicker.querySelector('input[value="qr"]').checked = true;
+    }
+    setStatus(
+      els.codeHint,
+      model.spotifyUri
+        ? 'Echter, scanbarer Spotify-Code verfügbar.'
+        : 'Kein Spotify-Code auflösbar — QR-Code verlinkt zum Song.'
+    );
+  }
+
+  els.codePicker.addEventListener('change', (e) => {
+    if (e.target.name !== 'codeType') return;
+    model.codeType = e.target.value;
+    prepareCodeAssets();
+  });
+
+  // --- Spotify credentials --------------------------------------------------
+
+  (function initSpotifyPanel() {
+    const creds = api.Spotify.getCreds();
+    if (creds) {
+      els.spotifyId.value = creds.id || '';
+      setStatus(els.spotifyStatus, 'Gespeicherte Zugangsdaten aktiv.');
+    }
+  })();
+
+  els.spotifySave.addEventListener('click', async () => {
+    const id = els.spotifyId.value.trim();
+    const secret = els.spotifySecret.value.trim();
+    if (!id || !secret) {
+      setStatus(els.spotifyStatus, 'Bitte Client-ID und Client-Secret eingeben.', 'error');
+      return;
+    }
+    api.Spotify.setCreds(id, secret);
+    setStatus(els.spotifyStatus, 'Verbinde…');
+    try {
+      await api.Spotify.getToken();
+      setStatus(els.spotifyStatus, 'Verbunden — Spotify ist jetzt Hauptquelle für Suche & Code.');
+      els.spotifySecret.value = '';
+    } catch (e) {
+      setStatus(els.spotifyStatus, e.message + ' — App nutzt weiterhin iTunes/QR-Code.', 'error');
+    }
+  });
+
+  els.spotifyClear.addEventListener('click', () => {
+    api.Spotify.clearCreds();
+    els.spotifyId.value = '';
+    els.spotifySecret.value = '';
+    setStatus(els.spotifyStatus, 'Zugangsdaten entfernt.');
+  });
+
+  // --- Code asset resolution (Spotify scannable code vs. QR fallback) -------
+
+  function qrTargetUrl() {
+    if (model.spotifyUri) {
+      const parts = model.spotifyUri.split(':');
+      return 'https://open.spotify.com/' + parts[1] + '/' + parts[2];
+    }
+    if (model.appleUrl) return model.appleUrl;
+    return 'https://open.spotify.com/search/' + encodeURIComponent((model.artist + ' ' + model.title).trim() || 'music');
+  }
+
+  async function prepareCodeAssets() {
+    const gen = ++codeGeneration;
+    model._effectiveCodeType = model.codeType;
+    model._spotifyCodeImg = null;
+    model.qrTargetUrl = qrTargetUrl();
+
+    if (model.codeType === 'spotify' && model.spotifyUri) {
+      const bgLight = U.relativeLuminance(...Object.values(U.hexToRgb(model.accent))) > 0.5;
+      const url = api.Spotify.scannableUrl(model.spotifyUri, {
+        bg: model.accent,
+        codeColor: bgLight ? 'black' : 'white',
+      });
+      try {
+        const img = await U.loadImage(url, 'anonymous');
+        if (gen !== codeGeneration) return;
+        model._spotifyCodeImg = img;
+      } catch (e) {
+        if (gen !== codeGeneration) return;
+        model._effectiveCodeType = 'qr';
+        setStatus(els.codeHint, 'Spotify-Code aktuell nicht ladbar — QR-Code verwendet.', 'error');
+      }
+    }
+    if (gen !== codeGeneration) return;
+    buildDrawCode();
+    scheduleRender();
+  }
+
+  function buildDrawCode() {
+    if (model._effectiveCodeType === 'none') {
+      model.drawCode = null;
+      return;
+    }
+    if (model._effectiveCodeType === 'spotify' && model._spotifyCodeImg) {
+      const img = model._spotifyCodeImg;
+      model.drawCode = function (ctx, x, y, maxW, maxH) {
+        const scale = Math.min(maxW / img.width, maxH / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, x, y, w, h);
+        return { w, h };
+      };
+      return;
+    }
+    const target = model.qrTargetUrl;
+    model.drawCode = function (ctx, x, y, maxW, maxH) {
+      const size = Math.min(maxW, maxH);
+      return Poster.qr.drawQR(ctx, target, x, y, size, { dark: '#111111', light: '#ffffff' });
+    };
+  }
+
+  // --- Preview render ---------------------------------------------------------
+
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 90);
+  }
+
+  function render() {
+    if (!model.coverImg) return;
+    const canvas = els.posterCanvas;
+    if (canvas.width !== PREVIEW_W || canvas.height !== PREVIEW_H) {
+      canvas.width = PREVIEW_W;
+      canvas.height = PREVIEW_H;
+    }
+    const ctx = canvas.getContext('2d');
+    const styleModule = Poster.styles[model.style] || Poster.styles.minimal;
+    styleModule.draw(ctx, PREVIEW_W, PREVIEW_H, model);
+  }
+
+  // --- Preview mode toggle (poster / framed wall) -----------------------------
+
+  els.toggleBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      els.toggleBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      els.previewStage.classList.toggle('mode-wall', btn.dataset.mode === 'wall');
+      els.previewStage.classList.toggle('mode-poster', btn.dataset.mode === 'poster');
+    });
+  });
+
+  // --- Export -----------------------------------------------------------------
+
+  els.exportPng.addEventListener('click', async () => {
+    if (!model.coverImg) return;
+    setStatus(els.exportStatus, 'PNG wird erstellt (kann bei A2 etwas dauern)…');
+    try {
+      await Poster.exportPoster.exportPNG(model, model.size);
+      setStatus(els.exportStatus, 'PNG exportiert.');
+    } catch (e) {
+      console.error(e);
+      setStatus(els.exportStatus, 'Export fehlgeschlagen: ' + e.message, 'error');
+    }
+  });
+
+  els.exportPdf.addEventListener('click', async () => {
+    if (!model.coverImg) return;
+    setStatus(els.exportStatus, 'PDF wird erstellt (kann bei A2 etwas dauern)…');
+    try {
+      await Poster.exportPoster.exportPDF(model, model.size);
+      setStatus(els.exportStatus, 'PDF exportiert.');
+    } catch (e) {
+      console.error(e);
+      setStatus(els.exportStatus, 'Export fehlgeschlagen: ' + e.message, 'error');
+    }
+  });
+
+  // --- Init ---------------------------------------------------------------
+
+  els.searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    doSearch(els.searchInput.value);
+  });
+
+  loadFonts().then(() => {
+    buildDrawCode();
+    if (model.coverImg) render();
+  });
+})();
