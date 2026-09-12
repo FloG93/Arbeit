@@ -20,6 +20,12 @@
     fieldTitle: document.getElementById('field-title'),
     fieldArtist: document.getElementById('field-artist'),
     fieldSubtitle: document.getElementById('field-subtitle'),
+    fieldTracks: document.getElementById('field-tracks'),
+    tracksStatus: document.getElementById('tracks-status'),
+    fieldRelease: document.getElementById('field-release'),
+    fieldLength: document.getElementById('field-length'),
+    fieldLabel: document.getElementById('field-label'),
+    fieldExplicit: document.getElementById('field-explicit'),
     coverPreview: document.getElementById('cover-preview'),
     coverUpload: document.getElementById('cover-upload'),
     codePicker: document.getElementById('code-picker'),
@@ -40,16 +46,19 @@
   const PREVIEW_H = Math.round(PREVIEW_W * Math.SQRT2);
 
   const model = {
-    title: '', artist: '', subtitle: '', duration: '',
+    title: '', artist: '', subtitle: '', albumName: '', duration: '',
+    tracks: [], releaseDate: '', label: '', totalLength: '', year: '',
+    showExplicit: false,
     coverImg: null,
     accent: '#1db954', palette: [],
-    style: 'minimal',
+    style: 'tracklist',
     codeType: 'qr',
     spotifyUri: null,
     appleUrl: null,
     size: 'A4',
   };
   let codeGeneration = 0;
+  let detailGeneration = 0;
   let renderTimer = null;
 
   function placeholderCover() {
@@ -146,13 +155,21 @@
   async function selectResult(r) {
     model.title = r.title || '';
     model.artist = r.artist || '';
+    model.albumName = r.albumName || r.title || '';
     model.duration = U.formatDuration(r.durationMs);
     model.subtitle = [r.type === 'track' ? r.albumName : '', r.year].filter(Boolean).join(' · ');
+    model.year = r.year || '';
+    model.releaseDate = U.formatDateDE(r.releaseDate) || r.year || '';
+    model.showExplicit = !!r.explicit;
+    model.tracks = [];
+    model.totalLength = '';
+    model.label = '';
     model.spotifyUri = r.spotifyUri || null;
     model.appleUrl = r.appleUrl || null;
 
     syncFieldsFromModel();
     els.editorFields.hidden = false;
+    loadAlbumDetails(r);
 
     await loadCover(r);
     updatePaletteUI();
@@ -164,6 +181,31 @@
     }
     updateCodeOptionsUI();
     prepareCodeAssets();
+  }
+
+  // Tracklist und Albumangaben kommen erst nach der Auswahl — die Suche liefert sie nicht mit.
+  async function loadAlbumDetails(r) {
+    const gen = ++detailGeneration;
+    setStatus(els.tracksStatus, 'Tracklist wird geladen…');
+    try {
+      const details = await api.fetchAlbumDetails(r);
+      if (gen !== detailGeneration) return;
+      if (!details || !details.tracks.length) {
+        setStatus(els.tracksStatus, 'Keine Tracklist gefunden — Titel hier von Hand eintragen.', 'error');
+        return;
+      }
+      model.tracks = details.tracks.map((t) => t.name);
+      model.totalLength = U.formatDuration(details.tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0));
+      model.releaseDate = U.formatDateDE(details.releaseDate) || model.releaseDate;
+      model.label = details.label || '';
+      if (details.explicit) model.showExplicit = true;
+      syncFieldsFromModel();
+      setStatus(els.tracksStatus, details.tracks.length + ' Titel geladen.');
+      scheduleRender();
+    } catch (e) {
+      if (gen !== detailGeneration) return;
+      setStatus(els.tracksStatus, 'Tracklist nicht ladbar: ' + e.message, 'error');
+    }
   }
 
   async function loadCover(r) {
@@ -217,6 +259,7 @@
     if (!model.coverImg) applyCover(placeholderCover());
     syncFieldsFromModel();
     els.editorFields.hidden = false;
+    updateTrackHint();
     updateCodeOptionsUI();
     prepareCodeAssets();
   });
@@ -227,6 +270,11 @@
     els.fieldTitle.value = model.title;
     els.fieldArtist.value = model.artist;
     els.fieldSubtitle.value = model.subtitle;
+    els.fieldTracks.value = model.tracks.join('\n');
+    els.fieldRelease.value = model.releaseDate;
+    els.fieldLength.value = model.totalLength || model.duration;
+    els.fieldLabel.value = model.label;
+    els.fieldExplicit.checked = model.showExplicit;
     [...els.sizePicker.querySelectorAll('input')].forEach((i) => { i.checked = i.value === model.size; });
     [...els.stylePicker.querySelectorAll('input')].forEach((i) => { i.checked = i.value === model.style; });
   }
@@ -234,12 +282,32 @@
   els.fieldTitle.addEventListener('input', () => { model.title = els.fieldTitle.value; scheduleRender(); });
   els.fieldArtist.addEventListener('input', () => { model.artist = els.fieldArtist.value; scheduleRender(); });
   els.fieldSubtitle.addEventListener('input', () => { model.subtitle = els.fieldSubtitle.value; scheduleRender(); });
+  els.fieldRelease.addEventListener('input', () => { model.releaseDate = els.fieldRelease.value; scheduleRender(); });
+  els.fieldLength.addEventListener('input', () => { model.totalLength = els.fieldLength.value; scheduleRender(); });
+  els.fieldLabel.addEventListener('input', () => { model.label = els.fieldLabel.value; scheduleRender(); });
+  els.fieldExplicit.addEventListener('change', () => {
+    model.showExplicit = els.fieldExplicit.checked;
+    scheduleRender();
+  });
+  els.fieldTracks.addEventListener('input', () => {
+    model.tracks = els.fieldTracks.value.split('\n').map((l) => l.trim()).filter(Boolean);
+    scheduleRender();
+  });
 
   els.stylePicker.addEventListener('change', (e) => {
     if (e.target.name !== 'style') return;
     model.style = e.target.value;
+    updateTrackHint();
     scheduleRender();
   });
+
+  // Manche Layouts leben von der Tracklist — ohne sie bleibt dort eine Lücke.
+  function updateTrackHint() {
+    const styleModule = Poster.styles[model.style];
+    if (styleModule && styleModule.needsTracks && !model.tracks.length) {
+      setStatus(els.tracksStatus, 'Dieser Stil zeigt eine Tracklist — bitte Titel eintragen oder einen Treffer wählen.', 'error');
+    }
+  }
 
   els.sizePicker.addEventListener('change', (e) => {
     if (e.target.name !== 'size') return;
@@ -371,21 +439,31 @@
       model.drawCode = null;
       return;
     }
+    // Der Spotify-Code ist ein breiter Streifen, der QR-Code quadratisch. Beide
+    // füllen die zugewiesene Box also unterschiedlich — daher die Ausrichtung.
     if (model._effectiveCodeType === 'spotify' && model._spotifyCodeImg) {
       const img = model._spotifyCodeImg;
-      model.drawCode = function (ctx, x, y, maxW, maxH) {
+      model.drawCode = function (ctx, x, y, maxW, maxH, align) {
         const scale = Math.min(maxW / img.width, maxH / img.height);
         const w = img.width * scale, h = img.height * scale;
-        ctx.drawImage(img, x, y, w, h);
+        ctx.drawImage(img, anchor(x, maxW, w, align), y, w, h);
         return { w, h };
       };
       return;
     }
     const target = model.qrTargetUrl;
-    model.drawCode = function (ctx, x, y, maxW, maxH) {
+    model.drawCode = function (ctx, x, y, maxW, maxH, align) {
       const size = Math.min(maxW, maxH);
-      return Poster.qr.drawQR(ctx, target, x, y, size, { dark: '#111111', light: '#ffffff' });
+      return Poster.qr.drawQR(ctx, target, anchor(x, maxW, size, align), y, size, {
+        dark: '#111111', light: '#ffffff',
+      });
     };
+  }
+
+  function anchor(x, boxW, drawnW, align) {
+    if (align === 'right') return x + boxW - drawnW;
+    if (align === 'center') return x + (boxW - drawnW) / 2;
+    return x;
   }
 
   // --- Preview render ---------------------------------------------------------

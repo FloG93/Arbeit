@@ -153,7 +153,7 @@ details.block summary{
 }
 .search-type label{display:flex;align-items:center;gap:5px;cursor:pointer;}
 
-input[type="text"],input[type="password"],input[type="search"]{
+input[type="text"],input[type="password"],input[type="search"],textarea{
   background:var(--panel-2);
   border:1px solid var(--border);
   color:var(--text);
@@ -163,9 +163,23 @@ input[type="text"],input[type="password"],input[type="search"]{
   font-family:inherit;
   width:100%;
 }
-input[type="text"]:focus,input[type="password"]:focus{
+input[type="text"]:focus,input[type="password"]:focus,textarea:focus{
   outline:2px solid var(--accent);
   outline-offset:1px;
+}
+textarea{
+  resize:vertical;
+  line-height:1.45;
+  min-height:88px;
+}
+.check-field{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.82rem;
+  color:var(--text-dim);
+  margin-bottom:12px;
+  cursor:pointer;
 }
 
 button{
@@ -280,6 +294,17 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   flex-wrap:wrap;
   margin-top:6px;
 }
+/* Neun Stile passen nicht mehr in eine Reihe — Raster statt Umbruch. */
+.style-picker{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.style-picker .style-option{
+  font-size:0.78rem;
+  padding:7px 8px;
+}
+.style-picker input{flex-shrink:0;}
 .style-option,.size-picker label,.code-picker label{
   display:flex;
   align-items:center;
@@ -306,6 +331,12 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
 .swatch-minimal{background:linear-gradient(135deg,#fff,#ccc);}
 .swatch-vintage{background:linear-gradient(135deg,#f2e8d3,#8a5a2b);}
 .swatch-grunge{background:linear-gradient(135deg,#1b1712,#ff5a36);}
+.swatch-tracklist{background:linear-gradient(135deg,#fff 55%,#3b82f6 55%);}
+.swatch-nowplaying{background:linear-gradient(135deg,#fff 60%,#111 60%);}
+.swatch-swiss{background:linear-gradient(135deg,#f1ede6 50%,#e05a4a 50%);}
+.swatch-pantone{background:linear-gradient(180deg,#ef8354 50%,#7d966f 50%);}
+.swatch-linernotes{background:linear-gradient(180deg,#fff 55%,#444 55%);}
+.swatch-vinylsleeve{background:radial-gradient(circle at 70% 50%,#17151a 38%,#e8e2f0 39%);}
 
 .cover-row{display:flex;align-items:center;gap:12px;}
 .cover-thumb{

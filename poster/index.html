@@ -55,7 +55,13 @@
         <div class="field">
           <span class="field-label">Stil</span>
           <div class="style-picker" id="style-picker">
-            <label class="style-option"><input type="radio" name="style" value="minimal" checked><span class="swatch swatch-minimal"></span>Minimalistisch</label>
+            <label class="style-option"><input type="radio" name="style" value="tracklist" checked><span class="swatch swatch-tracklist"></span>Tracklist-Klassiker</label>
+            <label class="style-option"><input type="radio" name="style" value="nowplaying"><span class="swatch swatch-nowplaying"></span>Now Playing</label>
+            <label class="style-option"><input type="radio" name="style" value="swiss"><span class="swatch swatch-swiss"></span>Swiss / Editorial</label>
+            <label class="style-option"><input type="radio" name="style" value="pantone"><span class="swatch swatch-pantone"></span>Pantone-Karte</label>
+            <label class="style-option"><input type="radio" name="style" value="linernotes"><span class="swatch swatch-linernotes"></span>Liner Notes</label>
+            <label class="style-option"><input type="radio" name="style" value="vinylsleeve"><span class="swatch swatch-vinylsleeve"></span>Vinyl-Hülle</label>
+            <label class="style-option"><input type="radio" name="style" value="minimal"><span class="swatch swatch-minimal"></span>Minimalistisch</label>
             <label class="style-option"><input type="radio" name="style" value="vintage"><span class="swatch swatch-vintage"></span>Vintage / Vinyl</label>
             <label class="style-option"><input type="radio" name="style" value="grunge"><span class="swatch swatch-grunge"></span>Grunge / Flyer</label>
           </div>
@@ -66,6 +72,19 @@
           <label class="field">Künstler<input id="field-artist" type="text"></label>
         </div>
         <label class="field">Zusatzzeile (Album · Jahr)<input id="field-subtitle" type="text"></label>
+
+        <div class="field">
+          <span class="field-label">Tracklist <span class="hint-inline">(eine Zeile je Titel)</span></span>
+          <textarea id="field-tracks" rows="5" placeholder="Wird beim Auswählen automatisch geladen — hier frei editierbar."></textarea>
+          <p id="tracks-status" class="status" aria-live="polite"></p>
+        </div>
+
+        <div class="field-row">
+          <label class="field">Erschienen<input id="field-release" type="text"></label>
+          <label class="field">Länge<input id="field-length" type="text"></label>
+        </div>
+        <label class="field">Label<input id="field-label" type="text"></label>
+        <label class="check-field"><input id="field-explicit" type="checkbox"> Explicit-Kennzeichen aufs Cover</label>
 
         <div class="field">
           <span class="field-label">Cover</span>
@@ -130,7 +149,14 @@
 <script src="js/utils.js"></script>
 <script src="js/color.js"></script>
 <script src="js/qrcode.js"></script>
+<script src="js/parts.js"></script>
 <script src="js/api.js"></script>
+<script src="js/styles/tracklist.js"></script>
+<script src="js/styles/nowplaying.js"></script>
+<script src="js/styles/swiss.js"></script>
+<script src="js/styles/pantone.js"></script>
+<script src="js/styles/linernotes.js"></script>
+<script src="js/styles/vinylsleeve.js"></script>
 <script src="js/styles/minimal.js"></script>
 <script src="js/styles/vintage.js"></script>
 <script src="js/styles/grunge.js"></script>

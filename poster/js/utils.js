@@ -13,6 +13,19 @@ Poster.util = (function () {
     return m + ':' + String(s).padStart(2, '0');
   }
 
+  // Nimmt "2024", "2024-06" und "2024-06-14T00:00:00Z" — Spotify liefert je nach
+  // Genauigkeit alle drei Formen, iTunes den vollen Zeitstempel.
+  function formatDateDE(raw) {
+    const m = String(raw || '').match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/);
+    if (!m) return '';
+    const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    const [, year, month, day] = m;
+    if (!month) return year;
+    if (!day) return months[+month - 1] + ' ' + year;
+    return +day + '. ' + months[+month - 1] + ' ' + year;
+  }
+
   function hexToRgb(hex) {
     hex = String(hex).replace('#', '');
     if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
@@ -138,7 +151,7 @@ Poster.util = (function () {
   }
 
   return {
-    clamp, formatDuration, hexToRgb, rgbToHex, rgbToHsl, relativeLuminance,
+    clamp, formatDuration, formatDateDE, hexToRgb, rgbToHex, rgbToHsl, relativeLuminance,
     contrastColor, loadImage, drawCover, roundRect,
     fitText, wrapLines, seededRandom,
   };

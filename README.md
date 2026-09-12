@@ -169,9 +169,14 @@ direktes Öffnen per `file://` scheitert an CORS.
   sucht die App stattdessen zuerst in Spotifys eigenem Katalog — über den
   Client-Credentials-Flow, also App-seitige Anmeldung ohne Nutzer-Login/Redirect.
 - **Cover**: erst die von der Suche gelieferte Artwork-URL (iTunes bis 2000 px,
-  Spotify in der größten verfügbaren Auflösung). Schlägt das fehl, sucht die
-  App über MusicBrainz + Cover Art Archive nach einem Ersatz; schlägt auch das
-  fehl, gibt es ein Platzhalter-Cover plus manuellen Upload.
+  Spotify höchstens 640 px). Schlägt das fehl, sucht die App über MusicBrainz +
+  Cover Art Archive nach einem Ersatz; schlägt auch das fehl, gibt es ein
+  Platzhalter-Cover plus manuellen Upload.
+- **Tracklist und Albumangaben** (Titel, Gesamtlänge, Label, genaues Datum):
+  bei Spotify aus dem vollständigen Album-Objekt, bei iTunes aus
+  `lookup?entity=song`. Findet die eigene Quelle nichts, sucht die App das
+  Album über Interpret + Albumtitel bei der jeweils anderen. Alles Geladene
+  bleibt im Editor frei überschreibbar.
 - **Code**: „Spotify-Code" ist nur wählbar, wenn eine Spotify-URI vorliegt
   (direkt aus der Spotify-Suche, oder — bei hinterlegten Zugangsdaten — im
   Hintergrund über eine Zusatzsuche aufgelöst) und sich das öffentliche,
@@ -180,19 +185,50 @@ direktes Öffnen per `file://` scheitert an CORS.
   `open.spotify.com`-Link (falls eine URI bekannt ist), sonst zum
   Apple-Music-Link, sonst zur Spotify-Suche nach Künstler + Titel führt.
 
+### Stile
+
+| Stil | Aufbau |
+| --- | --- |
+| **Tracklist-Klassiker** | Cover, Titelzeile mit Code daneben, volle Tracklist, Farbpalette und Eckdaten in der Fußzeile |
+| **Now Playing** | Poster als Player-Oberfläche: Cover mit runden Ecken, Fortschrittsbalken, Laufzeit, Transporttasten |
+| **Swiss / Editorial** | Cremegrund, Farbbalken, riesiger Interpretenname, Albumtitel rechts, Tracklist dreispaltig unten |
+| **Pantone-Karte** | Cover als aufgeklebtes Foto, Namenskärtchen und Farbfächer daneben, Titelblock und Tracklist unten |
+| **Liner Notes** | Cover groß, darunter Trennlinie, links die Tracklist, rechts Titel, Palette, Datum und Label |
+| **Vinyl-Hülle** | Getönter Passepartout-Grund, Name und Titel oben, Platte ragt seitlich aus der Cover-Hülle |
+| **Minimalistisch** | Cover, Titel, Interpret, Wellenform-Balken in der Akzentfarbe, Laufzeit |
+| **Vintage / Vinyl-Retro** | Doppelte Rahmenlinie, Cover als Plattenlabel auf gezeichneter Schallplatte, Serifen-Display |
+| **Grunge / Konzertflyer** | Dunkler Grund, Duoton-Cover, Risskanten, gestempelte Schreibmaschinenschrift |
+
 ### Funktionsumfang
 
 | Bereich | Stand |
 | --- | --- |
 | Suche nach Song/Album über iTunes, optional Spotify | fertig |
+| Tracklist, Gesamtlänge, Label und Datum automatisch laden | fertig |
 | Cover-Fallback über MusicBrainz/Cover Art Archive, manueller Upload | fertig |
-| 3 Stile: Minimalistisch, Vintage/Vinyl-Retro, Grunge/Konzertflyer | fertig |
-| Editor mit editierbaren Feldern (Text, Cover, Code-Typ, Akzentfarbe, Größe) | fertig |
+| 9 Stile (siehe Tabelle oben) | fertig |
+| Editor: Text, Tracklist, Cover, Code-Typ, Akzentfarbe, Größe frei editierbar | fertig |
 | Automatische Farbpalette aus dem Cover, frei überschreibbar | fertig |
 | Echter Spotify-Code oder QR-Code, je nach Verfügbarkeit wählbar | fertig |
+| Explicit-Kennzeichen aufs Cover, automatisch vorbelegt | fertig |
 | Gerahmte Wand-Vorschau (nur Anzeige, nicht Teil des Exports) | fertig |
 | Export als PNG und PDF, A4/A3/A2 bei echten 300 dpi | fertig |
 | Manuelles Anlegen ganz ohne Suche/Internetzugriff | fertig |
+
+### Was die Datenquellen nicht hergeben
+
+- **Künstler-Logos** (der gesetzte Schriftzug einer Band) liefert keine der
+  Schnittstellen — sie sind Markenzeichen. Stattdessen wird der Name gesetzt.
+- **Aufnahmejahr** gibt es nirgends, nur das Veröffentlichungsdatum.
+- **Label** kennt nur Spotify als eigenes Feld. Bei iTunes wird es aus der
+  Copyright-Zeile abgeleitet („℗ 2013 Daft Life Limited, under exclusive…" →
+  „Daft Life Limited") — eine Heuristik, deshalb ist das Feld editierbar.
+- **Cover-Auflösung** begrenzt den sinnvollen Druck: iTunes liefert bis 2000 px
+  (reicht bis A3), Spotify nur 640 px (bei A2 sichtbar weich). Wer größer
+  drucken will, lädt ein eigenes Cover hoch.
+- **Das Explicit-Kennzeichen** ist nachgezeichnet, nicht das Originallogo des
+  RIAA-Markenzeichens.
+- **MusicBrainz** wird hier nur für Cover-Art genutzt, nicht für Tracklists.
 
 ### Wissenswertes zur Umsetzung
 
@@ -223,6 +259,17 @@ Bucket-Histogramm, nicht per k-Means: Farben werden nach Häufigkeit,
 Sättigung und Nähe zur mittleren Helligkeit gewichtet, damit dominante
 Weiß- oder Schwarzflächen im Cover nicht automatisch zur Akzentfarbe werden.
 
+Die Tracklist setzt sich selbst: Spaltenzahl nach Titelanzahl, dann die größte
+Schrift, die in die Höhe passt — und anschließend noch einmal verkleinert, bis
+auch der längste Titel in seine Spalte passt. Erst wenn das an der Untergrenze
+nicht reicht, wird mit „…" gekürzt. Ohne diesen zweiten Schritt stand in der
+dreispaltigen Variante hinter jedem zweiten Titel ein Auslassungszeichen.
+
+Spotify-Code und QR-Code haben verschiedene Formate — ein breiter Streifen
+gegen ein Quadrat. Die Stile geben deshalb nur eine Box samt Ausrichtung vor,
+gezeichnet wird darin je nach Codeart unterschiedlich; sonst klebte der QR-Code
+dort in der Ecke, wo der Spotify-Streifen bündig säße.
+
 ### Aufbau
 
 ```
@@ -232,14 +279,21 @@ poster/
   fonts/                Fonts für alle drei Stile, offline mitgeliefert (woff2)
   vendor/               jsPDF und ein QR-Code-Generator, offline mitgeliefert
   js/
-    api.js              iTunes-, MusicBrainz/Cover-Art-Archive- und Spotify-Anbindung
-    color.js             Farbpalette aus dem Cover extrahieren
-    qrcode.js             Wrapper um den QR-Code-Generator
-    export.js              PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)
-    utils.js                Canvas-, Farb- und Text-Hilfsfunktionen
-    main.js                  Zustand, Verkabelung, Live-Vorschau
-    styles/
-      minimal.js             Stil „Minimalistisch"
-      vintage.js              Stil „Vintage / Vinyl-Retro"
-      grunge.js                Stil „Grunge / Konzertflyer"
+    api.js              Suche, Tracklist/Albumangaben, Spotify-Anbindung
+    color.js            Farbpalette aus dem Cover extrahieren
+    parts.js            geteilte Bausteine: Tracklist, Farbfelder, Player, Platte
+    qrcode.js           Wrapper um den QR-Code-Generator
+    export.js           PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)
+    utils.js            Canvas-, Farb-, Datums- und Text-Hilfsfunktionen
+    main.js             Zustand, Verkabelung, Live-Vorschau
+    styles/             ein Modul je Stil, alle mit derselben draw(ctx, W, H, model)
+      tracklist.js      nowplaying.js   swiss.js
+      pantone.js        linernotes.js   vinylsleeve.js
+      minimal.js        vintage.js      grunge.js
 ```
+
+Ein Stil ist eine Datei mit einer einzigen Funktion `draw(ctx, W, H, model)`.
+Alle Koordinaten darin sind Vielfache von `W` und `H`, nie feste Pixel — deshalb
+zeichnet derselbe Code die 720-Pixel-Vorschau und das A2-Poster mit 4961 Pixeln
+Breite. Ein neuer Stil braucht nur diese Datei, einen Eintrag in `index.html`
+und eine Zeile in der Stilauswahl.

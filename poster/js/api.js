@@ -17,17 +17,60 @@ Poster.api = (function () {
       source: 'itunes',
       type: entity === 'album' ? 'album' : 'track',
       id: 'itunes:' + (r.trackId || r.collectionId),
+      albumId: r.collectionId ? String(r.collectionId) : null,
       title: entity === 'album' ? r.collectionName : r.trackName,
       artist: r.artistName,
       albumName: r.collectionName,
       year: (r.releaseDate || '').slice(0, 4),
+      releaseDate: r.releaseDate || '',
       genre: r.primaryGenreName || '',
       durationMs: r.trackTimeMillis || null,
+      explicit: r.trackExplicitness === 'explicit' || r.collectionExplicitness === 'explicit',
       coverUrl: r.artworkUrl100 || r.artworkUrl60,
       coverUrlHigh: upgradeArtwork(r.artworkUrl100 || r.artworkUrl60, 2000),
       appleUrl: r.trackViewUrl || r.collectionViewUrl || null,
       spotifyUri: null,
     }));
+  }
+
+  // The album behind a hit: tracklist, label, exact release date, total running time.
+  // Everything the tracklist-style posters print beyond what a search result carries.
+  async function fetchITunesAlbum(collectionId) {
+    const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
+      id: collectionId, entity: 'song', limit: '200',
+    });
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('iTunes-Album konnte nicht geladen werden (' + resp.status + ')');
+    const json = await resp.json();
+    const collection = json.results.find((r) => r.wrapperType === 'collection') || {};
+    const tracks = json.results
+      .filter((r) => r.wrapperType === 'track' && r.trackName)
+      .sort((a, b) => (a.discNumber - b.discNumber) || (a.trackNumber - b.trackNumber))
+      .map((t) => ({
+        name: t.trackName,
+        durationMs: t.trackTimeMillis || 0,
+        explicit: t.trackExplicitness === 'explicit',
+      }));
+    return {
+      tracks,
+      copyright: collection.copyright || '',
+      label: deriveLabel(collection.copyright || ''),
+      releaseDate: collection.releaseDate || '',
+      genre: collection.primaryGenreName || '',
+      explicit: collection.collectionExplicitness === 'explicit',
+    };
+  }
+
+  // iTunes exposes no label field, only a copyright line like
+  // "℗ 2013 Daft Life Limited, under exclusive license to Columbia". The first
+  // clause after the year is the closest thing to a label — and stays editable.
+  function deriveLabel(copyright) {
+    if (!copyright) return '';
+    return copyright
+      .replace(/^[℗©]\s*/, '')
+      .replace(/^\d{4}\s+/, '')
+      .split(/,| under | unter /i)[0]
+      .trim();
   }
 
   // Best-effort fallback: only used when a source has no usable cover art.
@@ -104,22 +147,60 @@ Poster.api = (function () {
       const items = type === 'album' ? json.albums.items : json.tracks.items;
       return items.map((it) => {
         const albumImages = (it.album && it.album.images) || it.images || [];
+        const releaseDate = (entity === 'album' ? it.release_date : it.album && it.album.release_date) || '';
         return {
           source: 'spotify',
           type: entity === 'album' ? 'album' : 'track',
           id: 'spotify:' + it.id,
+          albumId: entity === 'album' ? it.id : (it.album && it.album.id) || null,
           title: it.name,
           artist: (it.artists || []).map((a) => a.name).join(', '),
           albumName: entity === 'album' ? it.name : (it.album && it.album.name) || '',
-          year: ((entity === 'album' ? it.release_date : it.album && it.album.release_date) || '').slice(0, 4),
+          year: releaseDate.slice(0, 4),
+          releaseDate,
           genre: '',
           durationMs: it.duration_ms || null,
+          explicit: !!it.explicit,
           coverUrl: albumImages[0] && albumImages[0].url,
           coverUrlHigh: albumImages[0] && albumImages[0].url,
           appleUrl: null,
           spotifyUri: it.uri,
         };
       });
+    },
+
+    // The full album object — unlike search results it carries label, copyrights
+    // and the tracklist (paged at 50, so long albums need the follow-up requests).
+    async getAlbum(albumId) {
+      const token = await this.getToken();
+      if (!token) return null;
+      const headers = { Authorization: 'Bearer ' + token };
+      const resp = await fetch('https://api.spotify.com/v1/albums/' + albumId, { headers });
+      if (!resp.ok) throw new Error('Spotify-Album konnte nicht geladen werden (' + resp.status + ')');
+      const album = await resp.json();
+
+      let items = (album.tracks && album.tracks.items) || [];
+      let next = album.tracks && album.tracks.next;
+      while (next && items.length < 200) {
+        const page = await fetch(next, { headers });
+        if (!page.ok) break;
+        const json = await page.json();
+        items = items.concat(json.items || []);
+        next = json.next;
+      }
+
+      return {
+        tracks: items.map((t) => ({
+          name: t.name,
+          durationMs: t.duration_ms || 0,
+          explicit: !!t.explicit,
+        })),
+        copyright: ((album.copyrights || [])[0] || {}).text || '',
+        label: album.label || '',
+        releaseDate: album.release_date || '',
+        genre: (album.genres || [])[0] || '',
+        explicit: items.some((t) => t.explicit),
+      };
     },
 
     // Silent background lookup: find a Spotify URI for a track/album found via iTunes.
@@ -156,5 +237,28 @@ Poster.api = (function () {
     return { results, source: 'itunes' };
   }
 
-  return { search, searchITunes, findCoverViaMusicBrainz, Spotify, upgradeArtwork };
+  // Tracklist + album metadata for a hit, from whichever source can answer:
+  // its own first, then the other one matched by artist + album name.
+  async function fetchAlbumDetails(result) {
+    if (result.source === 'spotify' && result.albumId && Spotify.isConfigured()) {
+      try {
+        const details = await Spotify.getAlbum(result.albumId);
+        if (details) return details;
+      } catch (e) {
+        console.warn('Spotify-Albumdetails fehlgeschlagen, weiche auf iTunes aus:', e);
+      }
+    }
+    if (result.source === 'itunes' && result.albumId) {
+      return fetchITunesAlbum(result.albumId);
+    }
+    const albumName = result.albumName || result.title;
+    if (!albumName) return null;
+    const hits = await searchITunes(result.artist + ' ' + albumName, 'album');
+    const match = hits.find((h) => h.albumId);
+    return match ? fetchITunesAlbum(match.albumId) : null;
+  }
+
+  return {
+    search, searchITunes, fetchAlbumDetails, findCoverViaMusicBrainz, Spotify, upgradeArtwork,
+  };
 })();
