@@ -90,8 +90,16 @@
           <span class="field-label">Cover</span>
           <div class="cover-row">
             <img id="cover-preview" alt="" class="cover-thumb">
-            <label class="upload-btn">Cover ersetzen<input id="cover-upload" type="file" accept="image/*" hidden></label>
+            <div class="cover-actions">
+              <p id="cover-meta" class="cover-meta"></p>
+              <div class="cover-buttons">
+                <label class="upload-btn">Eigenes Cover<input id="cover-upload" type="file" accept="image/*" hidden></label>
+                <button id="cover-upgrade" type="button" class="secondary">Schärferes Cover suchen</button>
+              </div>
+            </div>
           </div>
+          <p id="cover-status" class="status" aria-live="polite"></p>
+          <div id="cover-candidates" class="cover-candidates" hidden></div>
         </div>
 
         <div class="field">

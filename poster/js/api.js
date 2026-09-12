@@ -73,6 +73,27 @@ Poster.api = (function () {
       .trim();
   }
 
+  // Cover-Alternativen für ein Album, absichtlich als Vorschläge zur Auswahl:
+  // über Namen gematcht landet sonst still das Artwork einer anderen Ausgabe
+  // (Remaster, Deluxe, Single) auf dem Poster.
+  async function findCoverCandidates(artist, albumName) {
+    const term = (artist + ' ' + albumName).trim();
+    if (!term) return [];
+    const hits = await searchITunes(term, 'album');
+    return hits
+      .filter((h) => h.coverUrl)
+      .slice(0, 8)
+      .map((h) => ({
+        title: h.title,
+        artist: h.artist,
+        year: h.year,
+        thumbUrl: h.coverUrl,
+        // Apple liefert je nach Release unterschiedliche Maximalgrößen — der
+        // Aufrufer probiert von groß nach klein durch.
+        sizeUrls: [3000, 2000, 1400].map((px) => upgradeArtwork(h.coverUrl, px)),
+      }));
+  }
+
   // Best-effort fallback: only used when a source has no usable cover art.
   async function findCoverViaMusicBrainz(artist, title) {
     try {
@@ -259,6 +280,7 @@ Poster.api = (function () {
   }
 
   return {
-    search, searchITunes, fetchAlbumDetails, findCoverViaMusicBrainz, Spotify, upgradeArtwork,
+    search, searchITunes, fetchAlbumDetails, findCoverCandidates, findCoverViaMusicBrainz,
+    Spotify, upgradeArtwork,
   };
 })();

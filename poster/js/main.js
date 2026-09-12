@@ -28,6 +28,10 @@
     fieldExplicit: document.getElementById('field-explicit'),
     coverPreview: document.getElementById('cover-preview'),
     coverUpload: document.getElementById('cover-upload'),
+    coverMeta: document.getElementById('cover-meta'),
+    coverUpgrade: document.getElementById('cover-upgrade'),
+    coverStatus: document.getElementById('cover-status'),
+    coverCandidates: document.getElementById('cover-candidates'),
     codePicker: document.getElementById('code-picker'),
     codeHint: document.getElementById('code-hint'),
     paletteRow: document.getElementById('palette-row'),
@@ -133,23 +137,31 @@
       const li = document.createElement('li');
       li.className = 'result-item';
       li.tabIndex = 0;
-      li.innerHTML =
-        '<img src="' + (r.coverUrl || '') + '" alt="" loading="lazy">' +
-        '<span class="result-text">' +
-        '<strong>' + escapeHtml(r.title) + '</strong>' +
-        '<span>' + escapeHtml(r.artist) + '</span>' +
-        '</span>' +
-        '<span class="result-badge">' + (r.type === 'album' ? 'Album' : 'Song') + '</span>';
+
+      const thumb = document.createElement('img');
+      thumb.src = r.coverUrl || '';
+      thumb.alt = '';
+      thumb.loading = 'lazy';
+
+      const text = document.createElement('span');
+      text.className = 'result-text';
+      const title = document.createElement('strong');
+      title.textContent = r.title;
+      const artist = document.createElement('span');
+      artist.textContent = r.artist;
+      text.append(title, artist);
+
+      const badge = document.createElement('span');
+      badge.className = 'result-badge';
+      badge.textContent = r.type === 'album' ? 'Album' : 'Song';
+
+      li.append(thumb, text, badge);
       li.addEventListener('click', () => selectResult(r));
       li.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectResult(r); }
       });
       els.searchResults.appendChild(li);
     });
-  }
-
-  function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   async function selectResult(r) {
@@ -239,7 +251,76 @@
     model.palette = palette;
     els.accentCustom.value = accent;
     updatePaletteUI();
+    updateCoverMeta();
     scheduleRender();
+  }
+
+  // Wie scharf das Cover im Druck wird, hängt am gewählten Format: dieselben
+  // 640 px sind auf A4 gerade noch brauchbar und auf A2 sichtbar weich.
+  function updateCoverMeta() {
+    const img = model.coverImg;
+    if (!img || !img.naturalWidth) {
+      els.coverMeta.textContent = '';
+      return;
+    }
+    const paperMm = (Poster.exportPoster.SIZES[model.size] || { w: 210 }).w * 0.85;
+    const dpi = Math.round(img.naturalWidth / (paperMm / 25.4));
+    els.coverMeta.textContent = img.naturalWidth + ' × ' + img.naturalHeight
+      + ' px · ca. ' + dpi + ' dpi bei ' + model.size;
+    els.coverMeta.dataset.kind = dpi < 150 ? 'error' : dpi < 220 ? 'warn' : '';
+  }
+
+  // Bewusst ein Knopf und eine Auswahl: automatisch über Namen gematcht landet
+  // sonst still das Cover einer anderen Ausgabe auf dem Poster.
+  els.coverUpgrade.addEventListener('click', async () => {
+    const album = model.albumName || model.title;
+    els.coverCandidates.hidden = true;
+    setStatus(els.coverStatus, 'Suche Cover in höherer Auflösung…');
+    try {
+      const candidates = await api.findCoverCandidates(model.artist, album);
+      if (!candidates.length) {
+        setStatus(els.coverStatus, 'Keine Alternativen gefunden.', 'error');
+        return;
+      }
+      renderCoverCandidates(candidates);
+      setStatus(els.coverStatus, 'Richtige Ausgabe wählen — die Liste enthält auch Remaster und Singles.');
+    } catch (e) {
+      setStatus(els.coverStatus, 'Suche fehlgeschlagen: ' + e.message, 'error');
+    }
+  });
+
+  function renderCoverCandidates(candidates) {
+    els.coverCandidates.innerHTML = '';
+    candidates.forEach((c) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cover-candidate';
+      const img = document.createElement('img');
+      img.src = c.thumbUrl;
+      img.alt = '';
+      img.loading = 'lazy';
+      const caption = document.createElement('span');
+      caption.textContent = c.title + (c.year ? ' · ' + c.year : '');
+      caption.title = c.artist + ' — ' + c.title;
+      btn.append(img, caption);
+      btn.addEventListener('click', () => applyCandidate(c));
+      els.coverCandidates.appendChild(btn);
+    });
+    els.coverCandidates.hidden = false;
+  }
+
+  async function applyCandidate(c) {
+    setStatus(els.coverStatus, 'Cover wird geladen…');
+    for (const url of c.sizeUrls) {
+      try {
+        const img = await U.loadImage(url, 'anonymous');
+        applyCover(img);
+        els.coverCandidates.hidden = true;
+        setStatus(els.coverStatus, 'Übernommen: ' + c.title + ' (' + img.naturalWidth + ' px).');
+        return;
+      } catch (e) { /* nächstkleinere Größe versuchen */ }
+    }
+    setStatus(els.coverStatus, 'Dieses Cover ließ sich nicht laden.', 'error');
   }
 
   els.coverUpload.addEventListener('change', () => {
@@ -312,6 +393,7 @@
   els.sizePicker.addEventListener('change', (e) => {
     if (e.target.name !== 'size') return;
     model.size = e.target.value;
+    updateCoverMeta();
   });
 
   function updatePaletteUI() {

@@ -206,6 +206,8 @@ direktes Öffnen per `file://` scheitert an CORS.
 | Suche nach Song/Album über iTunes, optional Spotify | fertig |
 | Tracklist, Gesamtlänge, Label und Datum automatisch laden | fertig |
 | Cover-Fallback über MusicBrainz/Cover Art Archive, manueller Upload | fertig |
+| Auflösungsanzeige und dpi-Warnung fürs gewählte Format | fertig |
+| „Schärferes Cover suchen": Ausgaben zur Auswahl statt stillem Austausch | fertig |
 | 9 Stile (siehe Tabelle oben) | fertig |
 | Editor: Text, Tracklist, Cover, Code-Typ, Akzentfarbe, Größe frei editierbar | fertig |
 | Automatische Farbpalette aus dem Cover, frei überschreibbar | fertig |
@@ -223,9 +225,12 @@ direktes Öffnen per `file://` scheitert an CORS.
 - **Label** kennt nur Spotify als eigenes Feld. Bei iTunes wird es aus der
   Copyright-Zeile abgeleitet („℗ 2013 Daft Life Limited, under exclusive…" →
   „Daft Life Limited") — eine Heuristik, deshalb ist das Feld editierbar.
-- **Cover-Auflösung** begrenzt den sinnvollen Druck: iTunes liefert bis 2000 px
-  (reicht bis A3), Spotify nur 640 px (bei A2 sichtbar weich). Wer größer
-  drucken will, lädt ein eigenes Cover hoch.
+- **Cover-Auflösung** begrenzt den sinnvollen Druck: iTunes liefert bis 3000 px,
+  Spotify nur 640 px (bei A2 sichtbar weich). Unter dem Cover steht deshalb
+  immer die Auflösung samt geschätzter dpi im gewählten Format, rot ab etwa
+  150 dpi. „Schärferes Cover suchen" holt Apple-Artwork in voller Größe —
+  bewusst als Knopf mit Auswahl, weil über Namen gematcht sonst still das
+  Cover einer anderen Ausgabe (Remaster, Deluxe, Single) auf dem Poster landet.
 - **Das Explicit-Kennzeichen** ist nachgezeichnet, nicht das Originallogo des
   RIAA-Markenzeichens.
 - **MusicBrainz** wird hier nur für Cover-Art genutzt, nicht für Tracklists.
