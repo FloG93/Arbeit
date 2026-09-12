@@ -401,6 +401,16 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
+.cover-candidate em{
+  font-size:0.6rem;
+  font-style:normal;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  opacity:0.65;
+}
+.result-item img.is-empty{
+  background:linear-gradient(135deg,#2a2e36,#1b1e24);
+}
 
 .palette-row{display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;}
 .swatch-btn{

@@ -28,9 +28,11 @@
           <div class="search-type" role="radiogroup" aria-label="Suchart">
             <label><input type="radio" name="search-entity" value="song" checked> Song</label>
             <label><input type="radio" name="search-entity" value="album"> Album</label>
+            <label><input type="radio" name="search-entity" value="artist"> Künstler</label>
           </div>
         </form>
         <p id="search-status" class="status" aria-live="polite"></p>
+        <button id="results-back" type="button" class="link-btn" hidden>← Zurück zu den Künstlern</button>
         <ul id="search-results" class="results"></ul>
         <button id="manual-btn" type="button" class="link-btn">Ohne Suche manuell anlegen</button>
       </div>
@@ -95,6 +97,7 @@
               <div class="cover-buttons">
                 <label class="upload-btn">Eigenes Cover<input id="cover-upload" type="file" accept="image/*" hidden></label>
                 <button id="cover-upgrade" type="button" class="secondary">Schärferes Cover suchen</button>
+                <button id="cover-upscale" type="button" class="secondary" hidden>Notfall: hochrechnen</button>
               </div>
             </div>
           </div>
@@ -166,6 +169,7 @@
 <script src="js/utils.js"></script>
 <script src="js/color.js"></script>
 <script src="js/qrcode.js"></script>
+<script src="js/upscale.js"></script>
 <script src="js/parts.js"></script>
 <script src="js/api.js"></script>
 <script src="js/styles/tracklist.js"></script>

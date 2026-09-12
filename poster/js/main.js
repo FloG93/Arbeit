@@ -7,6 +7,7 @@
     searchInput: document.getElementById('search-input'),
     searchStatus: document.getElementById('search-status'),
     searchResults: document.getElementById('search-results'),
+    resultsBack: document.getElementById('results-back'),
     manualBtn: document.getElementById('manual-btn'),
 
     spotifyId: document.getElementById('spotify-id'),
@@ -30,6 +31,7 @@
     coverUpload: document.getElementById('cover-upload'),
     coverMeta: document.getElementById('cover-meta'),
     coverUpgrade: document.getElementById('cover-upgrade'),
+    coverUpscale: document.getElementById('cover-upscale'),
     coverStatus: document.getElementById('cover-status'),
     coverCandidates: document.getElementById('cover-candidates'),
     codePicker: document.getElementById('code-picker'),
@@ -114,13 +116,18 @@
     return el ? el.value : 'song';
   }
 
+  let artistResults = null;
+
   async function doSearch(term) {
     if (!term.trim()) return;
     setStatus(els.searchStatus, 'Suche läuft…');
     els.searchResults.innerHTML = '';
+    els.resultsBack.hidden = true;
+    artistResults = null;
     try {
       const { results, source } = await api.search(term.trim(), searchEntity());
       renderResults(results);
+      if (searchEntity() === 'artist') artistResults = results;
       setStatus(
         els.searchStatus,
         results.length
@@ -132,6 +139,31 @@
       setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + e.message, 'error');
     }
   }
+
+  // Ein Künstlertreffer ist kein Poster, sondern der Weg dorthin: er klappt die
+  // Diskografie auf, damit man das Album nicht am Titel erraten muss.
+  async function showDiscography(artistResult) {
+    setStatus(els.searchStatus, 'Alben von ' + artistResult.artist + ' werden geladen…');
+    els.searchResults.innerHTML = '';
+    try {
+      const albums = await api.fetchDiscography(artistResult);
+      renderResults(albums);
+      els.resultsBack.hidden = false;
+      setStatus(els.searchStatus, albums.length
+        ? albums.length + ' Alben von ' + artistResult.artist + ', neueste zuerst'
+        : 'Keine Alben gefunden.');
+    } catch (e) {
+      console.error(e);
+      setStatus(els.searchStatus, 'Diskografie fehlgeschlagen: ' + e.message, 'error');
+    }
+  }
+
+  els.resultsBack.addEventListener('click', () => {
+    if (!artistResults) return;
+    renderResults(artistResults);
+    els.resultsBack.hidden = true;
+    setStatus(els.searchStatus, artistResults.length + ' Künstler');
+  });
 
   function renderResults(results) {
     els.searchResults.innerHTML = '';
@@ -149,18 +181,29 @@
       text.className = 'result-text';
       const title = document.createElement('strong');
       title.textContent = r.title;
-      const artist = document.createElement('span');
-      artist.textContent = r.artist;
-      text.append(title, artist);
+      const sub = document.createElement('span');
+      // Zweite Zeile trägt das, woran man die richtige Ausgabe erkennt: bei
+      // Songs das Album, bei Alben Jahr und Titelzahl, bei Künstlern das Genre.
+      if (r.type === 'artist') {
+        sub.textContent = r.genre || 'Künstler';
+      } else if (r.type === 'album') {
+        sub.textContent = [r.artist, r.year, r.trackCount ? r.trackCount + ' Titel' : '']
+          .filter(Boolean).join(' · ');
+      } else {
+        sub.textContent = [r.artist, r.albumName, r.year].filter(Boolean).join(' · ');
+      }
+      text.append(title, sub);
 
       const badge = document.createElement('span');
       badge.className = 'result-badge';
-      badge.textContent = r.type === 'album' ? 'Album' : 'Song';
+      badge.textContent = r.type === 'artist' ? 'Alben ›' : r.type === 'album' ? 'Album' : 'Song';
 
+      if (!r.coverUrl) thumb.classList.add('is-empty');
       li.append(thumb, text, badge);
-      li.addEventListener('click', () => selectResult(r));
+      const open = () => (r.type === 'artist' ? showDiscography(r) : selectResult(r));
+      li.addEventListener('click', open);
       li.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectResult(r); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
       });
       els.searchResults.appendChild(li);
     });
@@ -268,8 +311,12 @@
     const paperMm = (Poster.exportPoster.SIZES[model.size] || { w: 210 }).w * 0.85;
     const dpi = Math.round(img.naturalWidth / (paperMm / 25.4));
     els.coverMeta.textContent = img.naturalWidth + ' × ' + img.naturalHeight
-      + ' px · ca. ' + dpi + ' dpi bei ' + model.size;
+      + ' px · ca. ' + dpi + ' dpi bei ' + model.size
+      + (model.coverUpscaled ? ' · hochgerechnet' : '');
     els.coverMeta.dataset.kind = dpi < 150 ? 'error' : dpi < 220 ? 'warn' : '';
+    // Hochrechnen ist die Notlösung: nur anbieten, wenn es wirklich knapp wird
+    // und das Bild noch klein genug ist, dass es überhaupt etwas ändert.
+    els.coverUpscale.hidden = model.coverUpscaled || dpi >= 220 || img.naturalWidth >= Poster.upscale.MAX_TARGET;
   }
 
   // Bewusst ein Knopf und eine Auswahl: automatisch über Namen gematcht landet
@@ -301,10 +348,15 @@
       img.src = c.thumbUrl;
       img.alt = '';
       img.loading = 'lazy';
+      // Das Cover Art Archive hat nicht zu jeder Ausgabe einen Scan; solche
+      // Vorschläge fallen still raus, statt als leeres Kästchen dazustehen.
+      img.addEventListener('error', () => btn.remove());
       const caption = document.createElement('span');
-      caption.textContent = c.title + (c.year ? ' · ' + c.year : '');
-      caption.title = c.artist + ' — ' + c.title;
-      btn.append(img, caption);
+      caption.textContent = [c.year, c.detail].filter(Boolean).join(' · ') || c.title;
+      caption.title = c.artist + ' — ' + c.title + ' (' + c.source + ')';
+      const source = document.createElement('em');
+      source.textContent = c.source === 'Apple' ? 'Apple' : 'CAA';
+      btn.append(img, caption, source);
       btn.addEventListener('click', () => applyCandidate(c));
       els.coverCandidates.appendChild(btn);
     });
@@ -312,18 +364,47 @@
   }
 
   async function applyCandidate(c) {
+    const before = model.coverImg ? model.coverImg.naturalWidth : 0;
     setStatus(els.coverStatus, 'Cover wird geladen…');
     for (const url of c.sizeUrls) {
       try {
         const img = await U.loadImage(url, 'anonymous');
+        model.coverUpscaled = false;
         applyCover(img);
         els.coverCandidates.hidden = true;
-        setStatus(els.coverStatus, 'Übernommen: ' + c.title + ' (' + img.naturalWidth + ' px).');
+        setStatus(els.coverStatus, before
+          ? 'Übernommen (' + c.source + '): ' + before + ' → ' + img.naturalWidth + ' px.'
+          : 'Übernommen (' + c.source + '): ' + img.naturalWidth + ' px.');
         return;
       } catch (e) { /* nächstkleinere Größe versuchen */ }
     }
     setStatus(els.coverStatus, 'Dieses Cover ließ sich nicht laden.', 'error');
   }
+
+  // Letzte Möglichkeit, wenn keine Quelle mehr Pixel hat: rechnet das Cover
+  // hoch, ohne Details zu erfinden — Lanczos statt der weichen Interpolation,
+  // die der Browser beim Export sonst von allein anwendet.
+  els.coverUpscale.addEventListener('click', async () => {
+    if (!model.coverImg) return;
+    const before = model.coverImg.naturalWidth;
+    const paperMm = (Poster.exportPoster.SIZES[model.size] || { w: 210 }).w * 0.85;
+    const target = Math.round((paperMm / 25.4) * 300);
+    setStatus(els.coverStatus, 'Wird hochgerechnet — das dauert einen Moment…');
+    els.coverUpscale.disabled = true;
+    await new Promise((r) => setTimeout(r, 40)); // Statuszeile zeichnen lassen
+    try {
+      const img = await Poster.upscale.enlarge(model.coverImg, target);
+      model.coverUpscaled = true;
+      applyCover(img);
+      setStatus(els.coverStatus, before + ' → ' + img.naturalWidth
+        + ' px hochgerechnet. Das schärft die Kanten, bringt aber keine echten Details zurück.');
+    } catch (e) {
+      console.error(e);
+      setStatus(els.coverStatus, 'Hochrechnen fehlgeschlagen: ' + e.message, 'error');
+    } finally {
+      els.coverUpscale.disabled = false;
+    }
+  });
 
   els.coverUpload.addEventListener('change', () => {
     const file = els.coverUpload.files[0];

@@ -163,15 +163,20 @@ direktes Öffnen per `file://` scheitert an CORS.
 ### Datenquellen
 
 - **Suche**: primär die [iTunes Search API](https://performance-partners.apple.com/search-api)
-  (kein Login, CORS-fähig). Ist im Bereich „Spotify-Zugang" ein eigener,
-  kostenloser Spotify-Client (Client-ID + Secret, siehe
-  [developer.spotify.com](https://developer.spotify.com/dashboard)) hinterlegt,
-  sucht die App stattdessen zuerst in Spotifys eigenem Katalog — über den
-  Client-Credentials-Flow, also App-seitige Anmeldung ohne Nutzer-Login/Redirect.
-- **Cover**: erst die von der Suche gelieferte Artwork-URL (iTunes bis 2000 px,
-  Spotify höchstens 640 px). Schlägt das fehl, sucht die App über MusicBrainz +
-  Cover Art Archive nach einem Ersatz; schlägt auch das fehl, gibt es ein
-  Platzhalter-Cover plus manuellen Upload.
+  (kein Login, CORS-fähig), wahlweise nach Song, Album oder Künstler. Ist im
+  Bereich „Spotify-Zugang" ein eigener, kostenloser Spotify-Client (Client-ID +
+  Secret, siehe [developer.spotify.com](https://developer.spotify.com/dashboard))
+  hinterlegt, sucht die App stattdessen zuerst in Spotifys eigenem Katalog —
+  über den Client-Credentials-Flow, also App-seitige Anmeldung ohne
+  Nutzer-Login/Redirect.
+- **Künstlersuche** liefert kein Poster, sondern die Diskografie: ein Klick auf
+  den Künstler listet seine Alben, neueste zuerst (iTunes `lookup?entity=album`
+  bzw. Spotify `/artists/{id}/albums`). Von dort geht es wie gewohnt weiter.
+- **Cover**: erst die von der Suche gelieferte Artwork-URL (Apple bis zur Größe
+  des hinterlegten Masters, Spotify höchstens 640 px). Schlägt das fehl, sucht
+  die App über MusicBrainz + Cover Art Archive nach einem Ersatz; schlägt auch
+  das fehl, gibt es ein Platzhalter-Cover plus manuellen Upload. „Schärferes
+  Cover suchen" stellt beide Quellen nebeneinander zur Auswahl.
 - **Tracklist und Albumangaben** (Titel, Gesamtlänge, Label, genaues Datum):
   bei Spotify aus dem vollständigen Album-Objekt, bei iTunes aus
   `lookup?entity=song`. Findet die eigene Quelle nichts, sucht die App das
@@ -203,11 +208,14 @@ direktes Öffnen per `file://` scheitert an CORS.
 
 | Bereich | Stand |
 | --- | --- |
-| Suche nach Song/Album über iTunes, optional Spotify | fertig |
+| Suche nach Song, Album oder Künstler über iTunes, optional Spotify | fertig |
+| Künstlertreffer klappt die Diskografie auf, neueste Alben zuerst | fertig |
+| Deutscher Store (`country=DE`), 25 Treffer, Doppeltreffer zusammengefasst | fertig |
 | Tracklist, Gesamtlänge, Label und Datum automatisch laden | fertig |
 | Cover-Fallback über MusicBrainz/Cover Art Archive, manueller Upload | fertig |
 | Auflösungsanzeige und dpi-Warnung fürs gewählte Format | fertig |
-| „Schärferes Cover suchen": Ausgaben zur Auswahl statt stillem Austausch | fertig |
+| „Schärferes Cover suchen": Apple- und CAA-Ausgaben zur Auswahl | fertig |
+| Notfall-Hochrechnung (Lanczos + Unscharfmaske), nur bei zu wenig dpi | fertig |
 | 9 Stile (siehe Tabelle oben) | fertig |
 | Editor: Text, Tracklist, Cover, Code-Typ, Akzentfarbe, Größe frei editierbar | fertig |
 | Automatische Farbpalette aus dem Cover, frei überschreibbar | fertig |
@@ -225,12 +233,22 @@ direktes Öffnen per `file://` scheitert an CORS.
 - **Label** kennt nur Spotify als eigenes Feld. Bei iTunes wird es aus der
   Copyright-Zeile abgeleitet („℗ 2013 Daft Life Limited, under exclusive…" →
   „Daft Life Limited") — eine Heuristik, deshalb ist das Feld editierbar.
-- **Cover-Auflösung** begrenzt den sinnvollen Druck: iTunes liefert bis 3000 px,
-  Spotify nur 640 px (bei A2 sichtbar weich). Unter dem Cover steht deshalb
-  immer die Auflösung samt geschätzter dpi im gewählten Format, rot ab etwa
-  150 dpi. „Schärferes Cover suchen" holt Apple-Artwork in voller Größe —
-  bewusst als Knopf mit Auswahl, weil über Namen gematcht sonst still das
-  Cover einer anderen Ausgabe (Remaster, Deluxe, Single) auf dem Poster landet.
+- **Cover-Auflösung** begrenzt den sinnvollen Druck. Apple deckelt bei der
+  Auflösung des hinterlegten Masters: eine Anfrage nach `3000x3000` liefert
+  dieselben Bytes wie `2000x2000`, bei vielen Alben real nur 1500 px. Spotify
+  gibt höchstens 640 px. Das Cover Art Archive hält dagegen den Originalscan
+  der jeweiligen Ausgabe, häufig größer — und sendet `Access-Control-Allow-Origin: *`,
+  ist also ohne getaintete Canvas exportierbar. Unter dem Cover steht deshalb
+  immer die echte Auflösung samt geschätzter dpi im gewählten Format, rot ab
+  etwa 150 dpi. „Schärferes Cover suchen" stellt Apple- und CAA-Ausgaben zur
+  Wahl — bewusst als Knopf mit Auswahl, weil über Namen gematcht sonst still
+  das Cover einer anderen Ausgabe (Remaster, Deluxe, Single) auf dem Poster landet.
+- **Hochrechnen bringt keine Details zurück.** Der Knopf „Notfall:
+  hochrechnen" erscheint nur unter etwa 220 dpi und ersetzt die weiche
+  Standard-Interpolation des Browsers durch Lanczos plus leichte
+  Unscharfmaskierung. Gemessen an einem Testcover steigt der mittlere
+  Kantenkontrast um rund ein Viertel — die Kanten matschen also weniger, aber
+  erfundene Schärfe bleibt erfundene Schärfe. Echte Pixel gehen vor.
 - **Das Explicit-Kennzeichen** ist nachgezeichnet, nicht das Originallogo des
   RIAA-Markenzeichens.
 - **MusicBrainz** wird hier nur für Cover-Art genutzt, nicht für Tracklists.
@@ -297,6 +315,7 @@ poster/
     color.js            Farbpalette aus dem Cover extrahieren
     parts.js            geteilte Bausteine: Tracklist, Farbfelder, Player, Platte
     qrcode.js           Wrapper um den QR-Code-Generator
+    upscale.js          Notfall-Hochrechnung kleiner Cover (Lanczos + Unscharfmaske)
     export.js           PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)
     utils.js            Canvas-, Farb-, Datums- und Text-Hilfsfunktionen
     main.js             Zustand, Verkabelung, Live-Vorschau

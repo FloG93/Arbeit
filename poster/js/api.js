@@ -1,19 +1,57 @@
 window.Poster = window.Poster || {};
 
 Poster.api = (function () {
+  // Ohne Land sucht iTunes im US-Store: deutsche Veröffentlichungen fehlen dort
+  // oder stehen weit hinten. Spotify braucht denselben Markt als `market`.
+  const MARKET = 'DE';
+  const LIMIT = '25';
+
+  // Apple liefert höchstens die Auflösung des hinterlegten Masters — eine
+  // größere Anfrage gibt dieselben Bytes zurück, nicht mehr Pixel.
   function upgradeArtwork(url, px) {
     if (!url) return url;
     return url.replace(/\/\d+x\d+bb(\.[a-z]+)$/i, '/' + px + 'x' + px + 'bb$1');
   }
 
+  // Dieselbe Aufnahme kommt bei iTunes aus jeder Wiederveröffentlichung einmal
+  // zurück — ohne Zusammenfassen füllen 16 Treffer sich mit einem einzigen Song.
+  function dedupe(results) {
+    const seen = new Set();
+    return results.filter((r) => {
+      const key = [r.type, r.title, r.artist, r.albumName]
+        .map((v) => String(v || '').toLowerCase().trim()).join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  const ITUNES_ENTITY = { song: 'song', album: 'album', artist: 'musicArtist' };
+
   async function searchITunes(term, entity) {
     const url = 'https://itunes.apple.com/search?' + new URLSearchParams({
-      term, media: 'music', entity: entity === 'album' ? 'album' : 'song', limit: '16',
+      term, media: 'music', entity: ITUNES_ENTITY[entity] || 'song', limit: LIMIT, country: MARKET,
     });
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('iTunes-Suche fehlgeschlagen (' + resp.status + ')');
     const json = await resp.json();
-    return json.results.map((r) => ({
+
+    if (entity === 'artist') {
+      // Künstlertreffer haben bei iTunes kein Bild — nur Name, Genre und die ID,
+      // über die unten die Diskografie kommt.
+      return json.results.filter((r) => r.artistId).map((r) => ({
+        source: 'itunes',
+        type: 'artist',
+        id: 'itunes:artist:' + r.artistId,
+        artistId: String(r.artistId),
+        title: r.artistName,
+        artist: r.artistName,
+        genre: r.primaryGenreName || '',
+        coverUrl: null,
+      }));
+    }
+
+    return dedupe(json.results.map((r) => ({
       source: 'itunes',
       type: entity === 'album' ? 'album' : 'track',
       id: 'itunes:' + (r.trackId || r.collectionId),
@@ -27,10 +65,43 @@ Poster.api = (function () {
       durationMs: r.trackTimeMillis || null,
       explicit: r.trackExplicitness === 'explicit' || r.collectionExplicitness === 'explicit',
       coverUrl: r.artworkUrl100 || r.artworkUrl60,
-      coverUrlHigh: upgradeArtwork(r.artworkUrl100 || r.artworkUrl60, 2000),
+      coverUrlHigh: upgradeArtwork(r.artworkUrl100 || r.artworkUrl60, 3000),
       appleUrl: r.trackViewUrl || r.collectionViewUrl || null,
       spotifyUri: null,
-    }));
+    })));
+  }
+
+  // Alle Alben eines Künstlers, neueste zuerst — der Weg von „wie hieß die Band"
+  // zum konkreten Album, ohne den Albumtitel schon zu kennen.
+  async function fetchITunesDiscography(artistId) {
+    const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
+      id: artistId, entity: 'album', limit: '60', country: MARKET,
+    });
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Diskografie konnte nicht geladen werden (' + resp.status + ')');
+    const json = await resp.json();
+    return dedupe(json.results
+      .filter((r) => r.wrapperType === 'collection' && r.collectionName)
+      .map((r) => ({
+        source: 'itunes',
+        type: 'album',
+        id: 'itunes:' + r.collectionId,
+        albumId: String(r.collectionId),
+        title: r.collectionName,
+        artist: r.artistName,
+        albumName: r.collectionName,
+        year: (r.releaseDate || '').slice(0, 4),
+        releaseDate: r.releaseDate || '',
+        genre: r.primaryGenreName || '',
+        durationMs: null,
+        trackCount: r.trackCount || null,
+        explicit: r.collectionExplicitness === 'explicit',
+        coverUrl: r.artworkUrl100 || r.artworkUrl60,
+        coverUrlHigh: upgradeArtwork(r.artworkUrl100 || r.artworkUrl60, 3000),
+        appleUrl: r.collectionViewUrl || null,
+        spotifyUri: null,
+      })))
+      .sort((a, b) => String(b.releaseDate).localeCompare(String(a.releaseDate)));
   }
 
   // The album behind a hit: tracklist, label, exact release date, total running time.
@@ -79,19 +150,53 @@ Poster.api = (function () {
   async function findCoverCandidates(artist, albumName) {
     const term = (artist + ' ' + albumName).trim();
     if (!term) return [];
+    const [apple, caa] = await Promise.allSettled([
+      findCoverCandidatesApple(term),
+      findCoverCandidatesCAA(artist, albumName),
+    ]);
+    return [
+      ...(apple.status === 'fulfilled' ? apple.value : []),
+      ...(caa.status === 'fulfilled' ? caa.value : []),
+    ];
+  }
+
+  async function findCoverCandidatesApple(term) {
     const hits = await searchITunes(term, 'album');
-    return hits
-      .filter((h) => h.coverUrl)
-      .slice(0, 8)
-      .map((h) => ({
-        title: h.title,
-        artist: h.artist,
-        year: h.year,
-        thumbUrl: h.coverUrl,
-        // Apple liefert je nach Release unterschiedliche Maximalgrößen — der
-        // Aufrufer probiert von groß nach klein durch.
-        sizeUrls: [3000, 2000, 1400].map((px) => upgradeArtwork(h.coverUrl, px)),
-      }));
+    return hits.filter((h) => h.coverUrl).slice(0, 6).map((h) => ({
+      source: 'Apple',
+      title: h.title,
+      artist: h.artist,
+      year: h.year,
+      thumbUrl: h.coverUrl,
+      sizeUrls: [upgradeArtwork(h.coverUrl, 3000)],
+    }));
+  }
+
+  // Das Cover Art Archive hält die Originalscans der jeweiligen Ausgabe — oft
+  // größer als Apples Master, und mit `Access-Control-Allow-Origin: *`, also
+  // ohne getaintete Canvas beim Export.
+  async function findCoverCandidatesCAA(artist, albumName) {
+    const clean = (s) => String(s || '').replace(/["\\]/g, ' ').trim();
+    const query = 'release:"' + clean(albumName) + '" AND artist:"' + clean(artist) + '"';
+    const resp = await fetch('https://musicbrainz.org/ws/2/release/?' + new URLSearchParams({
+      query, fmt: 'json', limit: '8',
+    }));
+    if (!resp.ok) return [];
+    const json = await resp.json();
+    return (json.releases || []).map((rel) => ({
+      source: 'Cover Art Archive',
+      title: rel.title,
+      artist: ((rel['artist-credit'] || [])[0] || {}).name || artist,
+      year: (rel.date || '').slice(0, 4),
+      detail: [rel.country, (rel.media || [])[0] && rel.media[0].format].filter(Boolean).join(' · '),
+      thumbUrl: 'https://coverartarchive.org/release/' + rel.id + '/front-250',
+      // `front` ist der unskalierte Originalscan; 1200 fängt die Fälle ab, in
+      // denen das Original zu groß oder nicht hinterlegt ist.
+      sizeUrls: [
+        'https://coverartarchive.org/release/' + rel.id + '/front',
+        'https://coverartarchive.org/release/' + rel.id + '/front-1200',
+      ],
+    }));
   }
 
   // Best-effort fallback: only used when a source has no usable cover art.
@@ -160,13 +265,31 @@ Poster.api = (function () {
     async search(term, entity) {
       const token = await this.getToken();
       if (!token) return null;
-      const type = entity === 'album' ? 'album' : 'track';
-      const url = 'https://api.spotify.com/v1/search?' + new URLSearchParams({ q: term, type, limit: '16' });
+      const type = entity === 'album' ? 'album' : entity === 'artist' ? 'artist' : 'track';
+      const url = 'https://api.spotify.com/v1/search?' + new URLSearchParams({
+        q: term, type, limit: LIMIT, market: MARKET,
+      });
       const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
       if (!resp.ok) throw new Error('Spotify-Suche fehlgeschlagen (' + resp.status + ')');
       const json = await resp.json();
+
+      if (type === 'artist') {
+        // Anders als iTunes liefert Spotify Künstlerfotos mit.
+        return (json.artists.items || []).map((a) => ({
+          source: 'spotify',
+          type: 'artist',
+          id: 'spotify:artist:' + a.id,
+          artistId: a.id,
+          title: a.name,
+          artist: a.name,
+          genre: (a.genres || [])[0] || '',
+          coverUrl: (a.images || [])[(a.images || []).length - 1] && a.images[a.images.length - 1].url,
+          coverUrlHigh: (a.images || [])[0] && a.images[0].url,
+        }));
+      }
+
       const items = type === 'album' ? json.albums.items : json.tracks.items;
-      return items.map((it) => {
+      return dedupe(items.map((it) => {
         const albumImages = (it.album && it.album.images) || it.images || [];
         const releaseDate = (entity === 'album' ? it.release_date : it.album && it.album.release_date) || '';
         return {
@@ -187,7 +310,38 @@ Poster.api = (function () {
           appleUrl: null,
           spotifyUri: it.uri,
         };
+      }));
+    },
+
+    // Diskografie eines Künstlers, neueste zuerst.
+    async getArtistAlbums(artistId) {
+      const token = await this.getToken();
+      if (!token) return null;
+      const url = 'https://api.spotify.com/v1/artists/' + artistId + '/albums?' + new URLSearchParams({
+        include_groups: 'album,compilation', limit: '50', market: MARKET,
       });
+      const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      if (!resp.ok) throw new Error('Diskografie konnte nicht geladen werden (' + resp.status + ')');
+      const json = await resp.json();
+      return dedupe((json.items || []).map((a) => ({
+        source: 'spotify',
+        type: 'album',
+        id: 'spotify:' + a.id,
+        albumId: a.id,
+        title: a.name,
+        artist: (a.artists || []).map((x) => x.name).join(', '),
+        albumName: a.name,
+        year: (a.release_date || '').slice(0, 4),
+        releaseDate: a.release_date || '',
+        genre: '',
+        durationMs: null,
+        trackCount: a.total_tracks || null,
+        explicit: false,
+        coverUrl: (a.images || [])[(a.images || []).length - 1] && a.images[a.images.length - 1].url,
+        coverUrlHigh: (a.images || [])[0] && a.images[0].url,
+        appleUrl: null,
+        spotifyUri: a.uri,
+      }))).sort((x, y) => String(y.releaseDate).localeCompare(String(x.releaseDate)));
     },
 
     // The full album object — unlike search results it carries label, copyrights
@@ -279,8 +433,19 @@ Poster.api = (function () {
     return match ? fetchITunesAlbum(match.albumId) : null;
   }
 
+  // Diskografie über die Quelle, aus der der Künstlertreffer stammt.
+  async function fetchDiscography(artistResult) {
+    if (artistResult.source === 'spotify' && Spotify.isConfigured()) {
+      const albums = await Spotify.getArtistAlbums(artistResult.artistId);
+      if (albums && albums.length) return albums;
+    }
+    if (artistResult.source === 'itunes') return fetchITunesDiscography(artistResult.artistId);
+    const hits = await searchITunes(artistResult.artist, 'artist');
+    return hits.length ? fetchITunesDiscography(hits[0].artistId) : [];
+  }
+
   return {
-    search, searchITunes, fetchAlbumDetails, findCoverCandidates, findCoverViaMusicBrainz,
-    Spotify, upgradeArtwork,
+    search, searchITunes, fetchAlbumDetails, fetchDiscography, findCoverCandidates,
+    findCoverViaMusicBrainz, Spotify, upgradeArtwork,
   };
 })();
