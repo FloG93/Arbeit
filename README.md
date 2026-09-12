@@ -290,16 +290,26 @@ auch der längste Titel in seine Spalte passt. Erst wenn das an der Untergrenze
 nicht reicht, wird mit „…" gekürzt. Ohne diesen zweiten Schritt stand in der
 dreispaltigen Variante hinter jedem zweiten Titel ein Auslassungszeichen.
 
-Auf iPad und iPhone starb zuverlässig die zweite Abfrage an denselben Host mit
-„Load failed" — WebKits Wortlaut dafür, dass die Verbindung nicht zustande kam.
-Safari greift dabei auf eine Keep-alive-Verbindung zurück, die die Gegenseite
-inzwischen geschlossen hat. Alle API-Aufrufe laufen deshalb über `request()`,
-das genau einmal wiederholt: `fetch` lehnt nur bei echten Netzwerkfehlern ab,
-HTTP-Fehler kommen normal zurück, wiederholt wird also keine 404 und keine 403.
-Verschärft hatte es eine eigene Unart — die Cover-Suche über MusicBrainz lud
-jedes Bild per `fetch` nur zum Dasein-Test und las den Body nie aus; eine solche
-Antwort hält in WebKit die Verbindung offen. Geprüft wird jetzt gar nicht mehr,
-das entscheidet der Ladeversuch des Bildes selbst.
+Auf dem iPad scheiterte in Brave jede Abfrage nach der ersten mit „Load
+failed" — WebKits Wortlaut dafür, dass die Verbindung nicht zustande kam.
+Safari auf demselben Gerät lief dabei durch, ebenso Brave auf PC und Android;
+es liegt also weder an der API (`itunes.apple.com` sendet
+`Access-Control-Allow-Origin: *` und drosselt bei zwölf Abfragen nicht) noch an
+WebKit allein, sondern an Braves eigener Anfrage-Pipeline auf iOS.
+
+Dagegen stehen zwei Ebenen. `request()` wiederholt dreimal mit wachsender Pause
+(0/400/1400 ms) statt einmal nach 250 ms — ein zu schneller zweiter Versuch
+greift dieselbe tote Verbindung aus dem Pool wieder ab. Kommt `fetch`
+überhaupt nicht durch, laufen die drei iTunes-Endpunkte über JSONP: ein
+`<script>`-Tag nimmt einen anderen Weg durch den Browser, ohne CORS und an
+blockierten XHR-Pfaden vorbei. Der Preis dafür ist real — JSONP führt Code der
+Gegenseite in dieser Seite aus —, deshalb ist es Rückfallebene und gilt nur für
+Apples eigene API über HTTPS.
+
+Verschärft hatte das eine eigene Unart: die Cover-Suche über MusicBrainz lud
+jedes Bild per `fetch` nur zum Dasein-Test und las den Body nie aus; eine
+solche Antwort hält in WebKit die Verbindung offen. Geprüft wird jetzt gar
+nicht mehr, das entscheidet der Ladeversuch des Bildes selbst.
 
 Die Poster-App bringt selbst keinen Service Worker mit — der des Raumrechners
 liegt aber auf derselben Herkunft und hat damit die ganze Site im Scope. Seine

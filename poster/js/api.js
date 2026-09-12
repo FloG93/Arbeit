@@ -6,18 +6,59 @@ Poster.api = (function () {
   const MARKET = 'DE';
   const LIMIT = '25';
 
-  // WebKit meldet „Load failed", wenn Safari eine Keep-alive-Verbindung
-  // wiederverwendet, die die Gegenseite inzwischen geschlossen hat — auf dem
-  // iPad stirbt deshalb zuverlässig die zweite Abfrage an denselben Host. Ein
-  // einzelner Wiederholversuch fängt das ab. `fetch` lehnt nur bei echten
-  // Netzwerkfehlern ab, HTTP-Fehler kommen normal zurück: wiederholt wird also
-  // genau die richtige Klasse, keine 404 und kein 403.
+  // „Load failed" (WebKit) heißt: die Verbindung kam nicht zustande. Auf dem
+  // iPad trifft das zuverlässig die zweite Abfrage an denselben Host — in Brave,
+  // während Safari auf demselben Gerät durchläuft. Wiederholt wird deshalb
+  // dreimal mit wachsender Pause: ein Versuch nach 250 ms greift oft dieselbe
+  // tote Verbindung aus dem Pool wieder ab.
+  //
+  // `fetch` lehnt nur bei echten Netzwerkfehlern ab, HTTP-Fehler kommen normal
+  // zurück — wiederholt wird also genau die richtige Klasse, keine 404, kein 403.
   async function request(url, init) {
+    for (const wait of [0, 400, 1400]) {
+      if (wait) await new Promise((r) => setTimeout(r, wait));
+      try {
+        return await fetch(url, init);
+      } catch (e) { /* nächster Versuch */ }
+    }
+    const err = new Error('Keine Verbindung zu ' + new URL(url, location.href).host);
+    err.network = true;
+    throw err;
+  }
+
+  // Letzter Ausweg für die iTunes-Endpunkte, wenn fetch gar nicht durchkommt:
+  // sie beherrschen JSONP, und ein <script>-Tag nimmt einen anderen Weg durch
+  // den Browser als fetch — ohne CORS und an blockierten XHR-Pfaden vorbei.
+  //
+  // Der Preis ist real: JSONP führt Code der Gegenseite in dieser Seite aus.
+  // Deshalb nur als Rückfallebene, nur für Apples eigene API über HTTPS.
+  let jsonpSeq = 0;
+  function jsonp(url, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      const name = '__posterJsonp' + (++jsonpSeq);
+      const script = document.createElement('script');
+      const done = (err, data) => {
+        clearTimeout(timer);
+        delete window[name];
+        script.remove();
+        if (err) reject(err); else resolve(data);
+      };
+      const timer = setTimeout(() => done(Object.assign(new Error('Zeitüberschreitung'), { network: true })), timeoutMs || 12000);
+      window[name] = (data) => done(null, data);
+      script.onerror = () => done(Object.assign(new Error('Auch der Rückfallweg wurde blockiert'), { network: true }));
+      script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + name;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function itunesJson(url, what) {
     try {
-      return await fetch(url, init);
+      const resp = await request(url);
+      if (!resp.ok) throw new Error(what + ' fehlgeschlagen (' + resp.status + ')');
+      return await resp.json();
     } catch (e) {
-      await new Promise((r) => setTimeout(r, 250));
-      return fetch(url, init);
+      if (!e.network) throw e;
+      return jsonp(url);
     }
   }
 
@@ -47,9 +88,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/search?' + new URLSearchParams({
       term, media: 'music', entity: ITUNES_ENTITY[entity] || 'song', limit: LIMIT, country: MARKET,
     });
-    const resp = await request(url);
-    if (!resp.ok) throw new Error('iTunes-Suche fehlgeschlagen (' + resp.status + ')');
-    const json = await resp.json();
+    const json = await itunesJson(url, 'iTunes-Suche');
 
     if (entity === 'artist') {
       // Künstlertreffer haben bei iTunes kein Bild — nur Name, Genre und die ID,
@@ -92,9 +131,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
       id: artistId, entity: 'album', limit: '60', country: MARKET,
     });
-    const resp = await request(url);
-    if (!resp.ok) throw new Error('Diskografie konnte nicht geladen werden (' + resp.status + ')');
-    const json = await resp.json();
+    const json = await itunesJson(url, 'Diskografie');
     return dedupe(json.results
       .filter((r) => r.wrapperType === 'collection' && r.collectionName)
       .map((r) => ({
@@ -125,9 +162,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
       id: collectionId, entity: 'song', limit: '200',
     });
-    const resp = await request(url);
-    if (!resp.ok) throw new Error('iTunes-Album konnte nicht geladen werden (' + resp.status + ')');
-    const json = await resp.json();
+    const json = await itunesJson(url, 'iTunes-Album');
     const collection = json.results.find((r) => r.wrapperType === 'collection') || {};
     const tracks = json.results
       .filter((r) => r.wrapperType === 'track' && r.trackName)
