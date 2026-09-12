@@ -104,6 +104,13 @@
     try { await document.fonts.ready; } catch (e) { /* older browsers */ }
   }
 
+  // Ein einzelnes fehlendes Element hat früher die ganze Initialisierung
+  // abgebrochen — und damit auch den Submit-Handler der Suche, der ganz unten
+  // steht. Seither hängt kein Listener mehr an der Existenz aller anderen.
+  function on(el, type, fn) {
+    if (el) el.addEventListener(type, fn);
+  }
+
   function setStatus(el, text, kind) {
     el.textContent = text || '';
     el.dataset.kind = kind || '';
@@ -158,12 +165,39 @@
     }
   }
 
-  els.resultsBack.addEventListener('click', () => {
+  on(els.resultsBack, 'click', () => {
     if (!artistResults) return;
     renderResults(artistResults);
     els.resultsBack.hidden = true;
     setStatus(els.searchStatus, artistResults.length + ' Künstler');
   });
+
+  // iTunes liefert zu Künstlern grundsätzlich kein Bild. Ein <img> ohne Quelle
+  // zeigt das Kaputt-Symbol des Browsers — deshalb gezeichnete Platzhalter:
+  // Schattenriss für Künstler, Platte fürs Album, Note für den Song.
+  const PLACEHOLDERS = {
+    artist: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="14.5" r="6.8"/>'
+      + '<path d="M6.5 35.5c0-7.4 6-11.4 13.5-11.4s13.5 4 13.5 11.4z"/></svg>',
+    album: '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="12.5" fill="none"'
+      + ' stroke="currentColor" stroke-width="2.6"/><circle cx="20" cy="20" r="3.1"/></svg>',
+    track: '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M17.5 9.5L30 6.8v4.1l-12.5 2.7z"/>'
+      + '<rect x="17.5" y="9.5" width="2.4" height="17.5"/><rect x="27.6" y="6.8" width="2.4" height="14.8"/>'
+      + '<ellipse cx="14.5" cy="27.6" rx="5.2" ry="4.3"/><ellipse cx="24.6" cy="24.9" rx="5.2" ry="4.3"/></svg>',
+  };
+
+  function resultThumb(r) {
+    if (r.coverUrl) {
+      const img = document.createElement('img');
+      img.src = r.coverUrl;
+      img.alt = '';
+      img.loading = 'lazy';
+      return img;
+    }
+    const span = document.createElement('span');
+    span.className = 'result-placeholder';
+    span.innerHTML = PLACEHOLDERS[r.type] || PLACEHOLDERS.album;
+    return span;
+  }
 
   function renderResults(results) {
     els.searchResults.innerHTML = '';
@@ -172,10 +206,7 @@
       li.className = 'result-item';
       li.tabIndex = 0;
 
-      const thumb = document.createElement('img');
-      thumb.src = r.coverUrl || '';
-      thumb.alt = '';
-      thumb.loading = 'lazy';
+      const thumb = resultThumb(r);
 
       const text = document.createElement('span');
       text.className = 'result-text';
@@ -198,7 +229,6 @@
       badge.className = 'result-badge';
       badge.textContent = r.type === 'artist' ? 'Alben ›' : r.type === 'album' ? 'Album' : 'Song';
 
-      if (!r.coverUrl) thumb.classList.add('is-empty');
       li.append(thumb, text, badge);
       const open = () => (r.type === 'artist' ? showDiscography(r) : selectResult(r));
       li.addEventListener('click', open);
@@ -321,7 +351,7 @@
 
   // Bewusst ein Knopf und eine Auswahl: automatisch über Namen gematcht landet
   // sonst still das Cover einer anderen Ausgabe auf dem Poster.
-  els.coverUpgrade.addEventListener('click', async () => {
+  on(els.coverUpgrade, 'click', async () => {
     const album = model.albumName || model.title;
     els.coverCandidates.hidden = true;
     setStatus(els.coverStatus, 'Suche Cover in höherer Auflösung…');
@@ -384,7 +414,7 @@
   // Letzte Möglichkeit, wenn keine Quelle mehr Pixel hat: rechnet das Cover
   // hoch, ohne Details zu erfinden — Lanczos statt der weichen Interpolation,
   // die der Browser beim Export sonst von allein anwendet.
-  els.coverUpscale.addEventListener('click', async () => {
+  on(els.coverUpscale, 'click', async () => {
     if (!model.coverImg) return;
     const before = model.coverImg.naturalWidth;
     const paperMm = (Poster.exportPoster.SIZES[model.size] || { w: 210 }).w * 0.85;
@@ -406,7 +436,7 @@
     }
   });
 
-  els.coverUpload.addEventListener('change', () => {
+  on(els.coverUpload, 'change', () => {
     const file = els.coverUpload.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -416,7 +446,7 @@
     reader.readAsDataURL(file);
   });
 
-  els.manualBtn.addEventListener('click', () => {
+  on(els.manualBtn, 'click', () => {
     model.title = model.title || 'Songtitel';
     model.artist = model.artist || 'Künstler:in';
     model.subtitle = model.subtitle || '';
@@ -443,22 +473,22 @@
     [...els.stylePicker.querySelectorAll('input')].forEach((i) => { i.checked = i.value === model.style; });
   }
 
-  els.fieldTitle.addEventListener('input', () => { model.title = els.fieldTitle.value; scheduleRender(); });
-  els.fieldArtist.addEventListener('input', () => { model.artist = els.fieldArtist.value; scheduleRender(); });
-  els.fieldSubtitle.addEventListener('input', () => { model.subtitle = els.fieldSubtitle.value; scheduleRender(); });
-  els.fieldRelease.addEventListener('input', () => { model.releaseDate = els.fieldRelease.value; scheduleRender(); });
-  els.fieldLength.addEventListener('input', () => { model.totalLength = els.fieldLength.value; scheduleRender(); });
-  els.fieldLabel.addEventListener('input', () => { model.label = els.fieldLabel.value; scheduleRender(); });
-  els.fieldExplicit.addEventListener('change', () => {
+  on(els.fieldTitle, 'input', () => { model.title = els.fieldTitle.value; scheduleRender(); });
+  on(els.fieldArtist, 'input', () => { model.artist = els.fieldArtist.value; scheduleRender(); });
+  on(els.fieldSubtitle, 'input', () => { model.subtitle = els.fieldSubtitle.value; scheduleRender(); });
+  on(els.fieldRelease, 'input', () => { model.releaseDate = els.fieldRelease.value; scheduleRender(); });
+  on(els.fieldLength, 'input', () => { model.totalLength = els.fieldLength.value; scheduleRender(); });
+  on(els.fieldLabel, 'input', () => { model.label = els.fieldLabel.value; scheduleRender(); });
+  on(els.fieldExplicit, 'change', () => {
     model.showExplicit = els.fieldExplicit.checked;
     scheduleRender();
   });
-  els.fieldTracks.addEventListener('input', () => {
+  on(els.fieldTracks, 'input', () => {
     model.tracks = els.fieldTracks.value.split('\n').map((l) => l.trim()).filter(Boolean);
     scheduleRender();
   });
 
-  els.stylePicker.addEventListener('change', (e) => {
+  on(els.stylePicker, 'change', (e) => {
     if (e.target.name !== 'style') return;
     model.style = e.target.value;
     updateTrackHint();
@@ -473,7 +503,7 @@
     }
   }
 
-  els.sizePicker.addEventListener('change', (e) => {
+  on(els.sizePicker, 'change', (e) => {
     if (e.target.name !== 'size') return;
     model.size = e.target.value;
     updateCoverMeta();
@@ -500,7 +530,7 @@
     });
   }
 
-  els.accentCustom.addEventListener('input', () => {
+  on(els.accentCustom, 'input', () => {
     model.accent = els.accentCustom.value;
     [...els.paletteRow.children].forEach((c) => c.classList.remove('active'));
     prepareCodeAssets();
@@ -521,7 +551,7 @@
     );
   }
 
-  els.codePicker.addEventListener('change', (e) => {
+  on(els.codePicker, 'change', (e) => {
     if (e.target.name !== 'codeType') return;
     model.codeType = e.target.value;
     prepareCodeAssets();
@@ -537,7 +567,7 @@
     }
   })();
 
-  els.spotifySave.addEventListener('click', async () => {
+  on(els.spotifySave, 'click', async () => {
     const id = els.spotifyId.value.trim();
     const secret = els.spotifySecret.value.trim();
     if (!id || !secret) {
@@ -555,7 +585,7 @@
     }
   });
 
-  els.spotifyClear.addEventListener('click', () => {
+  on(els.spotifyClear, 'click', () => {
     api.Spotify.clearCreds();
     els.spotifyId.value = '';
     els.spotifySecret.value = '';
@@ -668,7 +698,7 @@
     });
   });
 
-  els.framePicker.addEventListener('click', (e) => {
+  on(els.framePicker, 'click', (e) => {
     const btn = e.target.closest('.frame-btn');
     if (!btn) return;
     [...els.framePicker.querySelectorAll('.frame-btn')].forEach((b) => b.classList.remove('active'));
@@ -694,7 +724,7 @@
 
   // --- Export -----------------------------------------------------------------
 
-  els.exportPng.addEventListener('click', async () => {
+  on(els.exportPng, 'click', async () => {
     if (!model.coverImg) return;
     setStatus(els.exportStatus, 'PNG wird erstellt (kann bei A2 etwas dauern)…');
     try {
@@ -706,7 +736,7 @@
     }
   });
 
-  els.exportPdf.addEventListener('click', async () => {
+  on(els.exportPdf, 'click', async () => {
     if (!model.coverImg) return;
     setStatus(els.exportStatus, 'PDF wird erstellt (kann bei A2 etwas dauern)…');
     try {
@@ -720,7 +750,7 @@
 
   // --- Init ---------------------------------------------------------------
 
-  els.searchForm.addEventListener('submit', (e) => {
+  on(els.searchForm, 'submit', (e) => {
     e.preventDefault();
     doSearch(els.searchInput.value);
   });

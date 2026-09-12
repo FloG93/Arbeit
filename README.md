@@ -229,6 +229,8 @@ direktes Öffnen per `file://` scheitert an CORS.
 
 - **Künstler-Logos** (der gesetzte Schriftzug einer Band) liefert keine der
   Schnittstellen — sie sind Markenzeichen. Stattdessen wird der Name gesetzt.
+- **Künstlerfotos** hat nur Spotify. iTunes liefert zu Künstlern gar kein Bild;
+  die Trefferliste zeigt dort einen gezeichneten Schattenriss.
 - **Aufnahmejahr** gibt es nirgends, nur das Veröffentlichungsdatum.
 - **Label** kennt nur Spotify als eigenes Feld. Bei iTunes wird es aus der
   Copyright-Zeile abgeleitet („℗ 2013 Daft Life Limited, under exclusive…" →
@@ -288,6 +290,18 @@ auch der längste Titel in seine Spalte passt. Erst wenn das an der Untergrenze
 nicht reicht, wird mit „…" gekürzt. Ohne diesen zweiten Schritt stand in der
 dreispaltigen Variante hinter jedem zweiten Titel ein Auslassungszeichen.
 
+Die Poster-App bringt selbst keinen Service Worker mit — der des Raumrechners
+liegt aber auf derselben Herkunft und hat damit die ganze Site im Scope. Seine
+erste Fassung cachte jede Anfrage darin, also auch diese App, und lieferte sie
+danach eingefroren aus: neues HTML mit altem JavaScript, die Initialisierung
+brach ab, die Suche reagierte nicht mehr. Sichtbar wurde das nur auf Geräten,
+auf denen der Raumrechner schon einmal lief. `app/sw.js` cacht jetzt
+ausschließlich die eigenen Dateien aus `ASSETS`; die Cache-Version wanderte auf
+v6, damit die alte samt Poster-Resten gelöscht wird. Weil ein reparierter
+Worker betroffene Geräte aber erst erreicht, wenn er nachgeladen wird, räumt
+`poster/js/sw-recovery.js` beim Start die eigenen Einträge aus jedem Cache und
+lädt einmalig neu — überall sonst ein No-Op.
+
 Die Wand-Vorschau hängt das Poster über ein Sofa, und zwar maßstabsgetreu:
 `room.svg` zeigt einen Ausschnitt von 130 cm Wandbreite, daraus rechnet
 `updateWallScale()` die Breite des Rahmens in Prozent. Ein A4-Poster nimmt dort
@@ -315,6 +329,7 @@ poster/
     color.js            Farbpalette aus dem Cover extrahieren
     parts.js            geteilte Bausteine: Tracklist, Farbfelder, Player, Platte
     qrcode.js           Wrapper um den QR-Code-Generator
+    sw-recovery.js      räumt Reste des Raumrechner-Workers aus dem Cache
     upscale.js          Notfall-Hochrechnung kleiner Cover (Lanczos + Unscharfmaske)
     export.js           PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)
     utils.js            Canvas-, Farb-, Datums- und Text-Hilfsfunktionen

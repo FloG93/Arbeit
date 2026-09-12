@@ -1,5 +1,6 @@
 'use strict';
-const CACHE = 'raumrechner-v5';
+// v6 löscht v5 mit: darin lagen fälschlich auch Dateien der Poster-App.
+const CACHE = 'raumrechner-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +14,13 @@ const ASSETS = [
   './icons/icon-192-maskable.png',
   './icons/icon-512-maskable.png',
 ];
+
+// Der Scope dieses Workers ist die ganze Site, seit unter /poster/ eine zweite
+// App auf derselben Herkunft liegt. Gecacht wird deshalb ausschließlich der
+// eigene App-Shell — vorher schluckte der Worker jede Anfrage im Scope und
+// lieferte der Poster-App eingefrorene Dateien aus, bis hin zu neuem HTML mit
+// altem JavaScript.
+const SHELL = new Set(ASSETS.map((p) => new URL(p, self.location).pathname));
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -34,6 +42,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
+  if (!SHELL.has(url.pathname)) return; // fremde Apps im Scope unangetastet lassen
 
   e.respondWith(
     caches.match(e.request).then(cached => {
