@@ -125,6 +125,63 @@
     el.dataset.kind = kind || '';
   }
 
+  // --- Diagnose ---------------------------------------------------------------
+
+  const diag = {
+    block: document.getElementById('diag-block'),
+    log: document.getElementById('diag-log'),
+    copy: document.getElementById('diag-copy'),
+    test: document.getElementById('diag-test'),
+    status: document.getElementById('diag-status'),
+  };
+
+  if (Poster.log && diag.log) {
+    const paint = () => { diag.log.value = Poster.log.text(); };
+    paint();
+    Poster.log.watch(() => { if (diag.block.open) paint(); });
+    on(diag.block, 'toggle', () => { if (diag.block.open) paint(); });
+
+    on(diag.copy, 'click', async () => {
+      const text = Poster.log.text();
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(diag.status, 'Protokoll kopiert.');
+      } catch (e) {
+        // Auf iOS scheitert das Clipboard je nach Kontext — dann wenigstens
+        // alles markieren, damit „Kopieren" aus dem Menü reicht.
+        diag.log.focus();
+        diag.log.select();
+        setStatus(diag.status, 'Markiert — bitte über das Menü kopieren.');
+      }
+    });
+
+    // Prüft der Reihe nach die beteiligten Hosts und schreibt jedes Ergebnis
+    // mit Dauer ins Protokoll: daran ist ablesbar, was genau nicht durchkommt.
+    on(diag.test, 'click', async () => {
+      setStatus(diag.status, 'Test läuft…');
+      diag.test.disabled = true;
+      const targets = [
+        ['iTunes-Suche', 'https://itunes.apple.com/search?term=test&media=music&entity=song&limit=1&country=DE'],
+        ['MusicBrainz', 'https://musicbrainz.org/ws/2/release/?query=a&fmt=json&limit=1'],
+        ['Cover Art Archive', 'https://coverartarchive.org/release/36e2aede-346d-4931-8565-78d810d167c7/front-250'],
+        ['eigene Herkunft', 'room.svg?t=' + Date.now()],
+      ];
+      for (const [name, url] of targets) {
+        const t0 = Date.now();
+        try {
+          const resp = await fetch(url, { cache: 'no-store' });
+          Poster.log.add('TEST ' + name + ' → HTTP ' + resp.status + ' (' + (Date.now() - t0) + ' ms)');
+        } catch (e) {
+          Poster.log.add('TEST ' + name + ' → ' + (e.name || 'Fehler') + ': ' + e.message
+            + ' (' + (Date.now() - t0) + ' ms)');
+        }
+      }
+      diag.log.value = Poster.log.text();
+      diag.test.disabled = false;
+      setStatus(diag.status, 'Test fertig — Protokoll unten.');
+    });
+  }
+
   // --- Search -------------------------------------------------------------
 
   function searchEntity() {
@@ -152,7 +209,7 @@
       );
     } catch (e) {
       console.error(e);
-      setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + errorText(e), 'error');
+      setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + errorText(e) + ' — Details unter „Diagnose".', 'error');
     }
   }
 

@@ -14,16 +14,46 @@ Poster.api = (function () {
   //
   // `fetch` lehnt nur bei echten Netzwerkfehlern ab, HTTP-Fehler kommen normal
   // zurück — wiederholt wird also genau die richtige Klasse, keine 404, kein 403.
+  function log(text) {
+    if (Poster.log) Poster.log.add(text);
+  }
+
+  function label(url) {
+    const u = new URL(url, location.href);
+    return u.host + u.pathname;
+  }
+
   async function request(url, init) {
-    for (const wait of [0, 400, 1400]) {
-      if (wait) await new Promise((r) => setTimeout(r, wait));
+    const name = label(url);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (attempt > 1) await new Promise((r) => setTimeout(r, attempt === 2 ? 400 : 1400));
+      const t0 = Date.now();
       try {
-        return await fetch(url, init);
-      } catch (e) { /* nächster Versuch */ }
+        const resp = await fetch(url, init);
+        log('fetch ' + name + ' #' + attempt + ' → HTTP ' + resp.status + ' (' + (Date.now() - t0) + ' ms)');
+        return resp;
+      } catch (e) {
+        log('fetch ' + name + ' #' + attempt + ' → ' + (e.name || 'Fehler') + ': ' + e.message
+          + ' (' + (Date.now() - t0) + ' ms)');
+      }
     }
+    probeControlHost();
     const err = new Error('Keine Verbindung zu ' + new URL(url, location.href).host);
     err.network = true;
     throw err;
+  }
+
+  // Gegenprobe an einen anderen Host, einmal je Sitzung: scheitert auch die,
+  // liegt es nicht an Apple, sondern am Gerät oder am Browser insgesamt.
+  let probed = false;
+  function probeControlHost() {
+    if (probed) return;
+    probed = true;
+    const t0 = Date.now();
+    fetch('https://musicbrainz.org/ws/2/release/?query=a&fmt=json&limit=1')
+      .then((r) => log('Gegenprobe musicbrainz.org → HTTP ' + r.status + ' (' + (Date.now() - t0) + ' ms)'))
+      .catch((e) => log('Gegenprobe musicbrainz.org → ' + (e.name || 'Fehler') + ': ' + e.message
+        + ' (' + (Date.now() - t0) + ' ms)'));
   }
 
   // Letzter Ausweg für die iTunes-Endpunkte, wenn fetch gar nicht durchkommt:
@@ -37,16 +67,20 @@ Poster.api = (function () {
     return new Promise((resolve, reject) => {
       const name = '__posterJsonp' + (++jsonpSeq);
       const script = document.createElement('script');
+      const t0 = Date.now();
       const done = (err, data) => {
         clearTimeout(timer);
         delete window[name];
         script.remove();
+        log('jsonp ' + label(url) + ' → ' + (err ? err.message : 'geladen')
+          + ' (' + (Date.now() - t0) + ' ms)');
         if (err) reject(err); else resolve(data);
       };
       const timer = setTimeout(() => done(Object.assign(new Error('Zeitüberschreitung'), { network: true })), timeoutMs || 12000);
       window[name] = (data) => done(null, data);
       script.onerror = () => done(Object.assign(new Error('Auch der Rückfallweg wurde blockiert'), { network: true }));
       script.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + name;
+      log('jsonp ' + label(url) + ' startet');
       document.head.appendChild(script);
     });
   }

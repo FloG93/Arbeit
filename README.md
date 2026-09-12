@@ -311,6 +311,16 @@ jedes Bild per `fetch` nur zum Dasein-Test und las den Body nie aus; eine
 solche Antwort hält in WebKit die Verbindung offen. Geprüft wird jetzt gar
 nicht mehr, das entscheidet der Ladeversuch des Bildes selbst.
 
+Weil sich der iPad-Fehler von hier aus nicht nachstellen lässt, hat die App
+einen Abschnitt „Diagnose": ein Protokoll im Speicher der Seite, das jeden
+API-Aufruf mit Weg, Ergebnis und **Dauer** festhält, dazu Browserkennung,
+Service-Worker-Status und Cache-Namen. Die Dauer ist dabei die eigentliche
+Auskunft — bricht eine Anfrage nach wenigen Millisekunden ab, wurde sie
+abgelehnt, bevor etwas über die Leitung ging; eine echte Netzstörung braucht
+länger. „Verbindung testen" prüft zusätzlich alle beteiligten Hosts einzeln
+gegen die eigene Herkunft, und nach einem Fehlschlag läuft automatisch eine
+Gegenprobe an einen anderen Host. Das Protokoll verlässt das Gerät nicht.
+
 Die Poster-App bringt selbst keinen Service Worker mit — der des Raumrechners
 liegt aber auf derselben Herkunft und hat damit die ganze Site im Scope. Seine
 erste Fassung cachte jede Anfrage darin, also auch diese App, und lieferte sie
@@ -350,6 +360,7 @@ poster/
     color.js            Farbpalette aus dem Cover extrahieren
     parts.js            geteilte Bausteine: Tracklist, Farbfelder, Player, Platte
     qrcode.js           Wrapper um den QR-Code-Generator
+    log.js              Diagnose-Protokoll (bleibt auf dem Gerät)
     sw-recovery.js      räumt Reste des Raumrechner-Workers aus dem Cache
     upscale.js          Notfall-Hochrechnung kleiner Cover (Lanczos + Unscharfmaske)
     export.js           PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)

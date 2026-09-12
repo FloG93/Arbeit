@@ -51,6 +51,17 @@
         <p id="spotify-status" class="status" aria-live="polite"></p>
       </details>
 
+      <details class="block" id="diag-block">
+        <summary>Diagnose <span class="hint-inline">(bei Problemen)</span></summary>
+        <p class="hint">Protokoll dieser Sitzung. Bleibt auf dem Gerät und wird nirgendwohin gesendet — bei einem Fehler bitte kopieren und schicken.</p>
+        <textarea id="diag-log" rows="12" readonly spellcheck="false"></textarea>
+        <div class="field-row">
+          <button id="diag-copy" type="button">Kopieren</button>
+          <button id="diag-test" type="button" class="secondary">Verbindung testen</button>
+        </div>
+        <p id="diag-status" class="status" aria-live="polite"></p>
+      </details>
+
       <div class="block editor-fields" id="editor-fields" hidden>
         <h2>Poster</h2>
 
@@ -164,6 +175,7 @@
   </div>
 </div>
 
+<script src="js/log.js"></script>
 <script src="js/sw-recovery.js"></script>
 <script src="vendor/qrcode-generator.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
