@@ -148,10 +148,15 @@ bildet daraus das Polygon (Bodenfläche über die Gaußsche Trapezformel);
 
 ## Musik-Poster-Generator
 
-Künstler, Album oder Song suchen und daraus automatisch ein druckreifes
-Poster generieren — Albumcover groß im Bild, dazu ein scanbarer Code (echter
-Spotify-Code, sonst ein QR-Code) zum Song oder Album, in einem von neun
-Design-Stilen. Kein Login, kein eigener Server — reines HTML/CSS/JavaScript.
+Künstler, Album, Song **oder Film** suchen und daraus automatisch ein
+druckreifes Poster generieren — Motiv groß im Bild, dazu ein scanbarer Code
+(echter Spotify-Code, sonst ein QR-Code), in einem von zwölf Design-Stilen.
+Kein Login, kein eigener Server — reines HTML/CSS/JavaScript.
+
+Der Umschalter oben in der Suche bestimmt die Art: **Musik** (neun Stile, Daten
+von iTunes/Spotify) oder **Film** (drei Stile, Daten von TMDB). Er tauscht nicht
+die Oberfläche aus, sondern beschriftet dieselben Felder um — „Künstler" wird
+„Regie", „Tracklist" wird „Besetzung" — und blendet die passenden Stile ein.
 
 ### Starten
 
@@ -198,6 +203,27 @@ des Beta-Kanals steht in `poster/version.json`, die freigegebene in
 auch der Release-Kanal den aktuellen Stand — besser eine ungekennzeichnete
 Fassung als eine 404.
 
+### Formate
+
+| Format | Maße | Auflösung |
+| --- | --- | --- |
+| A4 / A3 / A2 | 21 × 29,7 bis 42 × 59,4 cm | 300 dpi |
+| A1 | 59,4 × 84,1 cm | 210 dpi |
+| A0 | 84,1 × 118,9 cm | 150 dpi |
+| 50 × 70 | Plakatmaß | 250 dpi |
+| 70 × 100 | Kinoplakat | 170 dpi |
+
+Die Auflösung ist gestaffelt, weil nicht der Drucker die Grenze setzt, sondern
+die Canvas-Fläche des Browsers: A2 bei 300 dpi sind 34,8 Megapixel und laufen
+nachweislich durch, A1 wären bei 300 dpi schon 70 und A0 gar 140. Jedes Format
+bleibt deshalb unter etwa 35 Megapixeln. Fachlich ist das ohnehin richtig — ein
+A0-Plakat wird aus zwei Metern Abstand gesehen, 150 dpi sind dort üblich. Der
+Dateiname nennt die tatsächliche Auflösung.
+
+Die Plakatmaße haben andere Seitenverhältnisse als die A-Reihe (1:1,40 und
+1:1,43 gegen 1:1,414). Vorschau, Wand-Ansicht und Layout rechnen deshalb mit
+dem Verhältnis des gewählten Formats statt mit einem festen Wert.
+
 ### Datenquellen
 
 - **Suche**: primär die [iTunes Search API](https://performance-partners.apple.com/search-api)
@@ -215,6 +241,17 @@ Fassung als eine 404.
   die App über MusicBrainz + Cover Art Archive nach einem Ersatz; schlägt auch
   das fehl, gibt es ein Platzhalter-Cover plus manuellen Upload. „Schärferes
   Cover suchen" stellt beide Quellen nebeneinander zur Auswahl.
+- **Filme**: [TMDB](https://www.themoviedb.org). Apple hat seine Filmsuche
+  abgeschaltet (`media=movie` antwortet mit 403, `entity=movie` mit null
+  Treffern), und eine schlüsselfreie Quelle für Plakate gibt es nicht —
+  Filmplakate sind geschützt und liegen in keiner freien Bilddatenbank. TMDB
+  passt technisch: API und Bild-CDN senden beide
+  `Access-Control-Allow-Origin: *`, und `/t/p/original` liefert 2000 × 3000 px,
+  also 285 dpi auf A4 und 202 auf A3. Ein Aufruf holt über `append_to_response`
+  Stab, Freigaben und Bilder mit: Tagline, Laufzeit, Genre, Studio, FSK aus
+  `release_dates`, Besetzung und Billing Block aus `credits` — und mit Glück den
+  Original-Titelschriftzug als transparentes PNG aus `images.logos`. Der
+  kostenlose Schlüssel liegt wie die Spotify-Daten nur im Browser.
 - **Tracklist und Albumangaben** (Titel, Gesamtlänge, Label, genaues Datum):
   bei Spotify aus dem vollständigen Album-Objekt, bei iTunes aus
   `lookup?entity=song`. Findet die eigene Quelle nichts, sucht die App das
@@ -241,6 +278,9 @@ Fassung als eine 404.
 | **Minimalistisch** | Cover, Titel, Interpret, Wellenform-Balken in der Akzentfarbe, Laufzeit |
 | **Vintage / Vinyl-Retro** | Doppelte Rahmenlinie, Cover als Plattenlabel auf gezeichneter Schallplatte, Serifen-Display |
 | **Grunge / Konzertflyer** | Dunkler Grund, Duoton-Cover, Risskanten, gestempelte Schreibmaschinenschrift |
+| **Key Art** (Film) | Motiv randlos, Darstellerzeile, Titelschriftzug, Startzeile, Billing Block, FSK |
+| **Minimal** (Film) | Flächige Farbe aus dem Motiv, Plakat als eingesetztes Bild im 2:3-Format, Titel und Regie groß |
+| **Kinoprogramm** (Film) | Das Plakat als Eintrittskarte: Motiv, Perforation, Angaben als Tabelle, Strichcode |
 
 ### Funktionsumfang
 
@@ -292,6 +332,15 @@ Fassung als eine 404.
 - **Das Explicit-Kennzeichen** ist nachgezeichnet, nicht das Originallogo des
   RIAA-Markenzeichens.
 - **MusicBrainz** wird hier nur für Cover-Art genutzt, nicht für Tracklists.
+- **Filme brauchen zwingend einen TMDB-Schlüssel.** Ohne ihn bleibt für Film
+  nur der manuelle Weg: Plakat hochladen und die Felder selbst füllen.
+- **Der Original-Titelschriftzug** ist nicht zu jedem Film erfasst. Was hochkant
+  ankommt, ist bei TMDB falsch einsortiert und wird verworfen — ein
+  Titelschriftzug ist immer breiter als hoch; dann wird der Titel gesetzt.
+- **FSK-Logos** sind Marken wie das Explicit-Zeichen und deshalb nachgezeichnet.
+- **TMDB verlangt Attribution**, mit vorgeschriebenem Wortlaut und Logo. Beides
+  steht im Block „TMDB-Zugang". Kommerzielle Nutzung bräuchte eine eigene
+  Vereinbarung mit TMDB; privat ist die Nutzung frei.
 
 ### Wissenswertes zur Umsetzung
 
@@ -391,6 +440,7 @@ poster/
   index.html            Einstiegspunkt
   version.json          Version des Beta-Kanals
   release.json          Zeiger auf den freigegebenen Commit
+  img/tmdb.svg          Logo für die vorgeschriebene TMDB-Attribution
   build.js              Kanal/Version/Commit — beim Deploy je Kanal erzeugt
   styles.css            Design-Tokens, Formulare, Wand-Vorschau
   room.svg              gezeichnete Wohnzimmerwand für die Wand-Vorschau
@@ -403,11 +453,13 @@ poster/
     qrcode.js           Wrapper um den QR-Code-Generator
     log.js              Diagnose-Protokoll (bleibt auf dem Gerät)
     sw-recovery.js      räumt Reste des Raumrechner-Workers aus dem Cache
+    tmdb.js             Filmdaten und Plakate von TMDB
     upscale.js          Notfall-Hochrechnung kleiner Cover (Lanczos + Unscharfmaske)
     export.js           PNG-/PDF-Export bei echten 300 dpi (A4/A3/A2)
     utils.js            Canvas-, Farb-, Datums- und Text-Hilfsfunktionen
     main.js             Zustand, Verkabelung, Live-Vorschau
     styles/             ein Modul je Stil, alle mit derselben draw(ctx, W, H, model)
+      filmkeyart.js     filmminimal.js  filmticket.js
       tracklist.js      nowplaying.js   swiss.js
       pantone.js        linernotes.js   vinylsleeve.js
       minimal.js        vintage.js      grunge.js
