@@ -6,6 +6,21 @@ Poster.api = (function () {
   const MARKET = 'DE';
   const LIMIT = '25';
 
+  // WebKit meldet „Load failed", wenn Safari eine Keep-alive-Verbindung
+  // wiederverwendet, die die Gegenseite inzwischen geschlossen hat — auf dem
+  // iPad stirbt deshalb zuverlässig die zweite Abfrage an denselben Host. Ein
+  // einzelner Wiederholversuch fängt das ab. `fetch` lehnt nur bei echten
+  // Netzwerkfehlern ab, HTTP-Fehler kommen normal zurück: wiederholt wird also
+  // genau die richtige Klasse, keine 404 und kein 403.
+  async function request(url, init) {
+    try {
+      return await fetch(url, init);
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 250));
+      return fetch(url, init);
+    }
+  }
+
   // Apple liefert höchstens die Auflösung des hinterlegten Masters — eine
   // größere Anfrage gibt dieselben Bytes zurück, nicht mehr Pixel.
   function upgradeArtwork(url, px) {
@@ -32,7 +47,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/search?' + new URLSearchParams({
       term, media: 'music', entity: ITUNES_ENTITY[entity] || 'song', limit: LIMIT, country: MARKET,
     });
-    const resp = await fetch(url);
+    const resp = await request(url);
     if (!resp.ok) throw new Error('iTunes-Suche fehlgeschlagen (' + resp.status + ')');
     const json = await resp.json();
 
@@ -77,7 +92,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
       id: artistId, entity: 'album', limit: '60', country: MARKET,
     });
-    const resp = await fetch(url);
+    const resp = await request(url);
     if (!resp.ok) throw new Error('Diskografie konnte nicht geladen werden (' + resp.status + ')');
     const json = await resp.json();
     return dedupe(json.results
@@ -110,7 +125,7 @@ Poster.api = (function () {
     const url = 'https://itunes.apple.com/lookup?' + new URLSearchParams({
       id: collectionId, entity: 'song', limit: '200',
     });
-    const resp = await fetch(url);
+    const resp = await request(url);
     if (!resp.ok) throw new Error('iTunes-Album konnte nicht geladen werden (' + resp.status + ')');
     const json = await resp.json();
     const collection = json.results.find((r) => r.wrapperType === 'collection') || {};
@@ -178,7 +193,7 @@ Poster.api = (function () {
   async function findCoverCandidatesCAA(artist, albumName) {
     const clean = (s) => String(s || '').replace(/["\\]/g, ' ').trim();
     const query = 'release:"' + clean(albumName) + '" AND artist:"' + clean(artist) + '"';
-    const resp = await fetch('https://musicbrainz.org/ws/2/release/?' + new URLSearchParams({
+    const resp = await request('https://musicbrainz.org/ws/2/release/?' + new URLSearchParams({
       query, fmt: 'json', limit: '8',
     }));
     if (!resp.ok) return [];
@@ -199,7 +214,12 @@ Poster.api = (function () {
     }));
   }
 
-  // Best-effort fallback: only used when a source has no usable cover art.
+  // Notnagel, wenn die eigentliche Quelle kein brauchbares Cover hat: liefert
+  // Kandidaten-URLs, ohne sie zu prüfen. Vorher lud diese Funktion jedes Bild
+  // per fetch nur zum Dasein-Test und las den Body nie aus — in WebKit hält
+  // eine solche Antwort die Verbindung offen und lässt die nächste Anfrage an
+  // denselben Host mit „Load failed" auflaufen. Ob es das Bild gibt, entscheidet
+  // jetzt der Ladeversuch des Aufrufers.
   async function findCoverViaMusicBrainz(artist, title) {
     try {
       const q = new URLSearchParams({
@@ -207,18 +227,13 @@ Poster.api = (function () {
         fmt: 'json',
         limit: '3',
       });
-      const resp = await fetch('https://musicbrainz.org/ws/2/release/?' + q);
-      if (!resp.ok) return null;
+      const resp = await request('https://musicbrainz.org/ws/2/release/?' + q);
+      if (!resp.ok) return [];
       const json = await resp.json();
-      for (const rel of json.releases || []) {
-        const caaUrl = 'https://coverartarchive.org/release/' + rel.id + '/front-500';
-        try {
-          const head = await fetch(caaUrl, { method: 'GET', redirect: 'follow' });
-          if (head.ok) return head.url;
-        } catch (e) { /* try next release */ }
-      }
-    } catch (e) { /* offline or blocked — caller falls back further */ }
-    return null;
+      return (json.releases || []).map((rel) => 'https://coverartarchive.org/release/' + rel.id + '/front-500');
+    } catch (e) {
+      return []; // offline oder blockiert — der Aufrufer weicht weiter aus
+    }
   }
 
   const Spotify = {
@@ -247,7 +262,7 @@ Poster.api = (function () {
       const creds = this.getCreds();
       if (!creds || !creds.id || !creds.secret) return null;
       if (this._token && this._tokenExp > Date.now()) return this._token;
-      const resp = await fetch('https://accounts.spotify.com/api/token', {
+      const resp = await request('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -269,7 +284,7 @@ Poster.api = (function () {
       const url = 'https://api.spotify.com/v1/search?' + new URLSearchParams({
         q: term, type, limit: LIMIT, market: MARKET,
       });
-      const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      const resp = await request(url, { headers: { Authorization: 'Bearer ' + token } });
       if (!resp.ok) throw new Error('Spotify-Suche fehlgeschlagen (' + resp.status + ')');
       const json = await resp.json();
 
@@ -320,7 +335,7 @@ Poster.api = (function () {
       const url = 'https://api.spotify.com/v1/artists/' + artistId + '/albums?' + new URLSearchParams({
         include_groups: 'album,compilation', limit: '50', market: MARKET,
       });
-      const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      const resp = await request(url, { headers: { Authorization: 'Bearer ' + token } });
       if (!resp.ok) throw new Error('Diskografie konnte nicht geladen werden (' + resp.status + ')');
       const json = await resp.json();
       return dedupe((json.items || []).map((a) => ({
@@ -350,14 +365,14 @@ Poster.api = (function () {
       const token = await this.getToken();
       if (!token) return null;
       const headers = { Authorization: 'Bearer ' + token };
-      const resp = await fetch('https://api.spotify.com/v1/albums/' + albumId, { headers });
+      const resp = await request('https://api.spotify.com/v1/albums/' + albumId, { headers });
       if (!resp.ok) throw new Error('Spotify-Album konnte nicht geladen werden (' + resp.status + ')');
       const album = await resp.json();
 
       let items = (album.tracks && album.tracks.items) || [];
       let next = album.tracks && album.tracks.next;
       while (next && items.length < 200) {
-        const page = await fetch(next, { headers });
+        const page = await request(next, { headers });
         if (!page.ok) break;
         const json = await page.json();
         items = items.concat(json.items || []);

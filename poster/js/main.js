@@ -111,6 +111,15 @@
     if (el) el.addEventListener(type, fn);
   }
 
+  // „Load failed" (WebKit) bzw. „Failed to fetch" (Chromium) heißt beides nur:
+  // die Verbindung kam nicht zustande. Als Meldung ist das für niemanden
+  // brauchbar.
+  function errorText(e) {
+    return /load failed|failed to fetch|networkerror/i.test(e.message || '')
+      ? 'Netzwerkfehler — bitte noch einmal versuchen.'
+      : e.message;
+  }
+
   function setStatus(el, text, kind) {
     el.textContent = text || '';
     el.dataset.kind = kind || '';
@@ -143,7 +152,7 @@
       );
     } catch (e) {
       console.error(e);
-      setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + e.message, 'error');
+      setStatus(els.searchStatus, 'Suche fehlgeschlagen: ' + errorText(e), 'error');
     }
   }
 
@@ -161,7 +170,7 @@
         : 'Keine Alben gefunden.');
     } catch (e) {
       console.error(e);
-      setStatus(els.searchStatus, 'Diskografie fehlgeschlagen: ' + e.message, 'error');
+      setStatus(els.searchStatus, 'Diskografie fehlgeschlagen: ' + errorText(e), 'error');
     }
   }
 
@@ -291,7 +300,7 @@
       scheduleRender();
     } catch (e) {
       if (gen !== detailGeneration) return;
-      setStatus(els.tracksStatus, 'Tracklist nicht ladbar: ' + e.message, 'error');
+      setStatus(els.tracksStatus, 'Tracklist nicht ladbar: ' + errorText(e), 'error');
     }
   }
 
@@ -305,14 +314,14 @@
       } catch (e) { /* try next candidate */ }
     }
     setStatus(els.exportStatus, 'Cover wird über MusicBrainz gesucht…');
-    const mbUrl = await api.findCoverViaMusicBrainz(model.artist, model.title);
-    if (mbUrl) {
+    const mbUrls = await api.findCoverViaMusicBrainz(model.artist, model.title);
+    for (const url of mbUrls) {
       try {
-        const img = await U.loadImage(mbUrl, 'anonymous');
+        const img = await U.loadImage(url, 'anonymous');
         applyCover(img);
         setStatus(els.exportStatus, '');
         return;
-      } catch (e) { /* fall through to placeholder */ }
+      } catch (e) { /* nächste Ausgabe versuchen */ }
     }
     applyCover(placeholderCover());
     setStatus(els.exportStatus, 'Kein Cover gefunden — bitte manuell hochladen.', 'error');
@@ -364,7 +373,7 @@
       renderCoverCandidates(candidates);
       setStatus(els.coverStatus, 'Richtige Ausgabe wählen — die Liste enthält auch Remaster und Singles.');
     } catch (e) {
-      setStatus(els.coverStatus, 'Suche fehlgeschlagen: ' + e.message, 'error');
+      setStatus(els.coverStatus, 'Suche fehlgeschlagen: ' + errorText(e), 'error');
     }
   });
 

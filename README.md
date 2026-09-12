@@ -290,6 +290,17 @@ auch der längste Titel in seine Spalte passt. Erst wenn das an der Untergrenze
 nicht reicht, wird mit „…" gekürzt. Ohne diesen zweiten Schritt stand in der
 dreispaltigen Variante hinter jedem zweiten Titel ein Auslassungszeichen.
 
+Auf iPad und iPhone starb zuverlässig die zweite Abfrage an denselben Host mit
+„Load failed" — WebKits Wortlaut dafür, dass die Verbindung nicht zustande kam.
+Safari greift dabei auf eine Keep-alive-Verbindung zurück, die die Gegenseite
+inzwischen geschlossen hat. Alle API-Aufrufe laufen deshalb über `request()`,
+das genau einmal wiederholt: `fetch` lehnt nur bei echten Netzwerkfehlern ab,
+HTTP-Fehler kommen normal zurück, wiederholt wird also keine 404 und keine 403.
+Verschärft hatte es eine eigene Unart — die Cover-Suche über MusicBrainz lud
+jedes Bild per `fetch` nur zum Dasein-Test und las den Body nie aus; eine solche
+Antwort hält in WebKit die Verbindung offen. Geprüft wird jetzt gar nicht mehr,
+das entscheidet der Ladeversuch des Bildes selbst.
+
 Die Poster-App bringt selbst keinen Service Worker mit — der des Raumrechners
 liegt aber auf derselben Herkunft und hat damit die ganze Site im Scope. Seine
 erste Fassung cachte jede Anfrage darin, also auch diese App, und lieferte sie
