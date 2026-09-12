@@ -24,7 +24,10 @@ Poster.log = (function () {
 
   function watch(fn) { onChange = fn; }
 
+  const build = Poster.BUILD || {};
   add('Start · ' + location.href);
+  add('Build · ' + (build.channel || '?') + ' ' + (build.version || '?')
+    + (build.commit ? ' · ' + build.commit : '') + (build.date ? ' · ' + build.date : ''));
   add('Browser · ' + navigator.userAgent);
   add('online=' + navigator.onLine
     + ' · Service Worker=' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'aktiv' : 'keiner')

@@ -8,15 +8,19 @@ Login, jede läuft für sich.
 | [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 
-Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner) und
-https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator).
+Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner),
+https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator,
+freigegebene Fassung) und
+https://flogramsch-blip.github.io/Jungfernstieg/poster/beta/ (derselbe
+Generator, aktueller Entwicklungsstand).
 
 ## Hosting
 
-`.github/workflows/pages.yml` veröffentlicht `app/` (Wurzel) und `poster/`
-(unter `/poster/`) bei jedem Push auf GitHub Pages — ohne Build-Schritt,
-beide Ordner werden nur nebeneinander in ein Artefakt kopiert und so
-hochgeladen wie sie sind.
+`.github/workflows/pages.yml` veröffentlicht bei jedem Push auf GitHub Pages:
+`app/` an die Wurzel, den Poster-Generator in zwei Kanälen (siehe
+[Kanäle und Freigabe](#kanäle-und-freigabe)). Ohne Build-Schritt — die Ordner
+werden nebeneinander in ein Artefakt kopiert; erzeugt wird nur je Kanal eine
+`build.js` mit Version, Commit und Datum.
 
 **Einmalig von Hand nötig**, bevor der erste Deploy durchläuft:
 
@@ -159,6 +163,34 @@ python3 -m http.server 8000
 Dann `http://localhost:8000/` öffnen. Kein Service Worker, kein Manifest —
 die App braucht nur den HTTP-Server, damit `fetch()` und Web-Fonts laufen;
 direktes Öffnen per `file://` scheitert an CORS.
+
+### Kanäle und Freigabe
+
+| Kanal | Adresse | Stand |
+| --- | --- | --- |
+| Release | `/poster/` | der neueste Tag `poster-v*` |
+| Beta | `/poster/beta/` | der aktuelle Stand des Branches |
+
+Beide liegen auf derselben Seite, die Dateien aber nur einmal im Repo: der
+Release-Kanal wird beim Deploy mit `git archive <tag> poster` aus dem Tag
+ausgepackt. Freigeben ist deshalb ein Git-Vorgang, kein Kopieren von Ordnern:
+
+```bash
+git tag poster-v1.1.0 <commit>
+git push origin poster-v1.1.0
+```
+
+Der Tag-Push löst den Workflow aus, danach liefert `/poster/` diesen Stand.
+Gewählt wird über `git tag -l 'poster-v*' --sort=-v:refname | head -1`, also
+die **höchste Versionsnummer** — nicht der jüngste Tag. Zurückrollen heißt
+folglich: den zu neuen Tag löschen (`git push origin :poster-v1.1.0`), nicht
+einen weiteren setzen.
+
+Jeder Kanal zeigt oben ein Abzeichen mit Kanal, Version und Commit, und
+dieselbe Zeile steht im Diagnose-Protokoll. Damit ist bei jeder Fehlermeldung
+belegt, welcher Stand gemeint war. Die Version des Beta-Kanals steht in
+`poster/version.json`; solange überhaupt kein Tag existiert, bekommt auch der
+Release-Kanal den aktuellen Stand — besser eine ungetaggte Fassung als eine 404.
 
 ### Datenquellen
 
@@ -351,6 +383,8 @@ dort in der Ecke, wo der Spotify-Streifen bündig säße.
 ```
 poster/
   index.html            Einstiegspunkt
+  version.json          Version des Beta-Kanals
+  build.js              Kanal/Version/Commit — beim Deploy je Kanal erzeugt
   styles.css            Design-Tokens, Formulare, Wand-Vorschau
   room.svg              gezeichnete Wohnzimmerwand für die Wand-Vorschau
   fonts/                Fonts für alle drei Stile, offline mitgeliefert (woff2)

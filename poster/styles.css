@@ -91,6 +91,37 @@ body{
   margin:0;
   max-width:56ch;
 }
+.build-line{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:10px 0 0;
+}
+.badge{
+  font-size:0.7rem;
+  font-weight:600;
+  letter-spacing:0.02em;
+  border-radius:100px;
+  padding:3px 10px;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  color:var(--text-dim);
+}
+/* Der Beta-Kanal muss auf den ersten Blick vom Release zu unterscheiden sein. */
+.badge[data-channel="beta"]{
+  background:#e8b339;
+  border-color:#e8b339;
+  color:#20232a;
+}
+.badge[data-channel="release"]{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.channel-link{
+  font-size:0.78rem;
+  color:var(--accent);
+}
 
 .layout{
   display:grid;

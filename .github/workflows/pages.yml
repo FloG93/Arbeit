@@ -1,6 +1,10 @@
-# Publishes app/ (Raumrechner, at the site root) and poster/ (Musik-Poster-Generator,
-# at /poster/) to GitHub Pages. Both are plain HTML/CSS/JS with no build step — they
-# are just assembled side by side into one artifact before upload.
+# Publishes app/ (Raumrechner, at the site root) and den Poster-Generator in zwei
+# Kanälen: /poster/ ist die freigegebene Fassung, gebaut aus dem neuesten Tag
+# poster-v*, und /poster/beta/ der aktuelle Stand des Branches. Freigeben heißt
+# damit: einen Tag setzen — die Dateien liegen nur einmal im Repo.
+#
+# Alles ist reines HTML/CSS/JS ohne Build-Schritt; erzeugt wird lediglich je
+# Kanal eine build.js mit Version, Commit und Datum.
 #
 # HTTPS matters here beyond the usual reasons: a service worker (and with it
 # offline use and "add to home screen") only works on a secure origin.
@@ -11,10 +15,11 @@ on:
     branches:
       - main
       - claude/inspiring-ritchie-kaz8vn
-    paths:
-      - 'app/**'
-      - 'poster/**'
-      - '.github/workflows/pages.yml'
+    # Ein Tag ist die Freigabe: er muss zuverlässig deployen. Ein paths-Filter
+    # gilt für Branch- und Tag-Pushes gemeinsam und könnte genau das schlucken,
+    # deshalb läuft der Workflow bei jedem Push — er dauert keine halbe Minute.
+    tags:
+      - 'poster-v*'
   workflow_dispatch:
 
 permissions:
@@ -34,7 +39,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Volle Historie samt Tags: der Release-Kanal wird aus einem Tag gebaut.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # One-time manual step before the first run:
       #   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
@@ -45,10 +53,35 @@ jobs:
 
       - name: Assemble site
         run: |
+          set -eu
+
+          write_build() { # $1 Ordner, $2 Kanal, $3 Version, $4 Commit
+            printf 'window.Poster = window.Poster || {};\nPoster.BUILD = { channel: "%s", version: "%s", commit: "%s", date: "%s" };\n' \
+              "$2" "$3" "$4" "$(date -u +%F)" > "$1/build.js"
+          }
+
           mkdir -p dist
           cp -r app/. dist/
+
+          # Release: neuester Tag poster-v*. Solange keiner existiert, bekommt der
+          # Kanal den aktuellen Stand — besser eine ungetaggte Fassung als eine 404.
+          TAG="$(git tag -l 'poster-v*' --sort=-v:refname | head -n 1 || true)"
           mkdir -p dist/poster
-          cp -r poster/. dist/poster/
+          if [ -n "$TAG" ]; then
+            git archive "$TAG" poster | tar -x -C "$RUNNER_TEMP"
+            cp -r "$RUNNER_TEMP/poster/." dist/poster/
+            write_build dist/poster release "${TAG#poster-v}" "$(git rev-parse --short "$TAG^{commit}")"
+            echo "Release-Kanal aus $TAG"
+          else
+            cp -r poster/. dist/poster/
+            write_build dist/poster release "$(jq -r .version poster/version.json) (ohne Tag)" "$(git rev-parse --short HEAD)"
+            echo "Release-Kanal ohne Tag: aktueller Stand"
+          fi
+
+          # Beta: immer der Stand dieses Commits.
+          mkdir -p dist/poster/beta
+          cp -r poster/. dist/poster/beta/
+          write_build dist/poster/beta beta "$(jq -r .version poster/version.json)" "$(git rev-parse --short HEAD)"
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

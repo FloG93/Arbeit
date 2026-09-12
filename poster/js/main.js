@@ -125,6 +125,30 @@
     el.dataset.kind = kind || '';
   }
 
+  // --- Kanal und Version ------------------------------------------------------
+
+  (function showBuild() {
+    const badge = document.getElementById('build-badge');
+    const link = document.getElementById('channel-link');
+    if (!badge) return;
+    const build = Poster.BUILD || { channel: 'lokal', version: 'dev' };
+
+    badge.dataset.channel = build.channel;
+    badge.textContent = ({ release: 'Release', beta: 'Beta', lokal: 'Lokal' }[build.channel] || build.channel)
+      + ' ' + build.version + (build.commit ? ' · ' + build.commit : '');
+
+    if (!link) return;
+    if (build.channel === 'release') {
+      link.href = 'beta/';
+      link.textContent = 'Beta-Version öffnen →';
+    } else if (build.channel === 'beta') {
+      link.href = '../';
+      link.textContent = '← zur stabilen Version';
+    } else {
+      link.hidden = true;
+    }
+  })();
+
   // --- Diagnose ---------------------------------------------------------------
 
   const diag = {
