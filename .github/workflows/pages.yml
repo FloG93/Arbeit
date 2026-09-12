@@ -1,7 +1,8 @@
 # Publishes app/ (Raumrechner, at the site root) and den Poster-Generator in zwei
-# Kanälen: /poster/ ist die freigegebene Fassung, gebaut aus dem neuesten Tag
-# poster-v*, und /poster/beta/ der aktuelle Stand des Branches. Freigeben heißt
-# damit: einen Tag setzen — die Dateien liegen nur einmal im Repo.
+# Kanälen: /poster/ ist die freigegebene Fassung, ausgepackt aus dem in
+# poster/release.json eingetragenen Commit, und /poster/beta/ der aktuelle Stand
+# des Branches. Freigeben heißt damit: diesen Zeiger ändern — die Dateien liegen
+# nur einmal im Repo.
 #
 # Alles ist reines HTML/CSS/JS ohne Build-Schritt; erzeugt wird lediglich je
 # Kanal eine build.js mit Version, Commit und Datum.
@@ -15,11 +16,8 @@ on:
     branches:
       - main
       - claude/inspiring-ritchie-kaz8vn
-    # Ein Tag ist die Freigabe: er muss zuverlässig deployen. Ein paths-Filter
-    # gilt für Branch- und Tag-Pushes gemeinsam und könnte genau das schlucken,
-    # deshalb läuft der Workflow bei jedem Push — er dauert keine halbe Minute.
-    tags:
-      - 'poster-v*'
+    # Ohne paths-Filter: eine Freigabe ändert nur poster/release.json, und der
+    # Lauf dauert keine halbe Minute — die Ersparnis wäre den Fallstrick nicht wert.
   workflow_dispatch:
 
 permissions:
@@ -63,19 +61,22 @@ jobs:
           mkdir -p dist
           cp -r app/. dist/
 
-          # Release: neuester Tag poster-v*. Solange keiner existiert, bekommt der
-          # Kanal den aktuellen Stand — besser eine ungetaggte Fassung als eine 404.
-          TAG="$(git tag -l 'poster-v*' --sort=-v:refname | head -n 1 || true)"
+          # Release: der Commit aus poster/release.json. Ein Tag wäre der übliche
+          # Weg, lässt sich aus der Entwicklungsumgebung aber nicht pushen — ein
+          # Zeiger im Repo leistet dasselbe und macht jede Freigabe als eigenen
+          # Commit in der Historie sichtbar.
+          RELEASE_COMMIT="$(jq -r '.commit // empty' poster/release.json)"
+          RELEASE_VERSION="$(jq -r '.version // empty' poster/release.json)"
           mkdir -p dist/poster
-          if [ -n "$TAG" ]; then
-            git archive "$TAG" poster | tar -x -C "$RUNNER_TEMP"
+          if [ -n "$RELEASE_COMMIT" ] && git cat-file -e "$RELEASE_COMMIT^{commit}" 2>/dev/null; then
+            git archive "$RELEASE_COMMIT" poster | tar -x -C "$RUNNER_TEMP"
             cp -r "$RUNNER_TEMP/poster/." dist/poster/
-            write_build dist/poster release "${TAG#poster-v}" "$(git rev-parse --short "$TAG^{commit}")"
-            echo "Release-Kanal aus $TAG"
+            write_build dist/poster release "$RELEASE_VERSION" "$(git rev-parse --short "$RELEASE_COMMIT")"
+            echo "Release-Kanal aus $RELEASE_COMMIT ($RELEASE_VERSION)"
           else
             cp -r poster/. dist/poster/
-            write_build dist/poster release "$(jq -r .version poster/version.json) (ohne Tag)" "$(git rev-parse --short HEAD)"
-            echo "Release-Kanal ohne Tag: aktueller Stand"
+            write_build dist/poster release "$(jq -r .version poster/version.json) (ohne Freigabe)" "$(git rev-parse --short HEAD)"
+            echo "Release-Zeiger fehlt oder ist unbekannt — nehme den aktuellen Stand"
           fi
 
           # Beta: immer der Stand dieses Commits.

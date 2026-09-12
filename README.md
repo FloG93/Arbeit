@@ -168,29 +168,35 @@ direktes Öffnen per `file://` scheitert an CORS.
 
 | Kanal | Adresse | Stand |
 | --- | --- | --- |
-| Release | `/poster/` | der neueste Tag `poster-v*` |
+| Release | `/poster/` | der in `poster/release.json` eingetragene Commit |
 | Beta | `/poster/beta/` | der aktuelle Stand des Branches |
 
 Beide liegen auf derselben Seite, die Dateien aber nur einmal im Repo: der
-Release-Kanal wird beim Deploy mit `git archive <tag> poster` aus dem Tag
-ausgepackt. Freigeben ist deshalb ein Git-Vorgang, kein Kopieren von Ordnern:
+Release-Kanal wird beim Deploy mit `git archive <commit> poster` aus der
+Historie ausgepackt. Freigeben heißt deshalb, einen Zeiger umzusetzen, statt
+Ordner zu kopieren — `poster/release.json`:
 
-```bash
-git tag poster-v1.1.0 <commit>
-git push origin poster-v1.1.0
+```json
+{ "version": "1.1.0", "commit": "9a827f6", "released": "2026-09-12" }
 ```
 
-Der Tag-Push löst den Workflow aus, danach liefert `/poster/` diesen Stand.
-Gewählt wird über `git tag -l 'poster-v*' --sort=-v:refname | head -1`, also
-die **höchste Versionsnummer** — nicht der jüngste Tag. Zurückrollen heißt
-folglich: den zu neuen Tag löschen (`git push origin :poster-v1.1.0`), nicht
-einen weiteren setzen.
+Der Push dieser Änderung löst den Workflow aus, danach liefert `/poster/` den
+eingetragenen Stand. Zurückrollen ist derselbe Handgriff mit einem älteren
+Commit, und jede Freigabe steht als eigener Commit in der Historie.
 
-Jeder Kanal zeigt oben ein Abzeichen mit Kanal, Version und Commit, und
-dieselbe Zeile steht im Diagnose-Protokoll. Damit ist bei jeder Fehlermeldung
-belegt, welcher Stand gemeint war. Die Version des Beta-Kanals steht in
-`poster/version.json`; solange überhaupt kein Tag existiert, bekommt auch der
-Release-Kanal den aktuellen Stand — besser eine ungetaggte Fassung als eine 404.
+Git-Tags wären der übliche Weg dafür. Sie scheiden hier aus: der Git-Proxy der
+Entwicklungsumgebung weist Tag-Pushes ab (`the remote end hung up
+unexpectedly`), Branch-Pushes gehen. Ein Zeiger im Repo leistet dasselbe, ohne
+von der Umgebung abzuhängen.
+
+Jeder Kanal zeigt oben ein Abzeichen mit Kanal, Version und Commit — Beta in
+Gelb, damit die beiden nicht zu verwechseln sind — und einen Link auf den
+jeweils anderen. Dieselbe Zeile steht als erste im Diagnose-Protokoll: bei
+jeder Fehlermeldung ist damit belegt, welcher Stand gemeint war. Die Version
+des Beta-Kanals steht in `poster/version.json`, die freigegebene in
+`poster/release.json`. Fehlt der Zeiger oder ist der Commit unbekannt, bekommt
+auch der Release-Kanal den aktuellen Stand — besser eine ungekennzeichnete
+Fassung als eine 404.
 
 ### Datenquellen
 
@@ -384,6 +390,7 @@ dort in der Ecke, wo der Spotify-Streifen bündig säße.
 poster/
   index.html            Einstiegspunkt
   version.json          Version des Beta-Kanals
+  release.json          Zeiger auf den freigegebenen Commit
   build.js              Kanal/Version/Commit — beim Deploy je Kanal erzeugt
   styles.css            Design-Tokens, Formulare, Wand-Vorschau
   room.svg              gezeichnete Wohnzimmerwand für die Wand-Vorschau
