@@ -140,14 +140,23 @@
         <button type="button" class="toggle-btn active" data-mode="poster">Poster</button>
         <button type="button" class="toggle-btn" data-mode="wall">An der Wand</button>
       </div>
-      <div class="preview-stage mode-poster" id="preview-stage">
+      <div class="frame-picker" id="frame-picker" hidden>
+        <span class="field-label">Rahmen</span>
+        <button type="button" class="frame-btn frame-black active" data-frame="black" title="Schwarz"></button>
+        <button type="button" class="frame-btn frame-oak" data-frame="oak" title="Eiche"></button>
+        <button type="button" class="frame-btn frame-white" data-frame="white" title="Weiß"></button>
+      </div>
+      <div class="preview-stage mode-poster frame-black" id="preview-stage">
+        <div class="room">
+          <img src="room.svg" alt="" class="room-img">
+        </div>
         <div class="wall-frame">
           <div class="frame-mat">
             <canvas id="poster-canvas"></canvas>
           </div>
         </div>
       </div>
-      <p class="preview-note">Die Wand-Ansicht ist nur eine Vorschau und nicht Teil des Exports.</p>
+      <p class="preview-note" id="preview-note">Die Wand-Ansicht ist nur eine Vorschau und nicht Teil des Exports.</p>
     </section>
   </div>
 </div>

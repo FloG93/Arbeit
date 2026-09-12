@@ -146,7 +146,7 @@ bildet daraus das Polygon (Bodenfläche über die Gaußsche Trapezformel);
 
 Künstler, Album oder Song suchen und daraus automatisch ein druckreifes
 Poster generieren — Albumcover groß im Bild, dazu ein scanbarer Code (echter
-Spotify-Code, sonst ein QR-Code) zum Song oder Album, in einem von drei
+Spotify-Code, sonst ein QR-Code) zum Song oder Album, in einem von neun
 Design-Stilen. Kein Login, kein eigener Server — reines HTML/CSS/JavaScript.
 
 ### Starten
@@ -213,7 +213,7 @@ direktes Öffnen per `file://` scheitert an CORS.
 | Automatische Farbpalette aus dem Cover, frei überschreibbar | fertig |
 | Echter Spotify-Code oder QR-Code, je nach Verfügbarkeit wählbar | fertig |
 | Explicit-Kennzeichen aufs Cover, automatisch vorbelegt | fertig |
-| Gerahmte Wand-Vorschau (nur Anzeige, nicht Teil des Exports) | fertig |
+| Wand-Vorschau im Wohnzimmer, maßstabsgetreu, Rahmen in drei Farben | fertig |
 | Export als PNG und PDF, A4/A3/A2 bei echten 300 dpi | fertig |
 | Manuelles Anlegen ganz ohne Suche/Internetzugriff | fertig |
 
@@ -270,6 +270,14 @@ auch der längste Titel in seine Spalte passt. Erst wenn das an der Untergrenze
 nicht reicht, wird mit „…" gekürzt. Ohne diesen zweiten Schritt stand in der
 dreispaltigen Variante hinter jedem zweiten Titel ein Auslassungszeichen.
 
+Die Wand-Vorschau hängt das Poster über ein Sofa, und zwar maßstabsgetreu:
+`room.svg` zeigt einen Ausschnitt von 130 cm Wandbreite, daraus rechnet
+`updateWallScale()` die Breite des Rahmens in Prozent. Ein A4-Poster nimmt dort
+16 % der Bildbreite ein, ein A2 32 % — der Größenunterschied, den man sonst
+erst nach dem Drucken sieht. Die Szene ist gezeichnetes SVG statt Foto: kein
+Lizenzthema, ein paar Kilobyte, und sie lässt sich gegen ein echtes Foto
+tauschen, indem `room.svg` ersetzt wird (gleicher Ausschnitt, gleiche 130 cm).
+
 Spotify-Code und QR-Code haben verschiedene Formate — ein breiter Streifen
 gegen ein Quadrat. Die Stile geben deshalb nur eine Box samt Ausrichtung vor,
 gezeichnet wird darin je nach Codeart unterschiedlich; sonst klebte der QR-Code
@@ -280,7 +288,8 @@ dort in der Ecke, wo der Spotify-Streifen bündig säße.
 ```
 poster/
   index.html            Einstiegspunkt
-  styles.css            Design-Tokens, Formulare, Rahmen-Vorschau
+  styles.css            Design-Tokens, Formulare, Wand-Vorschau
+  room.svg              gezeichnete Wohnzimmerwand für die Wand-Vorschau
   fonts/                Fonts für alle drei Stile, offline mitgeliefert (woff2)
   vendor/               jsPDF und ein QR-Code-Generator, offline mitgeliefert
   js/

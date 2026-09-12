@@ -43,6 +43,8 @@
 
     posterCanvas: document.getElementById('poster-canvas'),
     previewStage: document.getElementById('preview-stage'),
+    previewNote: document.getElementById('preview-note'),
+    framePicker: document.getElementById('frame-picker'),
     toggleBtns: document.querySelectorAll('.toggle-btn'),
   };
 
@@ -394,6 +396,7 @@
     if (e.target.name !== 'size') return;
     model.size = e.target.value;
     updateCoverMeta();
+    updateWallScale();
   });
 
   function updatePaletteUI() {
@@ -573,10 +576,40 @@
     btn.addEventListener('click', () => {
       els.toggleBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      els.previewStage.classList.toggle('mode-wall', btn.dataset.mode === 'wall');
-      els.previewStage.classList.toggle('mode-poster', btn.dataset.mode === 'poster');
+      const wall = btn.dataset.mode === 'wall';
+      els.previewStage.classList.toggle('mode-wall', wall);
+      els.previewStage.classList.toggle('mode-poster', !wall);
+      els.framePicker.hidden = !wall;
+      els.previewNote.textContent = wall
+        ? 'Maßstabsgetreu über einem 2-m-Sofa — nur Vorschau, nicht Teil des Exports.'
+        : 'Die Wand-Ansicht ist nur eine Vorschau und nicht Teil des Exports.';
+      updateWallScale();
     });
   });
+
+  els.framePicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('.frame-btn');
+    if (!btn) return;
+    [...els.framePicker.querySelectorAll('.frame-btn')].forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    els.previewStage.classList.remove('frame-black', 'frame-oak', 'frame-white');
+    els.previewStage.classList.add('frame-' + btn.dataset.frame);
+  });
+
+  // Die Raumszene zeigt 130 cm Wandbreite. Daraus bekommt das Poster seine
+  // echte Größe im Bild — A4 neben A2 an derselben Wand ist der eigentliche
+  // Zweck der Ansicht, nicht die Deko.
+  const SCENE = { w: 1200, h: 1000, wallCm: 130, centerY: 470 };
+  const PAPER_CM = { A4: [21, 29.7], A3: [29.7, 42], A2: [42, 59.4] };
+
+  function updateWallScale() {
+    const [wCm, hCm] = PAPER_CM[model.size] || PAPER_CM.A4;
+    const unitsPerCm = SCENE.w / SCENE.wallCm;
+    const wUnits = wCm * unitsPerCm;
+    const hUnits = hCm * unitsPerCm;
+    els.previewStage.style.setProperty('--poster-width', (wUnits / SCENE.w) * 100 + '%');
+    els.previewStage.style.setProperty('--poster-top', ((SCENE.centerY - hUnits / 2) / SCENE.h) * 100 + '%');
+  }
 
   // --- Export -----------------------------------------------------------------
 

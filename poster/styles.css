@@ -446,16 +446,31 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   justify-content:center;
   padding:20px;
   border-radius:10px;
-  transition:background 0.2s;
 }
 .preview-stage.mode-poster{background:transparent;}
+
+/* Wand-Ansicht: die Raumszene ist die Bühne, der Rahmen liegt darüber.
+   Breite und Höhe kommen aus --poster-width/--poster-top, die main.js aus
+   der gewählten Papiergröße und der Wandbreite der Szene (130 cm) rechnet. */
 .preview-stage.mode-wall{
-  background:
-    radial-gradient(ellipse at top,#3a3f47,#20232a 70%);
+  position:relative;
+  padding:0;
+  overflow:hidden;
 }
-.wall-frame{
-  max-width:100%;
+.room{display:none;}
+.preview-stage.mode-wall .room{
+  display:block;
+  width:100%;
+  aspect-ratio:1200/1000;
 }
+.room-img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.wall-frame{max-width:100%;}
 .frame-mat{
   background:#fff;
   padding:10px;
@@ -463,14 +478,44 @@ button:disabled{opacity:0.5;cursor:not-allowed;}
   box-shadow:0 20px 45px rgba(0,0,0,0.45);
 }
 .preview-stage.mode-wall .wall-frame{
-  padding:14px;
-  background:linear-gradient(135deg,#5a3d24,#3a2716);
-  border-radius:3px;
-  box-shadow:0 30px 60px rgba(0,0,0,0.55);
+  position:absolute;
+  left:50%;
+  top:var(--poster-top,24%);
+  width:var(--poster-width,22%);
+  transform:translateX(-50%);
+  padding:2.2%;
+  border-radius:2px;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.35),
+    var(--frame-shadow,0 22px 30px -12px rgba(38,32,24,0.5));
 }
 .preview-stage.mode-wall .frame-mat{
-  padding:22px;
+  padding:5.5%;
+  box-shadow:inset 0 1px 6px rgba(0,0,0,0.18);
 }
+.preview-stage.mode-wall #poster-canvas{width:100%;}
+
+.preview-stage.frame-black .wall-frame{background:linear-gradient(135deg,#35373b,#141518);}
+.preview-stage.frame-oak .wall-frame{background:linear-gradient(135deg,#c79b62,#8d6436);}
+.preview-stage.frame-white .wall-frame{background:linear-gradient(135deg,#fdfdfd,#dcdcd8);}
+
+.frame-picker{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.frame-btn{
+  width:24px;height:24px;
+  border-radius:50%;
+  border:2px solid transparent;
+  padding:0;
+  cursor:pointer;
+}
+.frame-btn.active{border-color:var(--text);}
+.frame-btn.frame-black{background:linear-gradient(135deg,#35373b,#141518);}
+.frame-btn.frame-oak{background:linear-gradient(135deg,#c79b62,#8d6436);}
+.frame-btn.frame-white{background:linear-gradient(135deg,#fdfdfd,#dcdcd8);}
+
 #poster-canvas{
   display:block;
   width:min(360px,72vw);
