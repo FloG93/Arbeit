@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "en-50678-50699",
+  "norm": "DIN EN 50678 / DIN EN 50699",
+  "title": "Geräteprüfung ortsveränderlicher Betriebsmittel",
+  "short": "Geräteprüfung",
+  "status": "geplant",
+  "worlds": ["efh", "industrie"],
+  "plannedNote": "Prüfung steckerfertiger Geräte nach Instandsetzung (50678) und als Wiederholungsprüfung (50699), früher DIN VDE 0701-0702. Der Entscheidungsbaum verzweigt dort über die Schutzklasse I, II oder III und die Ableitstrommessverfahren.",
+  "nodes": [],
+  "steps": []
+}

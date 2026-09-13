@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de" data-world="efh">
+<head>
+<meta charset="utf-8">
+<!-- Bewusst ohne maximum-scale: Grenzwerttabellen will man im Feld auch zoomen. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prüfassistent</title>
+<meta name="description" content="Prüfablauf nach DIN VDE 0100-600: Assistent, Grenzwerte, Messwerte, Protokoll. Offline nutzbar.">
+<meta name="theme-color" content="#0a0c10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prüfung">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app"></div>
+<div id="print-root" aria-hidden="true"></div>
+
+<!-- Rettungsleine zuerst: räumt fremde Caches aus, bevor der Rest läuft. -->
+<script src="js/sw-guard.js"></script>
+<script src="js/util.js"></script>
+<script src="js/data.js"></script>
+<script src="js/limits.js"></script>
+<script src="js/wizard.js"></script>
+<script src="js/plan.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/view-auftraege.js"></script>
+<script src="js/view-wizard.js"></script>
+<script src="js/view-plan.js"></script>
+<script src="js/view-wiki.js"></script>
+<script src="js/view-protokoll.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

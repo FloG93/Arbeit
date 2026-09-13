@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "datenstand": "2026-09",
+  "disclaimer": "Hilfsmittel für Elektrofachkräfte. Kein Ersatz für Normtext, Herstellerangaben und eigene Fachkunde. Grenzwerte vor der ersten Verwendung gegen die gültige Norm prüfen.",
+  "worlds": "welten.json",
+  "limits": "grenzwerte.json",
+  "intervals": "prueffristen.json",
+  "norms": [
+    { "file": "normen/vde-0100-600.json", "status": "aktiv" },
+    { "file": "normen/vde-0105-100.json", "status": "geplant" },
+    { "file": "normen/en-50678-50699.json", "status": "geplant" }
+  ],
+  "wiki": [
+    "wiki/messverfahren.json",
+    "wiki/netzformen.json",
+    "wiki/fehlerquellen.json",
+    "wiki/grundlagen.json"
+  ]
+}

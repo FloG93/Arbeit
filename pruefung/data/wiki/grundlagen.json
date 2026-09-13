@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "collection": "grundlagen",
+  "entries": [
+    {
+      "id": "grenzwerte-iso",
+      "title": "Grenzwerte: Isolationswiderstand",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["riso", "grenzwerte"],
+      "summary": "Mindestwerte und Prüfspannungen nach Nennspannung des Stromkreises.",
+      "search": "grenzwert isolationswiderstand mindestwert pruefspannung tabelle 1 megaohm",
+      "body": [
+        { "type": "limits", "limitRef": "iso-nach-nennspannung" },
+        { "type": "note", "text": "Die Mindestwerte sind untere Schranken für eine noch brauchbare Anlage, keine Zielwerte. Eine neue, trockene Installation liegt üblicherweise im dreistelligen MΩ-Bereich oder über dem Messbereich." }
+      ],
+      "related": ["messverfahren-isolationswiderstand", "s-iso-widerstand"]
+    },
+    {
+      "id": "grenzwerte-rcd",
+      "title": "Grenzwerte: RCD",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["rcd", "grenzwerte"],
+      "summary": "Auslösezeiten und Auslösestrom für allgemeine und selektive RCD.",
+      "search": "grenzwert rcd fi ausloesezeit ausloesestrom 300 ms 40 ms selektiv",
+      "body": [
+        { "type": "limits", "limitRef": "rcd-ausloesezeit" },
+        { "type": "limits", "limitRef": "rcd-ausloesestrom" },
+        { "type": "limits", "limitRef": "rcd-ausloesestrom-abs" }
+      ],
+      "related": ["messverfahren-rcd-ausloesezeit", "messverfahren-rcd-ausloesestrom", "begriff-rcd-typen"]
+    },
+    {
+      "id": "grenzwerte-abschaltzeit",
+      "title": "Grenzwerte: Abschaltzeiten",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["zs", "grenzwerte"],
+      "summary": "Zulässige Abschaltzeiten nach Netzform und Stromkreisart — Grundlage für den Zs-Sollwert.",
+      "search": "grenzwert abschaltzeit 0,4 s 5 s 0,2 s tn tt endstromkreis",
+      "body": [
+        { "type": "limits", "limitRef": "abschaltzeit" },
+        { "type": "formula", "formulaRef": "zs-max" },
+        { "type": "p", "text": "Die Abschaltzeit ist nie direkt gemessen, sondern über die Schleifenimpedanz nachgewiesen: reicht der Fehlerstrom, um die Schutzeinrichtung im steilen Teil ihrer Kennlinie auszulösen, ist die Zeit eingehalten." }
+      ],
+      "related": ["messverfahren-schleifenimpedanz", "s-schleifenimpedanz"]
+    },
+    {
+      "id": "grenzwerte-schutzleiter",
+      "title": "Grenzwerte: Schutzleiter und Erdung",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["niederohm", "grenzwerte"],
+      "summary": "Richtwerte für Schutzleiterwiderstand, Potentialausgleich und RA im TT-System.",
+      "search": "grenzwert schutzleiter 1 ohm potentialausgleich ra erdungswiderstand",
+      "body": [
+        { "type": "limits", "limitRef": "schutzleiter-durchgang" },
+        { "type": "limits", "limitRef": "erdungswiderstand-tt" },
+        { "type": "formula", "formulaRef": "r-leiter" }
+      ],
+      "related": ["messverfahren-durchgang-schutzleiter", "messverfahren-erdungswiderstand-ra"]
+    },
+    {
+      "id": "begriff-ortsfest-ortsveraenderlich",
+      "title": "Ortsfest oder ortsveränderlich?",
+      "kind": "begriff",
+      "worlds": ["efh", "industrie"],
+      "tags": ["begriff"],
+      "summary": "Entscheidet, welche Norm überhaupt greift — Anlagenprüfung oder Geräteprüfung.",
+      "search": "ortsfest ortsveraenderlich fest angeschlossen steckerfertig unterschied norm",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Ortsfest", "v": "Fest angeschlossen oder so aufgestellt, dass es nicht ohne Werkzeug bewegt wird: Verteiler, Endstromkreise, Herd, Wallbox, Maschine mit Festanschluss. Prüfung nach DIN VDE 0100-600 / 0105-100." },
+          { "k": "Ortsveränderlich", "v": "Steckerfertig und im Gebrauch bewegt: Handmaschinen, Verlängerungen, Geräte am Arbeitsplatz. Prüfung nach DIN EN 50678 / 50699." }
+        ] },
+        { "type": "p", "text": "Grenzfälle entscheidet die Art des Anschlusses: ein Gerät mit Stecker, das nur selten bewegt wird, bleibt ortsveränderlich. Eine Maschine mit Festanschluss ist Teil der Anlage." },
+        { "type": "note", "text": "Bei Maschinen kommt DIN EN 60204-1 hinzu — Not-Halt, Netztrenneinrichtung und Sicherheitsfunktionen werden dort zusätzlich geprüft." }
+      ],
+      "related": ["begriff-schutzklassen", "begriff-maschinenpruefung"]
+    },
+    {
+      "id": "begriff-schutzklassen",
+      "title": "Schutzklassen I, II und III",
+      "kind": "begriff",
+      "worlds": ["efh", "industrie"],
+      "tags": ["begriff", "geraet"],
+      "summary": "Bestimmt bei der Geräteprüfung den Messumfang — besonders, ob ein Schutzleiter gemessen wird.",
+      "search": "schutzklasse 1 2 3 i ii iii geraeteprüfung schutzisoliert kleinspannung",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Schutzklasse I", "v": "Schutz durch Schutzleiter. Geprüft werden Schutzleiterwiderstand, Isolationswiderstand und Schutzleiterstrom." },
+          { "k": "Schutzklasse II", "v": "Schutzisoliert, kein Schutzleiter. Geprüft werden Isolationswiderstand und Berührungsstrom." },
+          { "k": "Schutzklasse III", "v": "Schutzkleinspannung (SELV). Sichtprüfung und Nachweis der Versorgung aus einer Sicherheitsquelle." }
+        ] },
+        { "type": "p", "text": "Diese App deckt im aktuellen Stand die Anlagenprüfung ab. Der Entscheidungsbaum für die Geräteprüfung nach DIN EN 50678 / 50699 verzweigt genau über diese drei Fälle und folgt als eigenes Norm-Paket." }
+      ],
+      "related": ["begriff-ortsfest-ortsveraenderlich"]
+    },
+    {
+      "id": "begriff-rcd-typen",
+      "title": "RCD-Typen A, F, B und B+",
+      "kind": "begriff",
+      "worlds": ["efh", "industrie"],
+      "tags": ["rcd", "rcd-typen", "ladeinfrastruktur", "pv"],
+      "summary": "Welcher Typ welche Fehlerstromform erfasst — entscheidend bei Wallbox, PV und Frequenzumrichter.",
+      "search": "rcd typ a f b b+ ac gleichfehlerstrom wallbox frequenzumrichter pv 6 ma",
+      "body": [
+        { "type": "table", "columns": [
+          { "id": "typ", "label": "Typ" },
+          { "id": "erfasst", "label": "Erfasst" },
+          { "id": "einsatz", "label": "Typischer Einsatz" }
+        ], "rows": [
+          { "typ": "AC", "erfasst": "nur sinusförmige Wechselfehlerströme", "einsatz": "in Neuanlagen nicht mehr zulässig" },
+          { "typ": "A", "erfasst": "Wechsel- und pulsierende Gleichfehlerströme", "einsatz": "Standard im Wohnbau" },
+          { "typ": "F", "erfasst": "zusätzlich mischfrequente Fehlerströme", "einsatz": "einphasige Frequenzumrichter, Waschmaschinen, PV" },
+          { "typ": "B / B+", "erfasst": "zusätzlich glatte Gleichfehlerströme", "einsatz": "Ladeinfrastruktur, dreiphasige Umrichter, Medizintechnik" }
+        ] },
+        { "type": "p", "text": "Bei Ladepunkten gilt: entweder RCD Typ B vorschalten, oder die Ladeeinrichtung erkennt glatte Gleichfehlerströme ab 6 mA selbst und darf dann mit Typ A betrieben werden. Der Nachweis kommt aus dem Datenblatt der Ladeeinrichtung und gehört ins Protokoll." },
+        { "type": "warn", "text": "Ein Typ A vor einem Ladepunkt ohne eigene DC-Erkennung kann durch glatte Gleichfehlerströme erblinden — er löst dann auch bei echtem Fehler nicht mehr aus." }
+      ],
+      "related": ["s-rcd-typ-b-nachweis", "s-rcd-typ-f-nachweis", "grenzwerte-rcd"]
+    },
+    {
+      "id": "begriff-maschinenpruefung",
+      "title": "Maschinen: DIN EN 60204-1 zusätzlich",
+      "kind": "begriff",
+      "worlds": ["industrie"],
+      "tags": ["maschine", "begriff"],
+      "summary": "Zur Anlagenprüfung kommen Not-Halt, Netztrenneinrichtung und die Sicherheitsfunktionen der Steuerung.",
+      "search": "maschine 60204-1 not-halt netztrenneinrichtung sicherheitsfunktion schaltschrank",
+      "body": [
+        { "type": "p", "text": "Die elektrische Ausrüstung von Maschinen wird nach DIN EN 60204-1 geprüft. Die Messungen entsprechen weitgehend der Anlagenprüfung, hinzu kommen die sicherheitstechnischen Funktionen." },
+        { "type": "bullets", "items": [
+          "Durchgängigkeit des Schutzleitersystems einschließlich Türen und beweglicher Teile.",
+          "Isolationswiderstand der Ausrüstung, Spannungsprüfung nach Herstellerangabe.",
+          "Wirksamkeit jeder Not-Halt-Einrichtung und kein selbsttätiger Wiederanlauf.",
+          "Netztrenneinrichtung abschließbar, Restspannung nach Abschalten geprüft.",
+          "Restspannungs- und Entladezeiten sowie Nachlaufzeiten dokumentieren."
+        ] },
+        { "type": "note", "text": "Für den Betrieb kommt die DGUV Vorschrift 3 mit ihren Prüffristen hinzu — bei der Erstinbetriebnahme wird die erste Frist festgelegt." }
+      ],
+      "related": ["s-not-halt-erprobung", "s-sicht-schaltschrank", "prueffristen-uebersicht"]
+    },
+    {
+      "id": "prueffristen-uebersicht",
+      "title": "Prüffristen — Richtwerte",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["prueffristen", "dguv3"],
+      "summary": "Richtwerte nach DGUV Vorschrift 3. Die verbindliche Frist legt der Betreiber aus der Gefährdungsbeurteilung fest.",
+      "search": "prueffrist intervall dguv v3 baustelle 3 monate buero 4 jahre wiederholungspruefung",
+      "body": [
+        { "type": "p", "text": "Die Fristen unten sind Richtwerte. Verbindlich ist die Festlegung des Betreibers auf Basis der Gefährdungsbeurteilung — bei rauem Betrieb kürzer, bei nachweisbar niedriger Fehlerquote länger." },
+        { "type": "intervals" },
+        { "type": "note", "text": "Fristenverwaltung mit Erinnerung ist für eine späterere Ausbaustufe dieser App vorgesehen; die Datenbasis dafür liegt schon in data/prueffristen.json." }
+      ],
+      "related": ["s-pruefplakette", "begriff-maschinenpruefung"]
+    }
+  ]
+}

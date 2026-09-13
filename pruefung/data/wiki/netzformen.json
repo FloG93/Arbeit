@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "collection": "netzformen",
+  "entries": [
+    {
+      "id": "netzformen-vergleich",
+      "title": "Netzformen im Vergleich",
+      "kind": "netzform",
+      "worlds": ["efh", "industrie"],
+      "tags": ["netzform"],
+      "summary": "TN-C, TN-S, TN-C-S, TT und IT auf einen Blick — und was jede für die Messung bedeutet.",
+      "search": "netzform vergleich tn tt it pen tabelle",
+      "body": [
+        { "type": "p", "text": "Die beiden Buchstaben beschreiben, wie der Sternpunkt geerdet ist (erster Buchstabe) und wie die Körper der Anlage mit Erde verbunden sind (zweiter Buchstabe). Die Anhänge C und S sagen, ob Schutz- und Neutralleiterfunktion kombiniert (C) oder getrennt (S) geführt werden." },
+        { "type": "table", "columns": [
+          { "id": "form", "label": "Netzform" },
+          { "id": "pe", "label": "PE / N" },
+          { "id": "rcd", "label": "RCD" },
+          { "id": "mess", "label": "Messbesonderheit" }
+        ], "rows": [
+          { "form": "TN-C", "pe": "PEN durchgehend", "rcd": "nicht möglich", "mess": "keine getrennte N-PE-Messung möglich" },
+          { "form": "TN-S", "pe": "ab Einspeisung getrennt", "rcd": "möglich", "mess": "Zs klein, Isolationsmessung unkompliziert" },
+          { "form": "TN-C-S", "pe": "PEN bis zur Trennstelle", "rcd": "nach der Trennstelle", "mess": "PEN-Brücke vor der Isolationsmessung beachten" },
+          { "form": "TT", "pe": "eigener Anlagenerder", "rcd": "praktisch zwingend", "mess": "RA messen, Zs deutlich größer" },
+          { "form": "IT", "pe": "isolierter Sternpunkt", "rcd": "je nach Konzept", "mess": "Isolationsüberwachung prüfen, erster Fehler schaltet nicht ab" }
+        ] },
+        { "type": "note", "text": "Im Wohnbau ist TN-C-S der Regelfall, TT findet sich bei älteren Anlagen und im ländlichen Freileitungsnetz, IT fast nur in Industrie, Medizin und auf Schiffen." }
+      ],
+      "related": ["netzform-tn-c-s", "netzform-tt", "messverfahren-schleifenimpedanz"]
+    },
+    {
+      "id": "netzform-tn-c-s",
+      "title": "TN-C-S",
+      "kind": "netzform",
+      "worlds": ["efh", "industrie"],
+      "tags": ["netzform", "tn-c-s"],
+      "summary": "PEN bis zur Trennstelle im Hausanschluss, danach PE und N getrennt. Der Regelfall im Wohnbau.",
+      "search": "tn-c-s pen trennstelle hausanschluss regelfall",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Merkmale", "v": "PEN vom Netz bis zur Trennstelle, ab dort PE und N getrennt geführt" },
+          { "k": "Messbesonderheiten", "v": "Für die Isolationsmessung N von PE trennen — sonst misst man die Brücke" },
+          { "k": "Grenzwerte", "v": "Abschaltzeit 0,4 s im Endstromkreis, Zs ≤ U0 / Ia" },
+          { "k": "Typische Fehler", "v": "N und PE hinter der Trennstelle wieder verbunden; PEN-Trennstelle im falschen Verteiler" }
+        ] },
+        { "type": "warn", "text": "Nach der Trennstelle darf N nirgends mehr mit PE verbunden werden. Passiert es doch, arbeitet jeder nachgeschaltete RCD nicht mehr zuverlässig." },
+        { "type": "link", "to": "fehler-iso-n-pe-bruecke", "label": "Fehlerquelle: N-PE-Brücke" }
+      ],
+      "related": ["netzformen-vergleich", "fehler-pe-n-vertauscht"]
+    },
+    {
+      "id": "netzform-tn-s",
+      "title": "TN-S",
+      "kind": "netzform",
+      "worlds": ["efh", "industrie"],
+      "tags": ["netzform", "tn-s"],
+      "summary": "PE und N ab der Einspeisung getrennt. Messtechnisch der angenehmste Fall.",
+      "search": "tn-s getrennt pe n einspeisung",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Merkmale", "v": "Schutzleiter und Neutralleiter ab der Stromquelle getrennt geführt" },
+          { "k": "Messbesonderheiten", "v": "N-PE-Messung direkt aussagekräftig, Zs meist klein" },
+          { "k": "Grenzwerte", "v": "wie TN allgemein: 0,4 s im Endstromkreis ≤ 32 A" },
+          { "k": "Typische Fehler", "v": "PE im Unterverteiler versehentlich auf die N-Schiene geklemmt" }
+        ] }
+      ],
+      "related": ["netzformen-vergleich"]
+    },
+    {
+      "id": "netzform-tn-c",
+      "title": "TN-C",
+      "kind": "netzform",
+      "worlds": ["efh", "industrie"],
+      "tags": ["netzform", "tn-c"],
+      "summary": "PEN durchgehend kombiniert. Kein RCD möglich, in Neuanlagen für Endstromkreise nicht zulässig.",
+      "search": "tn-c pen kombiniert klassische nullung",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Merkmale", "v": "Schutz- und Neutralleiterfunktion in einem Leiter (PEN) über die ganze Anlage" },
+          { "k": "Messbesonderheiten", "v": "Keine getrennte N-PE-Isolationsmessung möglich; RCD-Prüfung entfällt" },
+          { "k": "Grenzwerte", "v": "Abschaltung allein über Überstromschutz, Zs ≤ U0 / Ia" },
+          { "k": "Typische Fehler", "v": "PEN unterbrochen — dann liegt Spannung am Gehäuse, ohne dass etwas abschaltet" }
+        ] },
+        { "type": "warn", "text": "Ein unterbrochener PEN ist der gefährlichste Fehler dieser Netzform. Mindestquerschnitte und feste Verlegung sind deshalb Pflicht, bewegliche Leitungen unzulässig." },
+        { "type": "p", "text": "Bei Bestandsanlagen trifft man TN-C noch häufig an. Erweiterungen werden in der Regel als TN-C-S ausgeführt, mit Trennstelle im ersten Verteiler." }
+      ],
+      "related": ["netzformen-vergleich"]
+    },
+    {
+      "id": "netzform-tt",
+      "title": "TT",
+      "kind": "netzform",
+      "worlds": ["efh", "industrie"],
+      "tags": ["netzform", "tt"],
+      "summary": "Eigener Anlagenerder statt Netz-PE. RCD praktisch zwingend, RA gehört zur Prüfung.",
+      "search": "tt anlagenerder eigener erder ra 50 v",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Merkmale", "v": "Körper über einen eigenen Anlagenerder geerdet, keine PE-Verbindung zum Netz" },
+          { "k": "Messbesonderheiten", "v": "RA messen; Zs ist deutlich größer, Überstromschutz allein schaltet oft nicht schnell genug ab" },
+          { "k": "Grenzwerte", "v": "RA ≤ 50 V / IΔn, Abschaltzeit 0,2 s im Endstromkreis ≤ 32 A" },
+          { "k": "Typische Fehler", "v": "Erder über Wasserleitung oder Fundament unbeabsichtigt mit dem Netz-PE verbunden — dann ist es kein TT-System mehr" }
+        ] },
+        { "type": "limits", "limitRef": "erdungswiderstand-tt" }
+      ],
+      "related": ["netzformen-vergleich", "messverfahren-erdungswiderstand-ra", "fehler-tt-ra-sonde"]
+    },
+    {
+      "id": "netzform-it",
+      "title": "IT",
+      "kind": "netzform",
+      "worlds": ["industrie"],
+      "tags": ["netzform", "it"],
+      "summary": "Isolierter Sternpunkt. Der erste Fehler schaltet nicht ab, sondern wird gemeldet.",
+      "search": "it netz isolierter sternpunkt isolationsueberwachung medizin op",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "Merkmale", "v": "Sternpunkt nicht oder hochohmig geerdet; Versorgung bleibt beim ersten Erdfehler bestehen" },
+          { "k": "Messbesonderheiten", "v": "Isolationsüberwachungseinrichtung (IMD) prüfen und Meldekette erproben; Isolationsmessung auch zwischen den Leitern" },
+          { "k": "Grenzwerte", "v": "Abschaltung erst beim zweiten Fehler; Auslegung nach Anlagenkonzept" },
+          { "k": "Typische Fehler", "v": "IMD meldet, wird aber quittiert und nicht behoben — der zweite Fehler wird dann zum Kurzschluss" }
+        ] },
+        { "type": "p", "text": "Typische Einsatzfälle: medizinisch genutzte Räume der Gruppe 2, Prozessanlagen mit hoher Verfügbarkeitsanforderung, Bordnetze." }
+      ],
+      "related": ["netzformen-vergleich"]
+    }
+  ]
+}

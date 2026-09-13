@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "default": "efh",
+  "worlds": [
+    {
+      "id": "efh",
+      "label": "EFH / Wohnbau",
+      "short": "EFH",
+      "accent": "azure",
+      "sub": "Zähleranschlusssäule, Wohnungsverteiler, Wallbox, PV, Smart Home",
+      "terms": {
+        "anlage": "Wohnungsanlage",
+        "verteiler": "Wohnungs-/Zählerverteiler",
+        "auftraggeber": "Bauherr",
+        "objekt": "Objekt / Adresse"
+      },
+      "highlightTags": ["rcd-typen", "ladeinfrastruktur", "smarthome", "spd", "pv"],
+      "intervalPresets": ["wohnanlage", "vermietung"]
+    },
+    {
+      "id": "industrie",
+      "label": "Industrie / Gewerbe",
+      "short": "Industrie",
+      "accent": "amber",
+      "sub": "Maschinen, Schaltschränke, Schienensysteme, DGUV V3, EX-Bereiche",
+      "terms": {
+        "anlage": "Betriebsmittel / Anlage",
+        "verteiler": "Unterverteilung / Schaltschrank",
+        "auftraggeber": "Betreiber",
+        "objekt": "Betriebsstätte / Anlagen-Nr."
+      },
+      "highlightTags": ["dguv3", "maschine", "ex", "prueffristen", "schienensystem"],
+      "intervalPresets": ["baustelle", "werkstatt", "buero", "maschine"]
+    }
+  ]
+}

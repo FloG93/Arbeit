@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "datenstand": "2026-09",
+  "reviewed": { "by": "", "date": "" },
+  "note": "Allgemein publizierte Grenzwerte, zusammengetragen als Arbeitshilfe. Keine Normzitate. Vor der ersten Verwendung gegen die gültige Normfassung prüfen.",
+  "tables": [
+    {
+      "id": "iso-nach-nennspannung",
+      "title": "Mindest-Isolationswiderstand nach Nennspannung",
+      "source": "DIN VDE 0100-600",
+      "keyLabel": "Nennspannung des Stromkreises",
+      "columns": [
+        { "id": "label", "label": "Nennspannung" },
+        { "id": "pruefspannung", "label": "Prüfspannung", "unit": "V DC" },
+        { "id": "min", "label": "Mindestwert", "unit": "MΩ" }
+      ],
+      "rows": [
+        { "key": "selv-pelv", "label": "SELV / PELV", "pruefspannung": 250, "min": 0.5, "unit": "MΩ" },
+        { "key": "bis500", "label": "bis 500 V (einschl. FELV)", "pruefspannung": 500, "min": 1.0, "unit": "MΩ", "default": true },
+        { "key": "ueber500", "label": "über 500 V", "pruefspannung": 1000, "min": 1.0, "unit": "MΩ" }
+      ]
+    },
+    {
+      "id": "rcd-ausloesezeit",
+      "title": "RCD — zulässige Auslösezeiten",
+      "source": "DIN VDE 0100-600 / DIN EN 61008, 61009",
+      "keyLabel": "Bauart und Prüfstrom",
+      "rows": [
+        { "key": "allgemein", "label": "Allgemeiner RCD bei IΔn", "max": 300, "unit": "ms", "default": true },
+        { "key": "allgemein-5x", "label": "Allgemeiner RCD bei 5 × IΔn", "max": 40, "unit": "ms" },
+        { "key": "selektiv", "label": "Selektiver RCD (S) bei IΔn", "min": 130, "max": 500, "unit": "ms" },
+        { "key": "selektiv-5x", "label": "Selektiver RCD (S) bei 5 × IΔn", "min": 50, "max": 150, "unit": "ms" }
+      ]
+    },
+    {
+      "id": "rcd-ausloesestrom",
+      "title": "RCD — zulässiger Auslösestrom",
+      "source": "DIN VDE 0100-600",
+      "keyLabel": "Bauart",
+      "rows": [
+        { "key": "allgemein", "label": "Auslösung im Bereich", "min": 0.5, "max": 1.0, "unit": "× IΔn", "default": true, "note": "Bei IΔn = 30 mA also zwischen 15 mA und 30 mA." }
+      ]
+    },
+    {
+      "id": "rcd-ausloesestrom-abs",
+      "title": "RCD — zulässiger Auslösestrom in mA",
+      "source": "Abgeleitet aus 0,5 bis 1,0 × IΔn",
+      "keyLabel": "Nennfehlerstrom IΔn",
+      "rows": [
+        { "key": "30ma", "label": "IΔn = 30 mA", "min": 15, "max": 30, "unit": "mA", "default": true },
+        { "key": "100ma", "label": "IΔn = 100 mA", "min": 50, "max": 100, "unit": "mA" },
+        { "key": "300ma", "label": "IΔn = 300 mA", "min": 150, "max": 300, "unit": "mA" },
+        { "key": "500ma", "label": "IΔn = 500 mA", "min": 250, "max": 500, "unit": "mA" }
+      ]
+    },
+    {
+      "id": "abschaltzeit",
+      "title": "Zulässige Abschaltzeiten (Schutz durch automatische Abschaltung)",
+      "source": "DIN VDE 0100-410",
+      "keyLabel": "Netzform und Stromkreis",
+      "rows": [
+        { "key": "tn-endstromkreis", "label": "TN, Endstromkreis ≤ 32 A, 230 V AC", "max": 0.4, "unit": "s", "default": true },
+        { "key": "tn-verteilung", "label": "TN, Verteilungsstromkreis / > 32 A", "max": 5, "unit": "s" },
+        { "key": "tt-endstromkreis", "label": "TT, Endstromkreis ≤ 32 A, 230 V AC", "max": 0.2, "unit": "s" },
+        { "key": "tt-verteilung", "label": "TT, Verteilungsstromkreis / > 32 A", "max": 1, "unit": "s" }
+      ]
+    },
+    {
+      "id": "schutzleiter-durchgang",
+      "title": "Schutzleiter- und Verbindungswiderstand (Niederohmmessung)",
+      "source": "Richtwert, DIN VDE 0100-600",
+      "keyLabel": "Fall",
+      "rows": [
+        { "key": "richtwert", "label": "Richtwert Schutzleiterwiderstand", "max": 1.0, "unit": "Ω", "default": true, "note": "Richtwert für die Bewertung im Feld. Maßgeblich ist der aus Querschnitt und Länge berechnete Erwartungswert — bei langen Leitungen darf der Wert größer sein, bei kurzen ist 1 Ω schon ein Alarmzeichen." },
+        { "key": "schutzpotentialausgleich", "label": "Verbindung im Schutzpotentialausgleich", "max": 1.0, "unit": "Ω", "note": "Messstrom mindestens 200 mA, Leerlaufspannung 4 V bis 24 V." }
+      ]
+    },
+    {
+      "id": "erdungswiderstand-tt",
+      "title": "Erdungswiderstand RA im TT-System",
+      "source": "Berechnet aus RA ≤ 50 V / IΔn (DIN VDE 0100-410)",
+      "keyLabel": "Nennfehlerstrom des vorgeschalteten RCD",
+      "rows": [
+        { "key": "30ma", "label": "IΔn = 30 mA", "max": 1666, "unit": "Ω", "default": true },
+        { "key": "100ma", "label": "IΔn = 100 mA", "max": 500, "unit": "Ω" },
+        { "key": "300ma", "label": "IΔn = 300 mA", "max": 166, "unit": "Ω" },
+        { "key": "500ma", "label": "IΔn = 500 mA", "max": 100, "unit": "Ω" }
+      ]
+    },
+    {
+      "id": "spannungsfall",
+      "title": "Spannungsfall vom Übergabepunkt bis zum Verbrauchsmittel",
+      "source": "Richtwerte, DIN VDE 0100-520 Beiblatt",
+      "keyLabel": "Art des Stromkreises",
+      "rows": [
+        { "key": "beleuchtung", "label": "Beleuchtungsstromkreise", "max": 3, "unit": "%" },
+        { "key": "sonstige", "label": "Übrige Verbrauchsmittel", "max": 5, "unit": "%", "default": true }
+      ]
+    }
+  ],
+  "formulas": [
+    {
+      "id": "zs-max",
+      "label": "Zulässige Schleifenimpedanz",
+      "expr": "Zs ≤ U0 / Ia",
+      "note": "U0 = Nennspannung gegen Erde (230 V), Ia = Abschaltstrom der Schutzeinrichtung innerhalb der zulässigen Abschaltzeit (aus der Auslösekennlinie, z. B. B16 → 5 × In = 80 A → Zs ≤ 2,87 Ω)."
+    },
+    {
+      "id": "ra-max",
+      "label": "Zulässiger Erdungswiderstand (TT)",
+      "expr": "RA ≤ 50 V / IΔn",
+      "note": "Grundlage der Tabelle „Erdungswiderstand RA im TT-System“."
+    },
+    {
+      "id": "r-leiter",
+      "label": "Erwarteter Leiterwiderstand",
+      "expr": "R = ρ · l / A",
+      "note": "Für Kupfer ρ ≈ 0,0178 Ω·mm²/m. Beispiel: 25 m mit 2,5 mm² ergibt rund 0,18 Ω — deshalb ist der 1-Ω-Richtwert bei kurzen Leitungen kein Freibrief."
+    }
+  ]
+}

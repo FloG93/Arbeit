@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "vde-0105-100",
+  "norm": "DIN VDE 0105-100",
+  "title": "Wiederholungsprüfung ortsfester Anlagen im Betrieb",
+  "short": "Wiederholungsprüfung",
+  "status": "geplant",
+  "worlds": ["efh", "industrie"],
+  "plannedNote": "Ablauf und Umfang der Wiederholungsprüfung — Prüffristen, Sichtprüfung im Betrieb, reduzierter Messumfang bei zugänglichen Teilen. Bis dahin hilft die Erstprüfung für Erweiterungen und Änderungen.",
+  "nodes": [],
+  "steps": []
+}

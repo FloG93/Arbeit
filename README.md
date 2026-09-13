@@ -7,20 +7,22 @@ Login, jede läuft für sich.
 | --- | --- | --- |
 | [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
+| [Prüfassistent](#prüfassistent) | `/pruefung/` | VDE-Prüfung Schritt für Schritt: Assistent, Grenzwerte, Messwerte, Protokoll |
 
 Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner),
 https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator,
-freigegebene Fassung) und
+freigegebene Fassung),
 https://flogramsch-blip.github.io/Jungfernstieg/poster/beta/ (derselbe
-Generator, aktueller Entwicklungsstand).
+Generator, aktueller Entwicklungsstand) und
+https://flogramsch-blip.github.io/Jungfernstieg/pruefung/ (Prüfassistent).
 
 ## Hosting
 
 `.github/workflows/pages.yml` veröffentlicht bei jedem Push auf GitHub Pages:
 `app/` an die Wurzel, den Poster-Generator in zwei Kanälen (siehe
-[Kanäle und Freigabe](#kanäle-und-freigabe)). Ohne Build-Schritt — die Ordner
-werden nebeneinander in ein Artefakt kopiert; erzeugt wird nur je Kanal eine
-`build.js` mit Version, Commit und Datum.
+[Kanäle und Freigabe](#kanäle-und-freigabe)) und `pruefung/` nach `/pruefung/`.
+Ohne Build-Schritt — die Ordner werden nebeneinander in ein Artefakt kopiert;
+erzeugt wird nur je Poster-Kanal eine `build.js` mit Version, Commit und Datum.
 
 **Einmalig von Hand nötig**, bevor der erste Deploy durchläuft:
 
@@ -30,10 +32,10 @@ Der Workflow-Token darf Pages nicht selbst einschalten (die API antwortet mit
 `Resource not accessible by integration`), deshalb ist dieser eine Klick nicht
 automatisierbar. Jeder weitere Push läuft dann von allein durch.
 
-HTTPS ist hier nicht nur für den Poster-Generator Kosmetik: der Raumrechner
-läuft mit Service Worker, der nur auf einer sicheren Herkunft aktiv wird.
-Ohne echtes Hosting gibt es dort weder Offline-Betrieb noch Installation auf
-dem Startbildschirm.
+HTTPS ist hier nicht nur für den Poster-Generator Kosmetik: Raumrechner und
+Prüfassistent laufen mit Service Worker, der nur auf einer sicheren Herkunft
+aktiv wird. Ohne echtes Hosting gibt es dort weder Offline-Betrieb noch
+Installation auf dem Startbildschirm.
 
 ---
 
@@ -470,3 +472,171 @@ Alle Koordinaten darin sind Vielfache von `W` und `H`, nie feste Pixel — desha
 zeichnet derselbe Code die 720-Pixel-Vorschau und das A2-Poster mit 4961 Pixeln
 Breite. Ein neuer Stil braucht nur diese Datei, einen Eintrag in `index.html`
 und eine Zeile in der Stilauswahl.
+
+---
+
+## Prüfassistent
+
+Werkzeug für Elektrofachkräfte auf der Baustelle: Der Assistent fragt ab, was
+geprüft wird — Netzform, Stromkreisart, RCD, Besonderheiten — und stellt daraus
+den Prüfplan zusammen, in der Reihenfolge, die fachlich nötig ist. Zu jedem
+Schritt stehen Ablauf, Messmittel, Grenzwert und typische Fehlerquellen dabei;
+Messwerte werden direkt gegen den Grenzwert bewertet und am Ende als Protokoll
+gedruckt.
+
+Läuft wie die anderen Apps ohne Build-Schritt, installierbar, und **vollständig
+offline** — im Hausanschlussraum, im Keller und in der Halle gibt es meist kein
+Netz, und genau dort wird die App gebraucht.
+
+> Hilfsmittel, kein Ersatz für Normtext, Herstellerangaben und eigene
+> Fachkunde. Die Datenpakete enthalten keine Normzitate, sondern eigene
+> Zusammenfassungen des Ablaufs und die allgemein publizierten Grenzwerte mit
+> Quellenangabe. Vor der ersten Verwendung gegen die gültige Normfassung prüfen.
+
+### Starten
+
+```bash
+cd pruefung
+python3 -m http.server 8000
+```
+
+Dann `http://localhost:8000/` öffnen. Ein Start im Wurzelverzeichnis des Repos
+(`http://localhost:8000/pruefung/`) stellt die echte Deploy-Situation nach —
+drei Apps auf einer Herkunft, mit einem fremden Service Worker im Scope.
+`file://` reicht nicht: dort blockiert der Browser das Laden der Datenpakete.
+
+Auf `localhost` läuft beim Start automatisch `Pruefung.selftest()` und meldet in
+der Konsole, ob alle Verweise, Grenzwerte, Reihenfolgen und der Offline-Cache
+stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
+
+### Funktionsumfang
+
+| Bereich | Stand |
+| --- | --- |
+| Assistent nach DIN VDE 0100-600 (Erstprüfung ortsfester Anlagen) | fertig |
+| Zwei-Welten-Modus EFH / Industrie: Fragen, Schritte, Wiki und Begriffe | fertig |
+| Prüfplan mit verbindlicher Reihenfolge (`requires`) und Sperrhinweis | fertig |
+| Messwerte mit Live-Bewertung gegen den passenden Grenzwert | fertig |
+| Checklisten mit drei Zuständen, Bewertung je Schritt überschreibbar | fertig |
+| Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
+| Protokoll als A4-Bogen über den Druckdialog (auch „Als PDF speichern") | fertig |
+| Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
+| Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
+| Offline-Betrieb inklusive aller Datenpakete | fertig |
+| DIN VDE 0105-100 (Wiederholungsprüfung) | geplant |
+| DIN EN 50678 / 50699 (Geräteprüfung, Schutzklassen I/II/III) | geplant |
+| Prüffristen-Verwaltung mit Erinnerung (Datenbasis liegt bereit) | geplant |
+
+### Normdaten pflegen
+
+Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
+Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
+
+* **Grenzwert ändern** — Zeile in `data/grenzwerte.json` anpassen. Jeder
+  Grenzwert steht genau einmal im Repo; Prüfschritt, Wiki und Protokoll lesen
+  dieselbe Zeile.
+* **Neue Norm ergänzen** — Datei unter `data/normen/` anlegen und in
+  `data/index.json` eintragen. `"status": "geplant"` zeigt sie als deaktivierte
+  Karte, `"aktiv"` schaltet sie frei.
+* **Wiki-Eintrag ergänzen** — Objekt in eine der Dateien unter `data/wiki/`.
+
+Danach zwei Pflichten: die `CACHE`-Version in `pruefung/sw.js` hochzählen (sonst
+liefert der Service Worker installierten Geräten weiter den alten Stand) und
+`datenstand` in `data/index.json` setzen.
+
+Die wichtigsten Felder:
+
+| Feld | Bedeutung |
+| --- | --- |
+| `when` | Bedingung als `{fakt: wert}` oder `{fakt: [werte]}` — gilt für Fragen, Antwortoptionen, Prüfschritte, Checklistenpunkte und Wiki-Einträge |
+| `worlds` | Kurzform für `when.world`, etwa `["industrie"]` |
+| `set` | Fakten, die eine Antwort setzt (`{"netzform": "tt"}`) |
+| `addSteps` | Prüfschritte, die eine Antwort zusätzlich zuschaltet |
+| `phase` + `order` | grobe und feine Sortierung im Prüfplan |
+| `requires` | zwingende Vorbedingung — schlägt jede Sortierung |
+| `limitRef` + `limitKeyFrom` | Grenzwerttabelle und der Fakt, der die Zeile bestimmt |
+
+### Wissenswertes zur Umsetzung
+
+Die Reihenfolge im Prüfplan hängt **nicht** an der gepflegten Zahl `order`. Die
+sortiert nur dort, wo die Reihenfolge beliebig ist. Wo sie zwingend ist — der
+Schutzleiterwiderstand vor dem Isolationswiderstand, der RCD-Auslösestrom vor
+der Auslösezeit — steht `requires`, und eine topologische Sortierung setzt das
+durch. Ein falsch gepflegtes `order` oder ein umsortiertes `steps`-Array kann
+die fachliche Reihenfolge damit nicht mehr kippen. Genau das ist der Kern der
+App, deshalb hängt er nicht an Disziplin beim Datenpflegen.
+
+Antworten speichern **Fakten**, keine Knoten-IDs: aus „Ortsfeste Anlage" wird
+`{"anlagenart": "ortsfest"}`. Der Entscheidungsbaum darf deshalb umgebaut
+werden, ohne gespeicherte Aufträge oder `when`-Bedingungen zu brechen. „Zurück"
+ist aus demselben Grund kein Rückgängig, sondern ein Replay der Antwort-Historie
+von vorn — so kann kein Fakt hängen bleiben, dessen Antwort widerrufen wurde.
+
+Der Zwei-Welten-Modus ist kein Sonderfall in der Engine: `"worlds": [...]` wird
+beim Laden zu `when.world` normalisiert. Damit ist EFH oder Industrie ein Fakt
+wie jeder andere und kann Fragen überspringen, Prüfschritte zuschalten und das
+Wiki filtern, ohne eine Zeile Spezialcode. Die Welt eines Auftrags wird beim
+Anlegen eingefroren; der Umschalter im Kopf ändert sie nicht rückwirkend,
+sondern bietet das Umstellen an — sonst driften Antworten und Prüfplan
+auseinander.
+
+Der Prüfplan eines Auftrags wird beim ersten Öffnen eingefroren. Ein späteres
+Daten-Update sortiert eine laufende Prüfung dadurch nicht um; neu
+hinzugekommene Schritte hängen hinten an und sind als „neu" markiert, statt
+lautlos zwischen bereits erledigte Zeilen zu rutschen.
+
+Zahlenfelder sind wie im Raumrechner bewusst **kein** `type="number"` — dieses
+Feld verschluckt das Komma der deutschen Tastatur, aus „0,4" würde 4. Bei einem
+Isolationswiderstand ist das der Unterschied zwischen Mangel und „alles gut".
+
+Ein Zustand wird nie allein durch Farbe ausgedrückt: jede Bewertung trägt
+Symbol, Text und Farbe. Mit Handschuhen, in der Sonne oder mit Farbsehschwäche
+bleibt die Oberfläche damit lesbar. Aus demselben Grund gibt es keine Gesten —
+alles hat einen sichtbaren Knopf, mindestens 56 px hoch, Primäraktionen unten
+für die Bedienung mit einer Hand.
+
+`js/sw-guard.js` läuft als erstes Skript und räumt Einträge dieser App aus
+fremden Caches. Ältere Fassungen des Raumrechner-Workers hatten die ganze Site
+im Scope und lieferten Nachbar-Apps eingefroren aus — neues HTML mit altem
+JavaScript (siehe [Wissenswertes zur Umsetzung](#wissenswertes-zur-umsetzung-1)
+beim Poster-Generator). Der eigene Worker beantwortet nur die eigenen Pfade.
+
+Wiki-Inhalte sind Blocklisten (`{"type": "p"}`, `"steps"`, `"warn"`, `"limits"`
+…), kein HTML. Gerendert wird über `textContent`, damit ein Datenpaket keine
+Skripte einschleppen kann — und die Inhalte bleiben deklarativ genug, um sie
+später auch anders darzustellen.
+
+### Aufbau
+
+```
+pruefung/
+  index.html            Einstiegspunkt, lädt die Skripte in fester Reihenfolge
+  styles.css            Tokens (aus dem Raumrechner), Feldeinsatz, Tageslicht-Modus, Druckbogen
+  sw.js                 Service Worker: App-Shell und alle Datenpakete cache-first
+  manifest.webmanifest  Installierbarkeit
+  version.json          Version und Datenstand
+  fonts/                dieselben variablen Fonts wie im Raumrechner
+  icons/                Launcher-Icons (192/512, normal und maskable)
+  js/
+    sw-guard.js         räumt fremde Cache-Einträge dieser App weg (zuerst geladen)
+    util.js             el(), Zahlen-/Komma-Behandlung, matches(), Fokusrettung
+    data.js             lädt die Datenpakete, baut Indizes, Welt-Terminologie
+    limits.js           Grenzwerte auflösen, formatieren, bewerten
+    wizard.js           Entscheidungsbaum: Fragen überspringen, antworten, Replay
+    plan.js             Prüfplan bauen, topologisch ordnen, Bewertungen ableiten
+    store.js            Zustand, localStorage, Aufträge und Messergebnisse
+    ui.js               Bausteine: Messzeile, Bewertungsschalter, Grenzwerttabelle, Wiki-Blöcke
+    view-auftraege.js   Aufträge, Normauswahl, Auftragsdaten
+    view-wizard.js      Fragen, Hinweisknoten, Antwortübersicht
+    view-plan.js        Prüfplan und Schritt-Detail mit Messwerterfassung
+    view-wiki.js        Wissensdatenbank mit Suche und Filtern
+    view-protokoll.js   Zusammenfassung und A4-Druckbogen
+    app.js              Kopfzeile, Router, Service-Worker-Registrierung, Selbsttest
+  data/
+    index.json          Registry: Datenstand, Welten, Grenzwerte, Normen, Wiki
+    welten.json         EFH und Industrie: Labels, Begriffe, Akzent, Schwerpunkte
+    grenzwerte.json     alle Grenzwerttabellen und Formeln, per ID referenzierbar
+    prueffristen.json   Richtwerte für Prüffristen (Datenbasis fürs spätere Modul)
+    normen/             ein Paket je Norm (Fragen, Prüfschritte, Protokollfelder)
+    wiki/               Messverfahren, Netzformen, Fehlerquellen, Grundlagen
+```

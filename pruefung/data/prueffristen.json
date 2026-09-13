@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "note": "Datenbasis für das Fristen-Management. Im MVP nur als Übersicht im Wiki sichtbar. Richtwerte — die Frist legt der Betreiber auf Basis der Gefährdungsbeurteilung fest.",
+  "source": "Richtwerte nach DGUV Vorschrift 3 und TRBS 1201",
+  "presets": [
+    { "id": "baustelle", "label": "Baustelle / Baustromverteiler", "worlds": ["industrie"], "intervalMonths": 3, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "anlage" },
+    { "id": "werkstatt", "label": "Werkstatt, erhöhte Beanspruchung", "worlds": ["industrie"], "intervalMonths": 12, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "anlage" },
+    { "id": "maschine", "label": "Maschine / Schaltschrank", "worlds": ["industrie"], "intervalMonths": 12, "basis": "Betreiberfestlegung, Gefährdungsbeurteilung", "scope": "anlage" },
+    { "id": "buero", "label": "Büro, trockene Räume", "worlds": ["efh", "industrie"], "intervalMonths": 48, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "anlage" },
+    { "id": "wohnanlage", "label": "Wohnanlage (Empfehlung)", "worlds": ["efh"], "intervalMonths": 48, "basis": "Empfehlung, keine allgemeine Prüfpflicht für selbstgenutztes Wohneigentum", "scope": "anlage" },
+    { "id": "vermietung", "label": "Vermietete Wohnung / Mietobjekt", "worlds": ["efh"], "intervalMonths": 60, "basis": "Empfehlung aus der Betreiberverantwortung des Vermieters", "scope": "anlage" },
+    { "id": "rcd-nutzerpruefung", "label": "RCD-Funktionsprüfung durch den Nutzer", "worlds": ["efh", "industrie"], "intervalMonths": 6, "basis": "Empfehlung, Prüftaste", "scope": "geraet" }
+  ]
+}

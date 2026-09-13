@@ -1,0 +1,172 @@
+{
+  "schema": 1,
+  "collection": "fehlerquellen",
+  "entries": [
+    {
+      "id": "fehler-iso-spd",
+      "title": "SPD nicht getrennt — Isolationswert zu klein",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["riso", "spd"],
+      "summary": "Überspannungsschutz leitet die Prüfspannung ab. Der gemessene Wert gehört dann dem SPD, nicht der Leitung.",
+      "search": "spd ueberspannungsschutz isolationsmessung zu klein varistor",
+      "body": [
+        { "type": "p", "text": "Varistoren und Funkenstrecken im Überspannungsschutz sprechen auf 500 V DC an oder haben schon vorher einen messbaren Leckstrom. Das Messgerät zeigt dann einige hundert kΩ an — die Leitung ist aber in Ordnung." },
+        { "type": "bullets", "items": [
+          "Steckbare Module ziehen oder die Klemme lösen.",
+          "Bei fest verdrahteten SPD den Leiter abklemmen und danach nachweislich wieder anschließen.",
+          "Im Protokoll vermerken, dass der SPD getrennt war — sonst ist die Messung nicht nachvollziehbar."
+        ] },
+        { "type": "warn", "text": "Der häufigste Folgefehler: das Modul bleibt nach der Messung gezogen. Die Anlage ist dann ohne Überspannungsschutz in Betrieb." }
+      ],
+      "related": ["messverfahren-isolationswiderstand", "s-spd-sicht"]
+    },
+    {
+      "id": "fehler-iso-verbraucher",
+      "title": "Verbraucher am Netz — Isolationsmessung misst das Gerät",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["riso"],
+      "summary": "Netzteile, Dimmer, Vorschaltgeräte und Aktoren verfälschen den Wert oder gehen kaputt.",
+      "search": "verbraucher elektronik netzteil dimmer led isolationsmessung kaputt",
+      "body": [
+        { "type": "p", "text": "Angeschlossene Elektronik hat gegen PE einen definierten Y-Kondensator — das senkt den gemessenen Isolationswiderstand deutlich. Umgekehrt zerstört die Prüfspannung Geräte, die nicht dafür gebaut sind." },
+        { "type": "steps", "items": [
+          "Sicherungen der betroffenen Stromkreise entfernen oder Verbraucher trennen.",
+          "LED-Treiber, Dimmer, Smart-Home-Aktoren und Netzteile abklemmen.",
+          "Wenn eine Trennung nicht möglich ist: Messung auf 250 V DC reduzieren und das im Protokoll begründen."
+        ] }
+      ],
+      "related": ["messverfahren-isolationswiderstand"]
+    },
+    {
+      "id": "fehler-iso-n-pe-bruecke",
+      "title": "N-PE-Brücke steckt noch — N–PE misst null",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["riso", "tn-c-s"],
+      "summary": "Bei TN-C-S sitzt die PEN-Trennstelle im Verteiler. Solange sie gebrückt ist, ist N–PE ein Kurzschluss.",
+      "search": "n pe bruecke pen trennstelle null megaohm kurzschluss",
+      "body": [
+        { "type": "p", "text": "Ein Wert nahe 0 MΩ zwischen N und PE ist in der Praxis fast nie ein Isolationsfehler, sondern die bestehende Verbindung an der PEN-Trennstelle oder eine versehentlich auf die PE-Schiene geklemmte N-Leitung." },
+        { "type": "steps", "items": [
+          "Verbindung an der Trennstelle für die Messung lösen.",
+          "Bleibt der Wert null, Stromkreise einzeln auftrennen und den Verursacher einkreisen.",
+          "Nach der Messung die Trennstelle zwingend wieder schließen."
+        ] },
+        { "type": "warn", "text": "Bleibt die Brücke hinter der Trennstelle bestehen, arbeitet jeder nachgeschaltete RCD unzuverlässig — ein Teil des Rückstroms fließt über den PE." }
+      ],
+      "related": ["netzform-tn-c-s", "messverfahren-isolationswiderstand"]
+    },
+    {
+      "id": "fehler-messleitung-nicht-abgeglichen",
+      "title": "Messleitungen nicht abgeglichen",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["niederohm"],
+      "summary": "Der Eigenwiderstand der Leitungen landet sonst im Messwert — bei 0,2 Ω Richtwert ist das die Hälfte.",
+      "search": "messleitung abgleich nullen eigenwiderstand niederohm kalibrieren",
+      "body": [
+        { "type": "p", "text": "Prüfschnüre und Krokodilklemmen haben zusammen leicht 0,1 bis 0,3 Ω. Ohne Abgleich bewertet man Klemmstellen schlechter, als sie sind — und sucht Fehler, die es nicht gibt." },
+        { "type": "bullets", "items": [
+          "Vor jeder Messreihe Leitungen kurzschließen und abgleichen (Nullen).",
+          "Nach dem Wechsel auf eine längere Messleitung erneut abgleichen.",
+          "Bei aufgetrennten Klemmen mit Kontaktproblemen zeigt das Gerät sprunghafte Werte — dann ist die Klemme schuld, nicht die Anlage."
+        ] }
+      ],
+      "related": ["messverfahren-durchgang-schutzleiter"]
+    },
+    {
+      "id": "fehler-pe-n-vertauscht",
+      "title": "PE und N vertauscht",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["sicht", "niederohm"],
+      "summary": "Die Anlage funktioniert scheinbar normal — bis der Schutzleiter Betriebsstrom führt.",
+      "search": "pe n vertauscht getauscht schutzleiter betriebsstrom steckdose",
+      "body": [
+        { "type": "p", "text": "Vertauschte Leiter fallen im Betrieb nicht auf: Lampen leuchten, Geräte laufen. Der Schutzleiter führt dann aber Betriebsstrom, und im Fehlerfall liegt Spannung an berührbaren Teilen." },
+        { "type": "bullets", "items": [
+          "Bei der Niederohmmessung fällt ein auffällig kleiner Wert gegen N auf.",
+          "Steckdosenprüfer erkennen die Vertauschung meist zuverlässig.",
+          "Nach jeder Fremdarbeit an der Verteilung erneut prüfen — das ist die häufigste Ursache."
+        ] }
+      ],
+      "related": ["messverfahren-durchgang-schutzleiter", "messverfahren-sichtpruefung"]
+    },
+    {
+      "id": "fehler-zs-messleitung",
+      "title": "Zs zu groß gemessen",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["zs"],
+      "summary": "Übergangswiderstände an Messspitzen, Adaptern und Steckdosenkontakten addieren sich zur Anlage.",
+      "search": "zs zu gross schleifenimpedanz adapter messspitze uebergangswiderstand",
+      "body": [
+        { "type": "p", "text": "Ein schlecht sitzender Schutzkontakt oder ein billiger Messadapter bringt leicht ein halbes Ohm mit — bei Zs-Grenzwerten um 2 bis 3 Ω ist das ein relevanter Anteil." },
+        { "type": "bullets", "items": [
+          "Messung an derselben Stelle wiederholen und auf Streuung achten.",
+          "Direkt an der Klemme statt über die Steckdose messen, wenn der Wert unplausibel ist.",
+          "Bei sehr großen Werten zuerst die Leitungslänge und den Querschnitt gegenrechnen."
+        ] }
+      ],
+      "related": ["messverfahren-schleifenimpedanz"]
+    },
+    {
+      "id": "fehler-rcd-vorgelagert",
+      "title": "Vorgelagerter RCD löst bei der Messung aus",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["rcd", "zs"],
+      "summary": "Die Zs-Messung treibt Strom über PE. Ohne auslösefreie Messart schaltet der RCD ab.",
+      "search": "rcd loest aus zs messung auslösefrei selektiv vorgelagert",
+      "body": [
+        { "type": "p", "text": "Moderne Installationstester bieten eine Messart, die mit so kleinem Prüfstrom arbeitet, dass der RCD nicht auslöst — dafür dauert die Messung länger und streut etwas mehr." },
+        { "type": "bullets", "items": [
+          "Auslösefreie Zs-Messung wählen, wenn ein RCD vorgeschaltet ist.",
+          "Bei selektiven RCD prüfen, welche Stufe tatsächlich abgeschaltet hat — sonst sucht man am falschen Ende.",
+          "Nach jeder Auslösung nachsehen, ob Verbraucher unbemerkt ausgefallen sind (Server, Kühlung, Heizung)."
+        ] }
+      ],
+      "related": ["messverfahren-schleifenimpedanz", "messverfahren-rcd-ausloesestrom"]
+    },
+    {
+      "id": "fehler-tt-ra-sonde",
+      "title": "RA-Messung erfasst den Erder nicht",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["tt", "erder"],
+      "summary": "Sonde zu nah am Erder oder eine fremde Verbindung überbrückt die Messung — der Wert wird zu gut.",
+      "search": "ra sonde abstand erder fremde verbindung wasserleitung zu klein",
+      "body": [
+        { "type": "p", "text": "Zu kleine Sondenabstände liegen noch im Spannungstrichter des Erders, das Ergebnis ist dann zu klein. Ebenso täuscht eine metallene Wasserleitung oder eine Verbindung zum Netz-PE einen guten Erder vor." },
+        { "type": "bullets", "items": [
+          "Sonde und Hilfserder ausreichend weit und in einer Linie setzen.",
+          "Erdungsleitung für die Messung auftrennen, wenn zulässig und sicher möglich.",
+          "Plausibilität prüfen: ein Tiefenerder in trockenem Sandboden hat selten 3 Ω."
+        ] }
+      ],
+      "related": ["messverfahren-erdungswiderstand-ra", "netzform-tt"]
+    },
+    {
+      "id": "fehler-messung-unter-spannung",
+      "title": "Falsche Messung am spannungsführenden Teil",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["sicherheit"],
+      "summary": "Isolations- und Niederohmmessung setzen eine freigeschaltete Anlage voraus. Sonst wird es gefährlich und das Gerät geht kaputt.",
+      "search": "unter spannung messen gefahr freischalten fuenf sicherheitsregeln",
+      "body": [
+        { "type": "steps", "items": [
+          "Freischalten.",
+          "Gegen Wiedereinschalten sichern.",
+          "Spannungsfreiheit allpolig feststellen.",
+          "Erden und kurzschließen, wo gefordert.",
+          "Benachbarte, unter Spannung stehende Teile abdecken oder abschranken."
+        ] },
+        { "type": "warn", "text": "Schleifenimpedanz, RCD-Prüfung und Drehfeld werden dagegen bewusst unter Spannung gemessen — mit dafür gebautem Messgerät und Messleitungen passender Messkategorie." }
+      ],
+      "related": ["messverfahren-isolationswiderstand", "messverfahren-durchgang-schutzleiter"]
+    }
+  ]
+}

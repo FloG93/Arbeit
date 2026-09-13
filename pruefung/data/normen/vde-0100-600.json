@@ -1,0 +1,668 @@
+{
+  "schema": 1,
+  "id": "vde-0100-600",
+  "norm": "DIN VDE 0100-600",
+  "title": "Erstprüfung — Errichten und Erstinbetriebnahme ortsfester Anlagen",
+  "short": "Erstprüfung Anlage",
+  "edition": "2017-06",
+  "status": "aktiv",
+  "worlds": ["efh", "industrie"],
+  "datenstand": "2026-09",
+  "reviewed": { "by": "", "date": "" },
+  "entry": "q-pruefanlass",
+  "sources": [
+    { "label": "DIN VDE 0100-600:2017-06", "note": "Eigene Zusammenfassung des Ablaufs, kein Normtext." },
+    { "label": "DIN VDE 0100-410", "note": "Abschaltzeiten und Schutz durch automatische Abschaltung." }
+  ],
+  "phases": [
+    { "id": "besichtigen", "label": "Besichtigen", "order": 100, "hint": "Vor jeder Messung — spannungsfrei und mit offenen Augen." },
+    { "id": "messen", "label": "Erproben und Messen", "order": 200, "hint": "Anlage freigeschaltet, Reihenfolge beachten." },
+    { "id": "erproben", "label": "Funktionsprüfung", "order": 600, "hint": "Unter Spannung, Schutzeinrichtungen wirksam prüfen." },
+    { "id": "dokumentieren", "label": "Dokumentieren", "order": 900, "hint": "Protokoll, Übergabe, Plakette." }
+  ],
+  "protocol": {
+    "fields": [
+      { "id": "objekt", "label": "Objekt", "termKey": "objekt", "kind": "text", "required": true },
+      { "id": "anlagenteil", "label": "Anlagenteil", "termKey": "verteiler", "kind": "text" },
+      { "id": "auftraggeber", "label": "Auftraggeber", "termKey": "auftraggeber", "kind": "text" },
+      { "id": "pruefer", "label": "Prüfer", "kind": "text", "sticky": true },
+      { "id": "messgeraet", "label": "Messgerät / Kalibrierung", "kind": "text", "sticky": true },
+      { "id": "datum", "label": "Prüfdatum", "kind": "date", "default": "today" }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "q-pruefanlass",
+      "type": "question",
+      "title": "Was ist der Prüfanlass?",
+      "help": "Die Erstprüfung gehört zu jeder neuen Anlage und zu jeder Erweiterung oder Änderung vor der Inbetriebnahme.",
+      "defaultNext": "q-anlagenart",
+      "options": [
+        { "id": "o-erstpruefung", "label": "Erstinbetriebnahme", "sub": "Neue Anlage, Erweiterung oder Änderung", "set": { "pruefanlass": "erstpruefung" }, "next": "q-anlagenart" },
+        { "id": "o-wiederholung", "label": "Wiederholungsprüfung", "sub": "Bestehende Anlage im Betrieb", "set": { "pruefanlass": "wiederholung" }, "next": "r-wiederholung" }
+      ]
+    },
+    {
+      "id": "q-anlagenart",
+      "type": "question",
+      "title": "Was wird geprüft?",
+      "help": "Ortsfest heißt fest angeschlossen — Verteiler, Endstromkreise, Wallbox. Steckerfertige Geräte fallen unter eine andere Norm.",
+      "wiki": ["begriff-ortsfest-ortsveraenderlich"],
+      "defaultNext": "q-netzform",
+      "options": [
+        { "id": "o-ortsfest", "label": "Ortsfeste Anlage", "sub": "Verteiler, Endstromkreise, Wallbox", "set": { "anlagenart": "ortsfest" }, "addSteps": ["s-sicht-anlage"], "next": "q-netzform" },
+        { "id": "o-maschine", "label": "Maschine / Schaltschrank", "sub": "Zusätzlich DIN EN 60204-1", "when": { "world": "industrie" }, "set": { "anlagenart": "ortsfest", "maschine": "ja" }, "addSteps": ["s-sicht-anlage"], "addTags": ["maschine"], "next": "q-netzform" },
+        { "id": "o-ortsveraenderlich", "label": "Ortsveränderliches Betriebsmittel", "sub": "Steckerfertiges Gerät, Verlängerung", "set": { "anlagenart": "ortsveraenderlich" }, "next": "r-andere-norm" }
+      ]
+    },
+    {
+      "id": "q-netzform",
+      "type": "question",
+      "title": "Welche Netzform liegt vor?",
+      "help": "Die Netzform entscheidet, welche Messungen überhaupt aussagekräftig sind und welche Grenzwerte gelten.",
+      "wiki": ["netzformen-vergleich"],
+      "defaultNext": "q-nennspannung",
+      "options": [
+        { "id": "o-tn-c-s", "label": "TN-C-S", "sub": "PEN bis zur Trennstelle, danach PE und N getrennt — Regelfall im Wohnbau", "set": { "netzform": "tn-c-s" }, "next": "q-nennspannung" },
+        { "id": "o-tn-s", "label": "TN-S", "sub": "PE und N ab Einspeisung getrennt", "set": { "netzform": "tn-s" }, "next": "q-nennspannung" },
+        { "id": "o-tn-c", "label": "TN-C", "sub": "PEN durchgehend — RCD nicht möglich", "set": { "netzform": "tn-c" }, "addTags": ["tn-c"], "next": "q-nennspannung" },
+        { "id": "o-tt", "label": "TT", "sub": "Eigener Anlagenerder, RCD zwingend", "set": { "netzform": "tt" }, "addSteps": ["s-erdungswiderstand-ra"], "next": "q-nennspannung" },
+        { "id": "o-it", "label": "IT", "sub": "Isolierter Sternpunkt, Isolationsüberwachung", "when": { "world": "industrie" }, "set": { "netzform": "it" }, "next": "q-nennspannung" }
+      ]
+    },
+    {
+      "id": "q-nennspannung",
+      "type": "question",
+      "title": "Welche Nennspannung hat der Stromkreis?",
+      "help": "Bestimmt Prüfspannung und Mindest-Isolationswiderstand.",
+      "wiki": ["grenzwerte-iso"],
+      "defaultNext": "q-stromkreisart",
+      "options": [
+        { "id": "o-bis500", "label": "bis 500 V", "sub": "Regelfall 230/400 V — Prüfspannung 500 V DC", "set": { "nennspannung": "bis500" }, "next": "q-stromkreisart" },
+        { "id": "o-selv-pelv", "label": "SELV / PELV", "sub": "Schutzkleinspannung — Prüfspannung 250 V DC", "set": { "nennspannung": "selv-pelv" }, "addSteps": ["s-selv-pelv-trennung"], "next": "q-stromkreisart" },
+        { "id": "o-ueber500", "label": "über 500 V", "sub": "Prüfspannung 1000 V DC", "when": { "world": "industrie" }, "set": { "nennspannung": "ueber500" }, "next": "q-stromkreisart" }
+      ]
+    },
+    {
+      "id": "q-stromkreisart",
+      "type": "question",
+      "title": "Welcher Stromkreis wird bewertet?",
+      "help": "Endstromkreise müssen schneller abschalten als Verteilungsstromkreise. Die zulässige Abschaltzeit hängt zusätzlich an der Netzform.",
+      "wiki": ["grenzwerte-abschaltzeit"],
+      "defaultNext": "q-drehstrom",
+      "options": [
+        { "id": "o-end-tn", "label": "Endstromkreis ≤ 32 A", "sub": "zulässige Abschaltzeit 0,4 s", "when": { "netzform": ["tn-c", "tn-s", "tn-c-s"] }, "set": { "stromkreisart": "endstromkreis", "abschaltzeitFall": "tn-endstromkreis" }, "next": "q-drehstrom" },
+        { "id": "o-vert-tn", "label": "Verteilungsstromkreis / über 32 A", "sub": "zulässige Abschaltzeit 5 s", "when": { "netzform": ["tn-c", "tn-s", "tn-c-s"] }, "set": { "stromkreisart": "verteilung", "abschaltzeitFall": "tn-verteilung" }, "next": "q-drehstrom" },
+        { "id": "o-end-tt", "label": "Endstromkreis ≤ 32 A", "sub": "zulässige Abschaltzeit 0,2 s", "when": { "netzform": ["tt", "it"] }, "set": { "stromkreisart": "endstromkreis", "abschaltzeitFall": "tt-endstromkreis" }, "next": "q-drehstrom" },
+        { "id": "o-vert-tt", "label": "Verteilungsstromkreis / über 32 A", "sub": "zulässige Abschaltzeit 1 s", "when": { "netzform": ["tt", "it"] }, "set": { "stromkreisart": "verteilung", "abschaltzeitFall": "tt-verteilung" }, "next": "q-drehstrom" }
+      ]
+    },
+    {
+      "id": "q-drehstrom",
+      "type": "question",
+      "title": "Drehstrom im Spiel?",
+      "help": "Bei Drehstromkreisen gehört die Drehfeldrichtung zur Prüfung — ein vertauschtes Feld lässt Motoren und Pumpen falsch laufen.",
+      "defaultNext": "q-rcd",
+      "options": [
+        { "id": "o-drehstrom-ja", "label": "Ja, Drehstromkreise vorhanden", "sub": "400 V, Motoren, Herd, CEE", "set": { "drehstrom": "ja" }, "next": "q-rcd" },
+        { "id": "o-drehstrom-nein", "label": "Nein, nur Wechselstrom", "sub": "230 V einphasig", "set": { "drehstrom": "nein" }, "next": "q-rcd" }
+      ]
+    },
+    {
+      "id": "q-rcd",
+      "type": "question",
+      "title": "Ist ein RCD (FI) vorgeschaltet?",
+      "help": "Im TT-System ist der RCD praktisch zwingend. Im TN-C-System ist er nicht möglich — dort fehlt der getrennte PE.",
+      "wiki": ["grenzwerte-rcd", "messverfahren-rcd-ausloesezeit"],
+      "defaultNext": "q-besonderheiten",
+      "options": [
+        { "id": "o-rcd-allgemein", "label": "Ja, allgemeiner RCD", "sub": "Unverzögert — Regelfall", "when": { "netzform": ["tn-s", "tn-c-s", "tt", "it"] }, "set": { "rcd": "ja", "rcdBauart": "allgemein" }, "next": "q-rcd-nennfehlerstrom" },
+        { "id": "o-rcd-selektiv", "label": "Ja, selektiver RCD (S)", "sub": "Kurzzeitverzögert, vorgelagert", "when": { "netzform": ["tn-s", "tn-c-s", "tt", "it"] }, "set": { "rcd": "ja", "rcdBauart": "selektiv" }, "next": "q-rcd-nennfehlerstrom" },
+        { "id": "o-rcd-nein", "label": "Kein RCD", "sub": "Nur Überstromschutz", "set": { "rcd": "nein" }, "next": "q-besonderheiten" }
+      ]
+    },
+    {
+      "id": "q-rcd-nennfehlerstrom",
+      "type": "question",
+      "title": "Welcher Nennfehlerstrom IΔn?",
+      "help": "Bestimmt den zulässigen Auslösestrom und im TT-System den höchstzulässigen Erdungswiderstand.",
+      "when": { "rcd": "ja" },
+      "defaultNext": "q-besonderheiten",
+      "options": [
+        { "id": "o-in-30", "label": "30 mA", "sub": "Zusatzschutz, Standard im Wohnbau", "set": { "rcdIn": "30ma" }, "next": "q-besonderheiten" },
+        { "id": "o-in-100", "label": "100 mA", "set": { "rcdIn": "100ma" }, "next": "q-besonderheiten" },
+        { "id": "o-in-300", "label": "300 mA", "sub": "Brandschutz", "set": { "rcdIn": "300ma" }, "next": "q-besonderheiten" },
+        { "id": "o-in-500", "label": "500 mA", "when": { "world": "industrie" }, "set": { "rcdIn": "500ma" }, "next": "q-besonderheiten" }
+      ]
+    },
+    {
+      "id": "q-besonderheiten",
+      "type": "question",
+      "multi": true,
+      "title": "Was ist verbaut?",
+      "hint": "Mehrfachauswahl — schaltet zusätzliche Prüfschritte zu. Nichts zutreffend? Direkt weiter.",
+      "defaultNext": null,
+      "options": [
+        { "id": "o-wallbox", "label": "Wallbox / Ladepunkt", "sub": "RCD Typ B oder Typ A + DC-Fehlererkennung", "when": { "world": "efh" }, "set": { "ladeinfrastruktur": "ja" }, "addTags": ["ladeinfrastruktur"] },
+        { "id": "o-pv", "label": "PV / Wechselrichter", "sub": "Mischfrequente Fehlerströme — RCD Typ F/B", "set": { "pv": "ja" }, "addTags": ["pv"] },
+        { "id": "o-spd", "label": "Überspannungsschutz (SPD)", "sub": "Muss vor der Isolationsmessung getrennt werden", "set": { "spd": "ja" }, "addTags": ["spd"] },
+        { "id": "o-smarthome", "label": "Aktoren in der Verteilung", "sub": "Smart Home, Elektronik — Isolationsmessung vorsichtig", "when": { "world": "efh" }, "set": { "smarthome": "ja" }, "addTags": ["smarthome"] },
+        { "id": "o-schienensystem", "label": "Schienenverteiler", "sub": "Stoßstellen und Verbindungen mitprüfen", "when": { "world": "industrie" }, "set": { "schienensystem": "ja" }, "addTags": ["schienensystem"] },
+        { "id": "o-ex", "label": "EX-Bereich betroffen", "sub": "Zusätzliche Anforderungen", "when": { "world": "industrie" }, "set": { "ex": "ja" }, "addTags": ["ex"], "next": "r-ex-hinweis" }
+      ]
+    },
+    {
+      "id": "r-wiederholung",
+      "type": "result",
+      "kind": "hinweis",
+      "title": "Wiederholungsprüfung — andere Norm",
+      "body": [
+        { "type": "p", "text": "Bestehende Anlagen im Betrieb werden nach DIN VDE 0105-100 wiederholt geprüft. Der Ablauf ähnelt der Erstprüfung, der Umfang richtet sich aber nach Anlagenzustand und Prüffrist." },
+        { "type": "p", "text": "Das Norm-Paket dafür ist in dieser App noch nicht enthalten. Für eine Erweiterung oder Änderung an einer bestehenden Anlage ist dagegen die Erstprüfung richtig — dann hier zurückgehen und „Erstinbetriebnahme“ wählen." },
+        { "type": "link", "to": "prueffristen-uebersicht", "label": "Prüffristen — Richtwerte" }
+      ],
+      "normRef": "vde-0105-100"
+    },
+    {
+      "id": "r-andere-norm",
+      "type": "result",
+      "kind": "hinweis",
+      "title": "Geräteprüfung — andere Norm",
+      "body": [
+        { "type": "p", "text": "Steckerfertige, ortsveränderliche Betriebsmittel werden nach DIN EN 50678 (nach Instandsetzung) beziehungsweise DIN EN 50699 (Wiederholungsprüfung) geprüft — früher DIN VDE 0701-0702." },
+        { "type": "p", "text": "Dort bestimmt die Schutzklasse den Messumfang: Schutzklasse I mit Schutzleiterwiderstand und Ableitstrom, Schutzklasse II ohne Schutzleiter, Schutzklasse III nur Sichtprüfung und Kleinspannungsnachweis." },
+        { "type": "link", "to": "begriff-schutzklassen", "label": "Schutzklassen I, II, III" }
+      ],
+      "normRef": "en-50678-50699"
+    },
+    {
+      "id": "r-ex-hinweis",
+      "type": "result",
+      "kind": "warnung",
+      "title": "EX-Bereich — zusätzliche Anforderungen",
+      "continue": true,
+      "continueLabel": "Trotzdem Prüfplan erstellen",
+      "body": [
+        { "type": "warn", "text": "Prüfungen in explosionsgefährdeten Bereichen setzen zusätzliche Fachkunde und eine Befähigung nach TRBS 1203 voraus. Diese App deckt das nicht ab." },
+        { "type": "bullets", "items": [
+          "Zusätzlich gelten DIN EN 60079-14 und -17 sowie das Explosionsschutzdokument der Anlage.",
+          "Messungen mit Zündgefahr nur bei freigemessener Atmosphäre oder mit eigensicheren Geräten.",
+          "Zünddurchschlagsichere Verbindungen und Spaltmaße gehören zur Sichtprüfung."
+        ] },
+        { "type": "p", "text": "Der Prüfplan unten deckt nur den allgemeinen Teil nach DIN VDE 0100-600 ab." }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s-sicht-anlage",
+      "type": "sicht",
+      "phase": "besichtigen",
+      "order": 100,
+      "title": "Besichtigen",
+      "short": "Sicht",
+      "safety": "Vor dem Zuschalten. Abdeckungen nur von Fachkräften öffnen.",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-leitungsschutz", "label": "Leitungsschutz passend zum Querschnitt" },
+        { "id": "c-schutzmassnahme", "label": "Schutzmaßnahme durchgehend umgesetzt (PE, Trennstelle, Potentialausgleich)" },
+        { "id": "c-kennzeichnung", "label": "Kennzeichnung, Stromlaufplan und Verteilerbeschriftung vorhanden" },
+        { "id": "c-klemmstellen", "label": "Klemmstellen fest, keine blanken Leiter, Zugentlastung vorhanden" },
+        { "id": "c-ip-schutz", "label": "IP-Schutzart am Einbauort erreicht" },
+        { "id": "c-brandabschottung", "label": "Brandabschottungen und Leitungsführung dicht", "when": { "world": "industrie" } },
+        { "id": "c-nischen", "label": "Zähleranschluss und Zählerplatz normgerecht ausgeführt", "when": { "world": "efh" } }
+      ],
+      "wiki": ["messverfahren-sichtpruefung"],
+      "protocolLabel": "Besichtigung",
+      "tags": ["sicht"]
+    },
+    {
+      "id": "s-sicht-schaltschrank",
+      "type": "sicht",
+      "phase": "besichtigen",
+      "order": 110,
+      "title": "Schaltschrank und Maschine besichtigen",
+      "short": "Sicht Schrank",
+      "when": { "maschine": "ja" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-hauptschalter", "label": "Netztrenneinrichtung abschließbar, eindeutig gekennzeichnet" },
+        { "id": "c-not-halt-sicht", "label": "Not-Halt-Befehlsgeräte erreichbar und unverwechselbar" },
+        { "id": "c-schutzart-schrank", "label": "Schutzart des Gehäuses zum Aufstellort passend" },
+        { "id": "c-pe-schiene", "label": "PE-Schiene und Schutzleiterverbindungen der Türen vorhanden" },
+        { "id": "c-warnschilder", "label": "Warnhinweise auf Fremdspannung und Restspannung angebracht" }
+      ],
+      "wiki": ["messverfahren-sichtpruefung"],
+      "protocolLabel": "Besichtigung Schaltschrank",
+      "tags": ["maschine", "sicht"]
+    },
+    {
+      "id": "s-spd-sicht",
+      "type": "sicht",
+      "phase": "besichtigen",
+      "order": 120,
+      "title": "Überspannungsschutz prüfen",
+      "short": "SPD",
+      "when": { "spd": "ja" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-spd-anzeige", "label": "Statusanzeige aller Module im grünen Bereich" },
+        { "id": "c-spd-vorsicherung", "label": "Vorsicherung / Backup-Sicherung entsprechend Herstellerangabe" },
+        { "id": "c-spd-anschluss", "label": "Anschlussleitungen kurz und ohne Schlaufen geführt" },
+        { "id": "c-spd-getrennt", "label": "Für die Isolationsmessung getrennt und danach wieder angeklemmt" }
+      ],
+      "wiki": ["fehler-iso-spd"],
+      "protocolLabel": "Überspannungsschutz",
+      "tags": ["spd"]
+    },
+    {
+      "id": "s-durchgang-schutzleiter",
+      "type": "messung",
+      "phase": "messen",
+      "order": 200,
+      "title": "Schutzleiter und Potentialausgleich (Niederohmmessung)",
+      "short": "R-PE",
+      "instrument": "Niederohmmessgerät, Prüfstrom ≥ 200 mA",
+      "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen.",
+      "procedure": [
+        "Anlage freischalten und gegen Wiedereinschalten sichern.",
+        "Messleitungen kalibrieren / Eigenwiderstand abgleichen.",
+        "Von der Haupterdungsschiene zu jedem Schutzkontakt und zu jedem berührbaren Metallteil messen.",
+        "Ergebnis gegen den aus Querschnitt und Länge erwarteten Wert vergleichen."
+      ],
+      "measure": {
+        "quantity": "Schutzleiterwiderstand",
+        "symbol": "R",
+        "unit": "Ω",
+        "inputs": [
+          { "id": "r_pe_max", "label": "größter Messwert", "unit": "Ω", "quickValues": [{ "label": "0,1", "value": 0.1 }, { "label": "0,3", "value": 0.3 }] },
+          { "id": "r_pa", "label": "Potentialausgleich", "unit": "Ω", "limitKey": "schutzpotentialausgleich" }
+        ],
+        "aggregate": "max"
+      },
+      "limitRef": "schutzleiter-durchgang",
+      "pitfalls": ["fehler-messleitung-nicht-abgeglichen", "fehler-pe-n-vertauscht"],
+      "wiki": ["messverfahren-durchgang-schutzleiter"],
+      "protocolLabel": "Schutzleiterwiderstand",
+      "tags": ["messung", "niederohm"]
+    },
+    {
+      "id": "s-iso-widerstand",
+      "type": "messung",
+      "phase": "messen",
+      "order": 300,
+      "title": "Isolationswiderstand messen",
+      "short": "Riso",
+      "requires": ["s-durchgang-schutzleiter"],
+      "requiresReason": "Ein unterbrochener Schutzleiter macht die Isolationsmessung gegen PE wertlos — sie misst dann gegen nichts.",
+      "instrument": "Isolationsmessgerät",
+      "safety": "Anlage freigeschaltet und gesichert, Spannungsfreiheit festgestellt. Prüfspannung ist gefährlich.",
+      "procedure": [
+        "Elektronische Betriebsmittel, SPD und Aktoren abklemmen oder Klemme ziehen.",
+        "Verbraucher abschalten oder trennen, Leuchtmittel entfernen wo nötig.",
+        "Außenleiter und Neutralleiter gegen PE messen.",
+        "Bei Bedarf Leiter gegeneinander messen.",
+        "Nach der Messung entladen und alles wieder anklemmen."
+      ],
+      "measure": {
+        "quantity": "Isolationswiderstand",
+        "symbol": "Riso",
+        "unit": "MΩ",
+        "inputs": [
+          { "id": "riso_l_pe", "label": "L–PE", "unit": "MΩ", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
+          { "id": "riso_n_pe", "label": "N–PE", "unit": "MΩ", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
+          { "id": "riso_l_n", "label": "L–N", "unit": "MΩ", "optional": true }
+        ],
+        "aggregate": "min"
+      },
+      "limitRef": "iso-nach-nennspannung",
+      "limitKeyFrom": "nennspannung",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-iso-spd", "fehler-iso-verbraucher", "fehler-iso-n-pe-bruecke"],
+      "wiki": ["messverfahren-isolationswiderstand"],
+      "protocolLabel": "Isolationswiderstand",
+      "tags": ["messung", "riso"]
+    },
+    {
+      "id": "s-selv-pelv-trennung",
+      "type": "messung",
+      "phase": "messen",
+      "order": 310,
+      "title": "Trennung der SELV-/PELV-Kreise nachweisen",
+      "short": "SELV",
+      "when": { "nennspannung": "selv-pelv" },
+      "requires": ["s-iso-widerstand"],
+      "instrument": "Isolationsmessgerät, 500 V DC",
+      "procedure": [
+        "Kleinspannungskreis gegen die Kreise höherer Spannung messen.",
+        "Bei PELV zusätzlich die Erdverbindung nachweisen, bei SELV deren Fehlen.",
+        "Sichtprüfung der getrennten Leitungsführung und Klemmung."
+      ],
+      "measure": {
+        "quantity": "Isolationswiderstand zwischen den Kreisen",
+        "unit": "MΩ",
+        "inputs": [{ "id": "riso_kreise", "label": "SELV/PELV gegen 230 V", "unit": "MΩ" }],
+        "aggregate": "min"
+      },
+      "limitRef": "iso-nach-nennspannung",
+      "limitKey": "bis500",
+      "verdict": { "rule": "limit" },
+      "wiki": ["messverfahren-isolationswiderstand"],
+      "protocolLabel": "Trennung SELV/PELV",
+      "tags": ["messung", "riso"]
+    },
+    {
+      "id": "s-boden-wand-widerstand",
+      "type": "messung",
+      "phase": "messen",
+      "order": 320,
+      "title": "Boden- und Wandwiderstand",
+      "short": "Boden",
+      "optional": true,
+      "optionalReason": "Nur nötig, wenn die Schutzmaßnahme auf nichtleitenden Räumen beruht.",
+      "verdict": { "rule": "manual" },
+      "wiki": ["messverfahren-sichtpruefung"],
+      "protocolLabel": "Boden-/Wandwiderstand",
+      "tags": ["messung"]
+    },
+    {
+      "id": "s-schleifenimpedanz",
+      "type": "messung",
+      "phase": "messen",
+      "order": 400,
+      "title": "Schleifenimpedanz / Netzinnenwiderstand messen",
+      "short": "Zs",
+      "instrument": "Installationstester",
+      "safety": "Messung unter Spannung — nur mit geeignetem Messgerät und Messleitungen der Kategorie passend zur Anlage.",
+      "procedure": [
+        "Am ungünstigsten Punkt des Stromkreises messen (längste Leitung).",
+        "Zs zwischen Außenleiter und PE erfassen.",
+        "Sollwert aus der Auslösekennlinie der Schutzeinrichtung bestimmen: Zs ≤ U0 / Ia.",
+        "Bei vorgeschaltetem RCD die Messart ohne Auslösung wählen."
+      ],
+      "measure": {
+        "quantity": "Schleifenimpedanz",
+        "symbol": "Zs",
+        "unit": "Ω",
+        "inputs": [
+          { "id": "zs", "label": "Zs L–PE", "unit": "Ω" },
+          { "id": "zs_soll", "label": "Sollwert (aus Ia)", "unit": "Ω", "optional": true }
+        ],
+        "aggregate": "max"
+      },
+      "formulaRef": "zs-max",
+      "limitHint": "Zulässig ist Zs ≤ U0 / Ia — den Sollwert aus der Auslösekennlinie der Schutzeinrichtung ablesen. Beispiel B16: Ia = 80 A → Zs ≤ 2,87 Ω.",
+      "verdict": { "rule": "manual" },
+      "pitfalls": ["fehler-zs-messleitung", "fehler-rcd-vorgelagert"],
+      "wiki": ["messverfahren-schleifenimpedanz", "grenzwerte-abschaltzeit"],
+      "protocolLabel": "Schleifenimpedanz Zs",
+      "tags": ["messung", "zs"]
+    },
+    {
+      "id": "s-erdungswiderstand-ra",
+      "type": "messung",
+      "phase": "messen",
+      "order": 410,
+      "title": "Erdungswiderstand RA messen",
+      "short": "RA",
+      "when": { "netzform": "tt" },
+      "instrument": "Erdungsmessgerät oder Installationstester mit RA-Messung",
+      "procedure": [
+        "Erdungswiderstand des Anlagenerders messen (Sonde oder Schleifenverfahren).",
+        "Wert gegen RA ≤ 50 V / IΔn bewerten.",
+        "Bei Schleifenverfahren beachten: gemessen wird der gesamte Fehlerstromkreis, nicht der Erder allein."
+      ],
+      "measure": {
+        "quantity": "Erdungswiderstand",
+        "symbol": "RA",
+        "unit": "Ω",
+        "inputs": [{ "id": "ra", "label": "RA", "unit": "Ω" }],
+        "aggregate": "max"
+      },
+      "limitRef": "erdungswiderstand-tt",
+      "limitKeyFrom": "rcdIn",
+      "verdict": { "rule": "limit" },
+      "formulaRef": "ra-max",
+      "pitfalls": ["fehler-tt-ra-sonde"],
+      "wiki": ["messverfahren-erdungswiderstand-ra", "netzform-tt"],
+      "protocolLabel": "Erdungswiderstand RA",
+      "tags": ["messung", "tt"]
+    },
+    {
+      "id": "s-spannungsfall",
+      "type": "messung",
+      "phase": "messen",
+      "order": 420,
+      "title": "Spannungsfall bewerten",
+      "short": "ΔU",
+      "optional": true,
+      "optionalReason": "Nachweis über Berechnung ist zulässig — Messung nur bei Zweifeln oder langen Leitungen.",
+      "measure": {
+        "quantity": "Spannungsfall",
+        "symbol": "ΔU",
+        "unit": "%",
+        "inputs": [{ "id": "du", "label": "ΔU", "unit": "%" }],
+        "aggregate": "max"
+      },
+      "limitRef": "spannungsfall",
+      "verdict": { "rule": "limit" },
+      "wiki": ["messverfahren-spannungsfall"],
+      "protocolLabel": "Spannungsfall",
+      "tags": ["messung"]
+    },
+    {
+      "id": "s-drehfeld",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 500,
+      "title": "Drehfeldrichtung prüfen",
+      "short": "Drehfeld",
+      "when": { "drehstrom": "ja" },
+      "procedure": [
+        "An jeder Drehstromsteckdose und jedem Motorabgang das Drehfeld prüfen.",
+        "Rechtsdrehfeld L1–L2–L3 erwartet.",
+        "Bei mehreren Einspeisungen auch die Phasenfolge untereinander vergleichen."
+      ],
+      "verdict": { "rule": "manual" },
+      "wiki": ["messverfahren-drehfeld"],
+      "protocolLabel": "Drehfeldrichtung",
+      "tags": ["erprobung"]
+    },
+    {
+      "id": "s-rcd-ausloesestrom",
+      "type": "messung",
+      "phase": "erproben",
+      "order": 600,
+      "title": "RCD Auslösestrom messen",
+      "short": "IΔ",
+      "when": { "rcd": "ja" },
+      "requires": ["s-durchgang-schutzleiter"],
+      "requiresReason": "Ohne wirksamen Schutzleiter fließt kein definierter Fehlerstrom — die RCD-Prüfung wäre nicht aussagekräftig.",
+      "instrument": "Installationstester mit RCD-Funktion",
+      "procedure": [
+        "Mit ansteigendem Fehlerstrom (Rampe) messen, 0° und 180°.",
+        "Auslösestrom ablesen und gegen 0,5 bis 1,0 × IΔn bewerten.",
+        "Bei RCD Typ A zusätzlich mit pulsierendem Gleichfehlerstrom prüfen."
+      ],
+      "measure": {
+        "quantity": "Auslösestrom",
+        "symbol": "IΔ",
+        "unit": "mA",
+        "inputs": [
+          { "id": "i_0", "label": "0°", "unit": "mA" },
+          { "id": "i_180", "label": "180°", "unit": "mA" }
+        ],
+        "aggregate": "max"
+      },
+      "limitRef": "rcd-ausloesestrom-abs",
+      "limitKeyFrom": "rcdIn",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-rcd-vorgelagert"],
+      "wiki": ["messverfahren-rcd-ausloesestrom"],
+      "protocolLabel": "RCD Auslösestrom",
+      "tags": ["messung", "rcd"]
+    },
+    {
+      "id": "s-rcd-ausloesezeit",
+      "type": "messung",
+      "phase": "erproben",
+      "order": 610,
+      "title": "RCD Auslösezeit messen",
+      "short": "tA",
+      "when": { "rcd": "ja" },
+      "requires": ["s-rcd-ausloesestrom"],
+      "requiresReason": "Erst der Auslösestrom zeigt, ob der RCD überhaupt im richtigen Bereich anspricht — die Zeitmessung baut darauf auf.",
+      "instrument": "Installationstester mit RCD-Funktion",
+      "procedure": [
+        "Mit IΔn messen, 0° und 180°, jeweils die längere Zeit bewerten.",
+        "Zusätzlich mit 5 × IΔn prüfen.",
+        "Nach jeder Auslösung den RCD wieder einschalten und Wartezeit des Geräts beachten."
+      ],
+      "measure": {
+        "quantity": "Auslösezeit",
+        "symbol": "tA",
+        "unit": "ms",
+        "inputs": [
+          { "id": "t_1x_0", "label": "IΔn, 0°", "unit": "ms" },
+          { "id": "t_1x_180", "label": "IΔn, 180°", "unit": "ms" },
+          { "id": "t_5x_0", "label": "5 × IΔn", "unit": "ms", "limitKeySuffix": "-5x" }
+        ],
+        "aggregate": "max"
+      },
+      "limitRef": "rcd-ausloesezeit",
+      "limitKeyFrom": "rcdBauart",
+      "verdict": { "rule": "limit" },
+      "wiki": ["messverfahren-rcd-ausloesezeit", "grenzwerte-rcd"],
+      "protocolLabel": "RCD Auslösezeit",
+      "tags": ["messung", "rcd"]
+    },
+    {
+      "id": "s-rcd-typ-b-nachweis",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 630,
+      "title": "Ladepunkt: DC-Fehlerstromerkennung nachweisen",
+      "short": "Wallbox RCD",
+      "when": { "ladeinfrastruktur": "ja" },
+      "procedure": [
+        "Prüfen, ob RCD Typ B vorgeschaltet ist oder die Ladeeinrichtung eine DC-Fehlerstromerkennung ≥ 6 mA mitbringt.",
+        "Herstellerangabe der Ladeeinrichtung dokumentieren.",
+        "Wenn Typ A eingesetzt wird: Nachweis der geräteinternen DC-Erkennung verlangen."
+      ],
+      "verdict": { "rule": "manual" },
+      "wiki": ["begriff-rcd-typen"],
+      "protocolLabel": "DC-Fehlerstromerkennung Ladepunkt",
+      "tags": ["ladeinfrastruktur", "rcd-typen"]
+    },
+    {
+      "id": "s-wallbox-funktion",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 640,
+      "title": "Ladepunkt in Betrieb erproben",
+      "short": "Wallbox",
+      "when": { "ladeinfrastruktur": "ja" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-ladevorgang", "label": "Ladevorgang startet und beendet regulär (Adapter oder Fahrzeug)" },
+        { "id": "c-pe-ueberwachung", "label": "PE-Überwachung der Ladeeinrichtung reagiert" },
+        { "id": "c-lastmanagement", "label": "Absicherung und eingestellter Ladestrom passen zusammen" },
+        { "id": "c-anmeldung", "label": "Anmeldung beim Netzbetreiber erfolgt (ab 12 kVA Genehmigung)" }
+      ],
+      "wiki": ["begriff-rcd-typen"],
+      "protocolLabel": "Funktionsprüfung Ladepunkt",
+      "tags": ["ladeinfrastruktur"]
+    },
+    {
+      "id": "s-rcd-typ-f-nachweis",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 645,
+      "title": "PV: RCD-Typ und Fehlerstromart prüfen",
+      "short": "PV RCD",
+      "when": { "pv": "ja" },
+      "procedure": [
+        "Wechselrichter-Datenblatt auf zulässigen RCD-Typ prüfen (häufig Typ A ausreichend bei trennender Topologie, sonst Typ B).",
+        "Bei mischfrequenten Fehlerströmen RCD Typ F oder B einsetzen.",
+        "AC-seitige Freischaltstelle und Kennzeichnung prüfen."
+      ],
+      "verdict": { "rule": "manual" },
+      "wiki": ["begriff-rcd-typen"],
+      "protocolLabel": "RCD-Typ PV",
+      "tags": ["pv", "rcd-typen"]
+    },
+    {
+      "id": "s-not-halt-erprobung",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 650,
+      "title": "Not-Halt und Sicherheitsfunktionen erproben",
+      "short": "Not-Halt",
+      "when": { "maschine": "ja" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-not-halt-wirkung", "label": "Jedes Not-Halt-Gerät stoppt alle gefahrbringenden Bewegungen" },
+        { "id": "c-wiederanlauf", "label": "Kein selbsttätiger Wiederanlauf nach Entriegeln und nach Spannungswiederkehr" },
+        { "id": "c-schutzeinrichtung", "label": "Verriegelte trennende Schutzeinrichtungen wirksam" },
+        { "id": "c-stillstandszeit", "label": "Nachlauf-/Stillstandszeit dokumentiert" }
+      ],
+      "wiki": ["begriff-maschinenpruefung"],
+      "protocolLabel": "Not-Halt und Sicherheitsfunktionen",
+      "tags": ["maschine"]
+    },
+    {
+      "id": "s-funktion-schutzeinrichtungen",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 660,
+      "title": "Schutz- und Schalteinrichtungen erproben",
+      "short": "Funktion",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-rcd-pruefteste", "label": "Prüftaste jedes RCD löst aus", "when": { "rcd": "ja" } },
+        { "id": "c-schalter", "label": "Schalter, Steuerungen und Verriegelungen arbeiten wie geplant" },
+        { "id": "c-drehrichtung", "label": "Motoren laufen in der vorgesehenen Richtung an", "when": { "drehstrom": "ja" } },
+        { "id": "c-beleuchtung", "label": "Beleuchtung und Steckdosen stromkreisweise geprüft" },
+        { "id": "c-isolationsueberwachung", "label": "Isolationsüberwachungseinrichtung meldet und wird quittiert", "when": { "netzform": "it" } }
+      ],
+      "wiki": ["messverfahren-sichtpruefung"],
+      "protocolLabel": "Funktionsprüfung",
+      "tags": ["erprobung"]
+    },
+    {
+      "id": "s-pruefplakette",
+      "type": "doku",
+      "phase": "dokumentieren",
+      "order": 890,
+      "title": "Prüfplakette und Frist festlegen",
+      "short": "Plakette",
+      "when": { "world": "industrie" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-plakette", "label": "Prüfplakette angebracht" },
+        { "id": "c-frist", "label": "Nächste Prüffrist mit dem Betreiber festgelegt" },
+        { "id": "c-gefaehrdung", "label": "Grundlage der Frist dokumentiert (Gefährdungsbeurteilung)" }
+      ],
+      "wiki": ["prueffristen-uebersicht"],
+      "protocolLabel": "Prüfplakette / Frist",
+      "tags": ["dguv3", "prueffristen"]
+    },
+    {
+      "id": "s-doku-protokoll",
+      "type": "doku",
+      "phase": "dokumentieren",
+      "order": 900,
+      "title": "Protokoll erstellen und übergeben",
+      "short": "Protokoll",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-messwerte", "label": "Alle Messwerte mit Grenzwert und Bewertung erfasst" },
+        { "id": "c-messgeraet", "label": "Messgerät mit Typ und Kalibrierstand notiert" },
+        { "id": "c-maengel", "label": "Mängel mit Dringlichkeit benannt" },
+        { "id": "c-unterschrift", "label": "Protokoll unterschrieben und übergeben" }
+      ],
+      "protocolLabel": "Dokumentation",
+      "tags": ["doku"]
+    }
+  ]
+}

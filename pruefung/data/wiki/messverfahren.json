@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "collection": "messverfahren",
+  "entries": [
+    {
+      "id": "messverfahren-sichtpruefung",
+      "title": "Besichtigen",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["sicht", "0100-600"],
+      "summary": "Kommt vor jeder Messung. Findet in der Praxis die meisten Mängel — ohne ein Messgerät anzufassen.",
+      "search": "besichtigen sichtpruefung sichtprüfung inaugenscheinnahme",
+      "body": [
+        { "type": "p", "text": "Die Besichtigung ist der erste Teil der Prüfung und findet an der freigeschalteten Anlage statt. Sie deckt ab, was keine Messung zeigt: falsch gewählte Schutzorgane, fehlende Kennzeichnung, unzulässige Leitungsverlegung, mechanische Schäden." },
+        { "type": "steps", "items": [
+          "Auswahl und Einstellung der Schutzeinrichtungen gegen Querschnitt und Verlegeart prüfen.",
+          "Schutzmaßnahme über die ganze Anlage verfolgen: PEN-Trennstelle, PE-Führung, Haupterdungsschiene, Potentialausgleich.",
+          "Klemmstellen, Zugentlastungen, Abdeckungen und Berührungsschutz kontrollieren.",
+          "Kennzeichnung, Verteilerbeschriftung und Unterlagen auf Vollständigkeit prüfen.",
+          "Schutzart am Einbauort mit den Umgebungsbedingungen vergleichen."
+        ] },
+        { "type": "note", "text": "Was hier auffällt, spart später Messzeit: eine fehlende PEN-Trennstelle erklärt den seltsamen N-PE-Wert, bevor man ihn misst." }
+      ],
+      "related": ["s-sicht-anlage", "fehler-pe-n-vertauscht"]
+    },
+    {
+      "id": "messverfahren-durchgang-schutzleiter",
+      "title": "Niederohmmessung (Schutzleiter, Potentialausgleich)",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "niederohm", "0100-600"],
+      "summary": "Prüfstrom mindestens 200 mA, Messleitungen vorher abgleichen. Kommt immer vor der Isolationsmessung.",
+      "search": "niederohm durchgang schutzleiter pe potentialausgleich 200 ma r-pe",
+      "body": [
+        { "type": "p", "text": "Gemessen wird die Durchgängigkeit und der Widerstand der Schutzleiter, der Schutzpotentialausgleichsleiter und der Verbindungen zu berührbaren Metallteilen. Das Messgerät speist dabei mindestens 200 mA bei 4 V bis 24 V ein — nur so werden schlechte Verbindungen sichtbar, die bei kleinem Strom noch leiten." },
+        { "type": "steps", "items": [
+          "Anlage freischalten, gegen Wiedereinschalten sichern, Spannungsfreiheit feststellen.",
+          "Eigenwiderstand der Messleitungen abgleichen (Nullen) — sonst misst man die Leitungen mit.",
+          "Von der Haupterdungsschiene zu jedem Schutzkontakt und jedem fremden leitfähigen Teil messen.",
+          "Den größten Wert notieren und gegen den Erwartungswert aus Querschnitt und Länge halten."
+        ] },
+        { "type": "limits", "limitRef": "schutzleiter-durchgang" },
+        { "type": "formula", "formulaRef": "r-leiter" },
+        { "type": "warn", "text": "Der 1-Ω-Richtwert ist kein Freibrief: bei 10 m mit 2,5 mm² sind rund 0,07 Ω zu erwarten. Wer dort 0,8 Ω misst, hat eine schlechte Klemmstelle gefunden — auch wenn der Wert „im Grenzwert“ liegt." },
+        { "type": "link", "to": "fehler-messleitung-nicht-abgeglichen", "label": "Typische Fehlerquelle: Messleitungen nicht abgeglichen" }
+      ],
+      "related": ["s-durchgang-schutzleiter", "grenzwerte-schutzleiter"]
+    },
+    {
+      "id": "messverfahren-isolationswiderstand",
+      "title": "Isolationswiderstand",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "riso", "0100-600"],
+      "summary": "500 V DC gegen PE bei 230/400 V. Anlage freigeschaltet, Elektronik und SPD vorher abklemmen.",
+      "search": "isolationswiderstand riso megaohm 500 v dc isolationsmessung",
+      "body": [
+        { "type": "p", "text": "Gemessen wird der Widerstand der Isolierung zwischen den aktiven Leitern und dem Schutzleiter, bei Bedarf auch zwischen den Leitern. Die Messung kommt nach der Niederohmmessung: ohne wirksamen Schutzleiter misst man gegen nichts." },
+        { "type": "steps", "items": [
+          "Freischalten, sichern, Spannungsfreiheit feststellen.",
+          "SPD, Aktoren, Dimmer, Netzteile und andere Elektronik abklemmen oder Klemme ziehen.",
+          "Verbraucher abschalten oder trennen.",
+          "L gegen PE und N gegen PE messen, bei Bedarf L gegen N.",
+          "Nach der Messung entladen und alle getrennten Teile wieder anklemmen — und das im Protokoll vermerken."
+        ] },
+        { "type": "limits", "limitRef": "iso-nach-nennspannung" },
+        { "type": "warn", "text": "Ein N–PE-Wert nahe null ist fast immer eine noch gesteckte PEN-Brücke oder ein N-PE-Kurzschluss in der Verteilung — kein Isolationsfehler in der Leitung." },
+        { "type": "kv", "items": [
+          { "k": "Prüfspannung", "v": "250 / 500 / 1000 V DC nach Nennspannung" },
+          { "k": "Reihenfolge", "v": "nach der Niederohmmessung, vor dem Zuschalten" },
+          { "k": "Risiko", "v": "Prüfspannung zerstört ungeschützte Elektronik" }
+        ] }
+      ],
+      "related": ["s-iso-widerstand", "grenzwerte-iso", "fehler-iso-spd", "fehler-iso-n-pe-bruecke"]
+    },
+    {
+      "id": "messverfahren-schleifenimpedanz",
+      "title": "Schleifenimpedanz Zs / Netzinnenimpedanz",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "zs", "0100-600"],
+      "summary": "Unter Spannung am ungünstigsten Punkt. Zulässig ist Zs ≤ U0 / Ia — Sollwert aus der Auslösekennlinie.",
+      "search": "schleifenimpedanz zs netzinnenwiderstand kurzschlussstrom ik abschaltbedingung",
+      "body": [
+        { "type": "p", "text": "Die Messung weist nach, dass im Fehlerfall genug Strom fließt, um die Schutzeinrichtung innerhalb der zulässigen Zeit abzuschalten. Gemessen wird unter Spannung am Ende des Stromkreises — dort ist die Impedanz am größten." },
+        { "type": "formula", "formulaRef": "zs-max" },
+        { "type": "steps", "items": [
+          "Stromkreis identifizieren und am entferntesten Punkt messen.",
+          "Zs zwischen Außenleiter und PE erfassen; bei vorgeschaltetem RCD die auslösefreie Messart wählen.",
+          "Ia der Schutzeinrichtung aus der Auslösekennlinie bestimmen (B-Charakteristik: 5 × In, C: 10 × In).",
+          "Gemessenen Wert gegen U0 / Ia bewerten und beides ins Protokoll schreiben."
+        ] },
+        { "type": "table", "columns": [
+          { "id": "s", "label": "Schutzeinrichtung" },
+          { "id": "ia", "label": "Ia" },
+          { "id": "zs", "label": "Zs zulässig" }
+        ], "rows": [
+          { "s": "B10", "ia": "50 A", "zs": "4,60 Ω" },
+          { "s": "B16", "ia": "80 A", "zs": "2,87 Ω" },
+          { "s": "B20", "ia": "100 A", "zs": "2,30 Ω" },
+          { "s": "C16", "ia": "160 A", "zs": "1,44 Ω" }
+        ], "note": "Richtwerte bei U0 = 230 V, ohne Berücksichtigung von Toleranz- und Temperaturzuschlägen." },
+        { "type": "link", "to": "grenzwerte-abschaltzeit", "label": "Zulässige Abschaltzeiten" }
+      ],
+      "related": ["s-schleifenimpedanz", "fehler-zs-messleitung", "fehler-rcd-vorgelagert"]
+    },
+    {
+      "id": "messverfahren-erdungswiderstand-ra",
+      "title": "Erdungswiderstand RA",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "tt", "erder"],
+      "summary": "Im TT-System Pflicht. Zulässig ist RA ≤ 50 V / IΔn — bei 30 mA also rund 1666 Ω.",
+      "search": "erdungswiderstand ra erder sonde tt schleifenverfahren erdungsmessung",
+      "body": [
+        { "type": "p", "text": "Im TT-System fließt der Fehlerstrom über den Anlagenerder zurück. Sein Widerstand entscheidet, welche Berührungsspannung im Fehlerfall stehen bleibt — deshalb der Bezug auf die Grenze von 50 V." },
+        { "type": "formula", "formulaRef": "ra-max" },
+        { "type": "limits", "limitRef": "erdungswiderstand-tt" },
+        { "type": "bullets", "items": [
+          "Sondenverfahren: genauester Wert, braucht Platz für Sonde und Hilfserder.",
+          "Schleifenverfahren mit dem Installationstester: schnell, misst aber die gesamte Fehlerschleife.",
+          "Zangenverfahren: gut für Einzelerder in vermaschten Anlagen."
+        ] },
+        { "type": "note", "text": "Die Bewertung ist bei 30 mA meist unkritisch — die eigentliche Arbeit ist der Nachweis, dass die Messung überhaupt den Erder erfasst und nicht über eine fremde Verbindung kurzgeschlossen ist." }
+      ],
+      "related": ["s-erdungswiderstand-ra", "netzform-tt", "fehler-tt-ra-sonde"]
+    },
+    {
+      "id": "messverfahren-rcd-ausloesestrom",
+      "title": "RCD Auslösestrom",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "rcd", "0100-600"],
+      "summary": "Rampenmessung, 0° und 180°. Auslösung muss zwischen 0,5 und 1,0 × IΔn liegen.",
+      "search": "rcd fi ausloesestrom auslösestrom rampe idn 30 ma",
+      "body": [
+        { "type": "p", "text": "Mit ansteigendem Fehlerstrom wird gemessen, bei welchem Strom der RCD tatsächlich auslöst. Ein zu früh auslösender RCD führt zu Fehlauslösungen im Betrieb, ein zu spät auslösender schützt nicht." },
+        { "type": "limits", "limitRef": "rcd-ausloesestrom-abs" },
+        { "type": "steps", "items": [
+          "Bei 0° und 180° Phasenlage messen — beide Werte bewerten.",
+          "Bei Typ A zusätzlich mit pulsierendem Gleichfehlerstrom prüfen.",
+          "Zwischen den Messungen den RCD wieder einschalten und die Erholzeit des Testers abwarten."
+        ] },
+        { "type": "warn", "text": "Vorsicht bei laufender EDV und Kühlgeräten: jede Auslösung nimmt den ganzen Stromkreis mit. Vorher ankündigen." }
+      ],
+      "related": ["s-rcd-ausloesestrom", "grenzwerte-rcd", "begriff-rcd-typen"]
+    },
+    {
+      "id": "messverfahren-rcd-ausloesezeit",
+      "title": "RCD Auslösezeit",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "rcd", "0100-600"],
+      "summary": "Bei IΔn höchstens 300 ms, bei 5 × IΔn höchstens 40 ms. Selektive RCD dürfen länger brauchen.",
+      "search": "rcd fi ausloesezeit auslösezeit 300 ms 40 ms selektiv 5x",
+      "body": [
+        { "type": "p", "text": "Gemessen wird die Zeit vom Einsetzen des Fehlerstroms bis zum Trennen der Kontakte, jeweils bei IΔn und bei 5 × IΔn. Selektive RCD (Kennzeichnung S) sind bewusst kurzzeitverzögert, damit der nachgelagerte RCD zuerst abschaltet." },
+        { "type": "limits", "limitRef": "rcd-ausloesezeit" },
+        { "type": "kv", "items": [
+          { "k": "Messung", "v": "0° und 180°, der längere Wert zählt" },
+          { "k": "Reihenfolge", "v": "nach dem Auslösestrom" },
+          { "k": "Nutzerprüfung", "v": "Prüftaste ersetzt keine Messung, gehört aber zur Einweisung" }
+        ] }
+      ],
+      "related": ["s-rcd-ausloesezeit", "grenzwerte-rcd"]
+    },
+    {
+      "id": "messverfahren-drehfeld",
+      "title": "Drehfeldrichtung",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["erprobung", "drehstrom"],
+      "summary": "An jeder Drehstromsteckdose und jedem Motorabgang. Rechtsdrehfeld L1–L2–L3.",
+      "search": "drehfeld drehrichtung phasenfolge drehstrom cee rechtsdrehfeld",
+      "body": [
+        { "type": "p", "text": "Ein vertauschtes Drehfeld lässt Motoren, Pumpen und Kompressoren falsch laufen — teils ohne sofort sichtbaren Schaden, teils mit Zerstörung in Minuten." },
+        { "type": "bullets", "items": [
+          "An allen Drehstromsteckdosen prüfen, nicht nur an einer.",
+          "Bei mehreren Einspeisungen oder nach Umbauten auch die Phasenfolge untereinander vergleichen.",
+          "Drehfeldanzeiger mit Kontaktproblemen liefern Phantomanzeigen — Messspitzen sauber aufsetzen."
+        ] }
+      ],
+      "related": ["s-drehfeld"]
+    },
+    {
+      "id": "messverfahren-spannungsfall",
+      "title": "Spannungsfall",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "spannungsfall"],
+      "summary": "Nachweis auch durch Berechnung zulässig. Richtwerte: 3 % für Beleuchtung, 5 % für übrige Verbrauchsmittel.",
+      "search": "spannungsfall delta u 3 prozent 5 prozent leitungslaenge",
+      "body": [
+        { "type": "p", "text": "Der Spannungsfall wird üblicherweise berechnet und nur bei Zweifeln oder sehr langen Leitungen gemessen. Aus der Netzinnenimpedanz lässt er sich mit dem Betriebsstrom abschätzen." },
+        { "type": "limits", "limitRef": "spannungsfall" },
+        { "type": "note", "text": "Lange Zuleitungen zu Wallboxen oder Außenanlagen sind der häufigste Fall, in dem der Querschnitt am Spannungsfall und nicht am Schutz scheitert." }
+      ],
+      "related": ["s-spannungsfall"]
+    }
+  ]
+}
