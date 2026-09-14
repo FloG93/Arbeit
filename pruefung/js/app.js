@@ -81,6 +81,7 @@
     const state = P.store.state;
     const job = P.store.activeJob();
     const pack = job ? P.data.packById.get(job.normId) : null;
+    const variant = job ? P.data.variant(job.normId, job.variantId) : null;
     const activeTab = state.tab === 'protokoll' ? 'plan' : state.tab;
 
     // Der Kopfbereich kostet Platz, den der Prüfplan besser gebrauchen kann:
@@ -91,8 +92,8 @@
     return el('div', { class: 'header' }, [
       el('div', { class: 'header-row' }, [
         el('div', { class: 'brand' }, [
-          el('div', { class: 'eyebrow' }, pack ? pack.norm : 'Prüfassistent'),
-          el('div', { class: 'brand-name' }, job ? (job.protocol.objekt || 'Prüfung ohne Objekt') : 'VDE-Prüfungen'),
+          el('div', { class: 'eyebrow' }, variant ? variant.norm : 'Prüfassistent'),
+          el('div', { class: 'brand-name' }, job ? P.data.jobTitle(job) : 'VDE-Prüfungen'),
         ]),
         el('div', { class: 'head-tools' }, [
           el('button', {
@@ -189,7 +190,6 @@
 
     for (const pack of P.data.packs) {
       if (pack.status !== 'aktiv') continue;
-      if (!pack.nodeById.has(pack.entry)) note('Baum', pack.id + ': entry „' + pack.entry + '“ fehlt');
 
       for (const node of pack.nodes) {
         checkWiki(node.wiki, pack.id + '/' + node.id);
@@ -218,9 +218,13 @@
         }
       }
 
-      // Erreichbarkeit: jeder Knoten muss vom Einstieg aus erreichbar sein.
+      // Erreichbarkeit: jeder Knoten muss von mindestens einem
+      // Varianten-Einstieg aus erreichbar sein.
       const seen = new Set();
-      const queue = [pack.entry];
+      const queue = pack.variants.map(v => v.entry).filter(Boolean);
+      for (const v of pack.variants) {
+        if (!pack.nodeById.has(v.entry)) note('Baum', pack.id + '/' + v.id + ': entry „' + v.entry + '“ fehlt');
+      }
       while (queue.length) {
         const id = queue.shift();
         if (!id || seen.has(id) || !pack.nodeById.has(id)) continue;
@@ -273,23 +277,26 @@
       }
     }
 
-    // Plan-Überdeckung: für plausible Faktenmengen muss ein Plan entstehen und
-    // jede requires-Kante eingehalten sein.
+    // Plan-Überdeckung: statt geratener Fakten den Baum wirklich ablaufen —
+    // jede sichtbare Antwort, bei Mehrfachauswahl zusätzlich „nichts davon“.
+    // Für jedes erreichte Ende muss ein Plan entstehen, der alle
+    // requires-Kanten einhält.
     for (const pack of P.data.activePacks()) {
-      for (const world of P.data.worlds) {
-        for (const netzform of ['tn-c-s', 'tt']) {
-          for (const rcd of ['ja', 'nein']) {
-            const session = {
-              facts: { world: world.id, pruefanlass: 'erstpruefung', anlagenart: 'ortsfest', netzform, nennspannung: 'bis500', stromkreisart: 'endstromkreis', abschaltzeitFall: netzform === 'tt' ? 'tt-endstromkreis' : 'tn-endstromkreis', drehstrom: 'ja', rcd, rcdBauart: 'allgemein', rcdIn: '30ma' },
-              history: [], extraSteps: [], tags: [],
-            };
+      for (const variant of pack.variants) {
+        if (variant.status !== 'aktiv') continue;
+        for (const world of P.data.worlds) {
+          if (variant.worlds && !variant.worlds.includes(world.id)) continue;
+          const ends = walkTree(pack, variant, world.id);
+          const where = pack.id + '/' + variant.id + '/' + world.short;
+          if (!ends.length) { note('Plan', where + ': der Baum führt zu keinem Prüfplan'); continue; }
+          for (const session of ends) {
             const entries = P.plan.build(pack, session, {});
-            if (!entries.length) { note('Plan', pack.id + '/' + world.id + '/' + netzform + ': leerer Prüfplan'); continue; }
+            if (!entries.length) { note('Plan', where + ': leerer Prüfplan bei ' + JSON.stringify(session.facts)); continue; }
             const pos = new Map(entries.map((e, i) => [e.step.id, i]));
             for (const entry of entries) {
               for (const reqId of entry.step.requires || []) {
                 if (pos.has(reqId) && pos.get(reqId) > pos.get(entry.step.id)) {
-                  note('Plan', pack.id + ': „' + reqId + '“ steht nach „' + entry.step.id + '“, obwohl es Voraussetzung ist');
+                  note('Plan', where + ': „' + reqId + '“ steht nach „' + entry.step.id + '“, obwohl es Voraussetzung ist');
                 }
               }
             }
@@ -314,17 +321,59 @@
         .concat(P.data.registry.intervals ? ['data/' + P.data.registry.intervals] : [])
         .concat((P.data.registry.norms || []).map(n => 'data/' + n.file))
         .concat((P.data.registry.wiki || []).map(f => 'data/' + f));
-      return caches.open('pruefung-v1').then(cache => cache.keys()).then(keys => {
-        const have = new Set(keys.map(r => new URL(r.url).pathname));
-        const base = new URL('./', location.href).pathname;
-        const missing = expected.filter(path => !have.has(base + path));
-        if (!keys.length) return report('Cache noch leer — der Service Worker installiert sich beim ersten Besuch erst nach dem Laden. Nach einem Neuladen erneut prüfen.');
-        if (missing.length) { missing.forEach(m => problems.push('Cache: ' + m + ' fehlt im Offline-Cache')); return report(); }
-        return report('Offline-Cache enthält alle ' + expected.length + ' Datendateien.');
+      // Den eigenen Cache suchen statt seinen Namen zu kennen: eine zweite
+      // Stelle mit der Versionsnummer wäre eine zweite Stelle zum Vergessen —
+      // und caches.open() würde den Cache anlegen, den es prüfen soll.
+      return caches.keys().then(names => {
+        const mine = names.filter(n => n.indexOf('pruefung-') === 0).sort();
+        if (!mine.length) return report('Noch kein Cache — der Service Worker installiert sich beim ersten Besuch erst nach dem Laden. Nach einem Neuladen erneut prüfen.');
+        const name = mine[mine.length - 1];
+        return caches.open(name).then(cache => cache.keys()).then(keys => {
+          if (!keys.length) return report('Cache „' + name + '“ ist noch leer — nach einem Neuladen erneut prüfen.');
+          const have = new Set(keys.map(r => new URL(r.url).pathname));
+          const base = new URL('./', location.href).pathname;
+          const missing = expected.filter(path => !have.has(base + path));
+          if (missing.length) { missing.forEach(m => problems.push('Cache: ' + m + ' fehlt im Offline-Cache')); return report(); }
+          return report('Offline-Cache „' + name + '“ enthält alle ' + expected.length + ' Datendateien.');
+        });
       }).catch(() => report());
     }
     return report();
   };
+
+  /* Läuft den Entscheidungsbaum ab und sammelt die Sitzungen, die zu einem
+   * Prüfplan führen. Hinweisknoten ohne „continue“ sind bewusste Sackgassen
+   * (andere Norm zuständig) und zählen nicht als Ende. Gedeckelt, damit ein
+   * breiter Baum den Selbsttest nicht sprengt. */
+  function walkTree(pack, variant, worldId, limit) {
+    const cap = limit || 150;
+    const ends = [];
+    const clone = session => JSON.parse(JSON.stringify(session));
+
+    const walk = (session, depth) => {
+      if (ends.length >= cap || depth > 30) return;
+      if (session.done) { ends.push(session); return; }
+      const node = P.wizard.node(pack, session);
+      if (!node) { ends.push(session); return; }
+      if (node.type === 'result') {
+        if (!node.continue) return; // bewusste Sackgasse: andere Norm zuständig
+        const after = P.wizard.finish(pack, clone(session));
+        if (after.done) ends.push(after); else walk(after, depth + 1);
+        return;
+      }
+      const options = P.wizard.visibleOptions(node, session.facts);
+      const choices = node.multi ? [[]].concat(options.map(o => [o.id])) : options.map(o => [o.id]);
+      for (const choice of choices) {
+        const next = clone(session);
+        P.wizard.answer(pack, next, choice);
+        walk(next, depth + 1);
+        if (ends.length >= cap) return;
+      }
+    };
+
+    walk(P.wizard.start(pack, worldId, variant), 0);
+    return ends;
+  }
 
   function isStepId(id) {
     for (const pack of P.data.packs) if (pack.stepById && pack.stepById.has(id)) return true;

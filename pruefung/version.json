@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "datenstand": "2026-09",
-  "note": "Erste Fassung: Assistent und Wiki für DIN VDE 0100-600, Zwei-Welten-Modus, Protokolldruck."
+  "note": "Wiederholungsprüfung nach DIN VDE 0105-100 und Geräteprüfung nach DIN EN 50678/50699 ergänzt, dazu Prüffristen mit Fälligkeitsdatum."
 }

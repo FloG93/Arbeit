@@ -1,18 +1,42 @@
 {
   "schema": 1,
-  "id": "vde-0100-600",
-  "norm": "DIN VDE 0100-600",
-  "title": "Erstprüfung — Errichten und Erstinbetriebnahme ortsfester Anlagen",
-  "short": "Erstprüfung Anlage",
-  "edition": "2017-06",
+  "id": "anlage",
+  "norm": "Anlagenprüfung",
+  "title": "Prüfung ortsfester elektrischer Anlagen",
   "status": "aktiv",
   "worlds": ["efh", "industrie"],
   "datenstand": "2026-09",
   "reviewed": { "by": "", "date": "" },
-  "entry": "q-pruefanlass",
+  "note": "Erst- und Wiederholungsprüfung teilen sich Prüfschritte und Grenzwerte. Was sie unterscheidet — Anlass, Umfang, Sicherheitshinweise — steckt in den Varianten und in when-Bedingungen, nicht in zwei gepflegten Dateien.",
+  "variants": [
+    {
+      "id": "erstpruefung",
+      "norm": "DIN VDE 0100-600",
+      "short": "Erstprüfung Anlage",
+      "title": "Erstprüfung — Errichten und Erstinbetriebnahme",
+      "edition": "2017-06",
+      "status": "aktiv",
+      "worlds": ["efh", "industrie"],
+      "entry": "q-anlagenart",
+      "presetFacts": { "pruefanlass": "erstpruefung", "freischaltung": "ja" }
+    },
+    {
+      "id": "wiederholung",
+      "norm": "DIN VDE 0105-100",
+      "short": "Wiederholungsprüfung",
+      "title": "Wiederholungsprüfung ortsfester Anlagen im Betrieb",
+      "edition": "2021-06",
+      "status": "aktiv",
+      "worlds": ["efh", "industrie"],
+      "entry": "q-w-freischaltung",
+      "presetFacts": { "pruefanlass": "wiederholung" }
+    }
+  ],
   "sources": [
-    { "label": "DIN VDE 0100-600:2017-06", "note": "Eigene Zusammenfassung des Ablaufs, kein Normtext." },
-    { "label": "DIN VDE 0100-410", "note": "Abschaltzeiten und Schutz durch automatische Abschaltung." }
+    { "label": "DIN VDE 0100-600:2017-06", "note": "Erstprüfung — eigene Zusammenfassung des Ablaufs, kein Normtext." },
+    { "label": "DIN VDE 0105-100:2021-06", "note": "Betrieb elektrischer Anlagen, Wiederholungsprüfung." },
+    { "label": "DIN VDE 0100-410", "note": "Abschaltzeiten und Schutz durch automatische Abschaltung." },
+    { "label": "DGUV Vorschrift 3", "note": "Prüffristen als Richtwerte." }
   ],
   "phases": [
     { "id": "besichtigen", "label": "Besichtigen", "order": 100, "hint": "Vor jeder Messung — spannungsfrei und mit offenen Augen." },
@@ -32,14 +56,45 @@
   },
   "nodes": [
     {
-      "id": "q-pruefanlass",
+      "id": "q-w-freischaltung",
       "type": "question",
-      "title": "Was ist der Prüfanlass?",
-      "help": "Die Erstprüfung gehört zu jeder neuen Anlage und zu jeder Erweiterung oder Änderung vor der Inbetriebnahme.",
+      "title": "Kann die Anlage freigeschaltet werden?",
+      "help": "Die Isolationsmessung setzt eine freigeschaltete Anlage voraus. Ist das im laufenden Betrieb nicht möglich, tritt die Differenzstrommessung unter Spannung an ihre Stelle.",
+      "when": { "pruefanlass": "wiederholung" },
+      "wiki": ["messverfahren-differenzstrom"],
+      "defaultNext": "q-w-nutzung",
+      "options": [
+        { "id": "o-frei-ja", "label": "Ja, Freischaltung möglich", "sub": "Abstimmung mit dem Betreiber steht", "set": { "freischaltung": "ja" }, "next": "q-w-nutzung" },
+        { "id": "o-frei-nein", "label": "Nein, Anlage bleibt in Betrieb", "sub": "Ersatz: Differenzstrommessung unter Spannung", "set": { "freischaltung": "nein" }, "next": "q-w-nutzung" }
+      ]
+    },
+    {
+      "id": "q-w-nutzung",
+      "type": "question",
+      "title": "Wie wird die Anlage genutzt?",
+      "help": "Die Nutzung bestimmt den Richtwert für die nächste Prüffrist. Verbindlich bleibt die Festlegung des Betreibers aus der Gefährdungsbeurteilung.",
+      "when": { "pruefanlass": "wiederholung" },
+      "wiki": ["prueffristen-uebersicht"],
+      "defaultNext": "q-w-veraenderung",
+      "options": [
+        { "id": "o-nutz-baustelle", "label": "Baustelle", "sub": "Baustromverteiler, raue Beanspruchung", "when": { "world": "industrie" }, "set": { "nutzungsart": "baustelle" }, "addTags": ["prueffristen"], "next": "q-w-veraenderung" },
+        { "id": "o-nutz-werkstatt", "label": "Werkstatt oder Produktion", "sub": "Erhöhte Beanspruchung", "when": { "world": "industrie" }, "set": { "nutzungsart": "werkstatt" }, "next": "q-w-veraenderung" },
+        { "id": "o-nutz-maschine", "label": "Maschine oder Schaltschrank", "when": { "world": "industrie" }, "set": { "nutzungsart": "maschine", "maschine": "ja" }, "addTags": ["maschine"], "next": "q-w-veraenderung" },
+        { "id": "o-nutz-buero", "label": "Büro, Verwaltung, trockene Räume", "set": { "nutzungsart": "buero" }, "next": "q-w-veraenderung" },
+        { "id": "o-nutz-wohnanlage", "label": "Selbstgenutzte Wohnanlage", "sub": "E-Check, keine allgemeine Prüfpflicht", "when": { "world": "efh" }, "set": { "nutzungsart": "wohnanlage" }, "next": "q-w-veraenderung" },
+        { "id": "o-nutz-vermietung", "label": "Vermietetes Objekt", "sub": "Betreiberverantwortung des Vermieters", "when": { "world": "efh" }, "set": { "nutzungsart": "vermietung" }, "next": "q-w-veraenderung" }
+      ]
+    },
+    {
+      "id": "q-w-veraenderung",
+      "type": "question",
+      "title": "Seit der letzten Prüfung erweitert oder geändert?",
+      "help": "Für geänderte oder erweiterte Anlagenteile gilt die Erstprüfung — die Wiederholungsprüfung deckt sie nicht ab.",
+      "when": { "pruefanlass": "wiederholung" },
       "defaultNext": "q-anlagenart",
       "options": [
-        { "id": "o-erstpruefung", "label": "Erstinbetriebnahme", "sub": "Neue Anlage, Erweiterung oder Änderung", "set": { "pruefanlass": "erstpruefung" }, "next": "q-anlagenart" },
-        { "id": "o-wiederholung", "label": "Wiederholungsprüfung", "sub": "Bestehende Anlage im Betrieb", "set": { "pruefanlass": "wiederholung" }, "next": "r-wiederholung" }
+        { "id": "o-w-unveraendert", "label": "Nein, unverändert", "sub": "Nur Alterung und Betrieb", "set": { "erweiterung": "nein" }, "next": "q-anlagenart" },
+        { "id": "o-w-erweitert", "label": "Ja, erweitert oder geändert", "sub": "Neue Stromkreise, Umbau, Nachrüstung", "set": { "erweiterung": "ja" }, "addTags": ["erweiterung"], "next": "r-w-erweiterung" }
       ]
     },
     {
@@ -152,16 +207,22 @@
       ]
     },
     {
-      "id": "r-wiederholung",
+      "id": "r-w-erweiterung",
       "type": "result",
       "kind": "hinweis",
-      "title": "Wiederholungsprüfung — andere Norm",
+      "title": "Geänderter Teil: Erstprüfung nötig",
+      "continue": true,
+      "continueLabel": "Weiter zur Wiederholungsprüfung",
+      "next": "q-anlagenart",
       "body": [
-        { "type": "p", "text": "Bestehende Anlagen im Betrieb werden nach DIN VDE 0105-100 wiederholt geprüft. Der Ablauf ähnelt der Erstprüfung, der Umfang richtet sich aber nach Anlagenzustand und Prüffrist." },
-        { "type": "p", "text": "Das Norm-Paket dafür ist in dieser App noch nicht enthalten. Für eine Erweiterung oder Änderung an einer bestehenden Anlage ist dagegen die Erstprüfung richtig — dann hier zurückgehen und „Erstinbetriebnahme“ wählen." },
-        { "type": "link", "to": "prueffristen-uebersicht", "label": "Prüffristen — Richtwerte" }
-      ],
-      "normRef": "vde-0105-100"
+        { "type": "p", "text": "Für erweiterte oder geänderte Anlagenteile gilt die Erstprüfung nach DIN VDE 0100-600 — vollständig, vor der erneuten Inbetriebnahme dieses Teils. Die Wiederholungsprüfung deckt nur den unveränderten Bestand ab." },
+        { "type": "bullets", "items": [
+          "Den geänderten Teil als eigene Prüfung nach DIN VDE 0100-600 anlegen.",
+          "Im Protokoll der Wiederholungsprüfung vermerken, welcher Teil separat geprüft wurde.",
+          "Bei einer Erweiterung zusätzlich prüfen, ob die vorhandene Anlage sie noch trägt (Querschnitte, Selektivität, Schutzmaßnahme)."
+        ] },
+        { "type": "p", "text": "Der Prüfplan unten deckt den Bestand ab." }
+      ]
     },
     {
       "id": "r-andere-norm",
@@ -173,7 +234,7 @@
         { "type": "p", "text": "Dort bestimmt die Schutzklasse den Messumfang: Schutzklasse I mit Schutzleiterwiderstand und Ableitstrom, Schutzklasse II ohne Schutzleiter, Schutzklasse III nur Sichtprüfung und Kleinspannungsnachweis." },
         { "type": "link", "to": "begriff-schutzklassen", "label": "Schutzklassen I, II, III" }
       ],
-      "normRef": "en-50678-50699"
+      "normRef": "geraet"
     },
     {
       "id": "r-ex-hinweis",
@@ -210,7 +271,13 @@
         { "id": "c-klemmstellen", "label": "Klemmstellen fest, keine blanken Leiter, Zugentlastung vorhanden" },
         { "id": "c-ip-schutz", "label": "IP-Schutzart am Einbauort erreicht" },
         { "id": "c-brandabschottung", "label": "Brandabschottungen und Leitungsführung dicht", "when": { "world": "industrie" } },
-        { "id": "c-nischen", "label": "Zähleranschluss und Zählerplatz normgerecht ausgeführt", "when": { "world": "efh" } }
+        { "id": "c-nischen", "label": "Zähleranschluss und Zählerplatz normgerecht ausgeführt", "when": { "world": "efh" } },
+        { "id": "c-w-alterung", "label": "Keine Alterungsspuren: Verfärbungen, Wärmeschäden, versprödete Isolierung", "when": { "pruefanlass": "wiederholung" } },
+        { "id": "c-w-nachruestung", "label": "Nachträgliche Einbauten fachgerecht ausgeführt und dokumentiert", "when": { "pruefanlass": "wiederholung" } },
+        { "id": "c-w-abdeckungen", "label": "Abdeckungen und Berührungsschutz vollständig, nichts provisorisch offen", "when": { "pruefanlass": "wiederholung" } },
+        { "id": "c-w-zugang", "label": "Verteiler zugänglich, Bedien- und Fluchtwege frei", "when": { "pruefanlass": "wiederholung" } },
+        { "id": "c-w-unterlagen", "label": "Beschriftung und Unterlagen noch zum Ist-Zustand passend", "when": { "pruefanlass": "wiederholung" } },
+        { "id": "c-w-rcd-taste", "label": "RCD-Prüftaste wird vom Nutzer regelmäßig betätigt (Einweisung erfolgt)", "when": { "pruefanlass": "wiederholung", "rcd": "ja" } }
       ],
       "wiki": ["messverfahren-sichtpruefung"],
       "protocolLabel": "Besichtigung",
@@ -263,7 +330,7 @@
       "title": "Schutzleiter und Potentialausgleich (Niederohmmessung)",
       "short": "R-PE",
       "instrument": "Niederohmmessgerät, Prüfstrom ≥ 200 mA",
-      "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen.",
+      "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen. Bei einer Anlage im Betrieb die Freischaltung vorher mit dem Betreiber abstimmen.",
       "procedure": [
         "Anlage freischalten und gegen Wiedereinschalten sichern.",
         "Messleitungen kalibrieren / Eigenwiderstand abgleichen.",
@@ -293,6 +360,7 @@
       "order": 300,
       "title": "Isolationswiderstand messen",
       "short": "Riso",
+      "when": { "freischaltung": "ja" },
       "requires": ["s-durchgang-schutzleiter"],
       "requiresReason": "Ein unterbrochener Schutzleiter macht die Isolationsmessung gegen PE wertlos — sie misst dann gegen nichts.",
       "instrument": "Isolationsmessgerät",
@@ -322,6 +390,38 @@
       "wiki": ["messverfahren-isolationswiderstand"],
       "protocolLabel": "Isolationswiderstand",
       "tags": ["messung", "riso"]
+    },
+    {
+      "id": "s-w-differenzstrom",
+      "type": "messung",
+      "phase": "messen",
+      "order": 305,
+      "title": "Differenzstrom messen (statt Isolationsmessung)",
+      "short": "IΔ Anlage",
+      "when": { "freischaltung": "nein" },
+      "requires": ["s-durchgang-schutzleiter"],
+      "requiresReason": "Der gemessene Differenzstrom fließt über den Schutzleiter zurück — ist der unterbrochen, misst man zu wenig statt zu viel.",
+      "instrument": "Zangenamperemeter für Differenzstrom oder Installationstester",
+      "safety": "Messung am spannungsführenden Stromkreis. Messmittel und Messleitungen passender Messkategorie verwenden.",
+      "procedure": [
+        "Alle aktiven Leiter des Stromkreises gemeinsam umfassen (L und N, bei Drehstrom alle drei Außenleiter und N).",
+        "Betriebszustand notieren: Verbraucher ein- oder ausgeschaltet — der Wert hängt davon ab.",
+        "Ergebnis mit früheren Messungen vergleichen; ein steigender Trend ist aussagekräftiger als der Einzelwert.",
+        "Bei auffälligem Wert die Stromkreise einzeln nachmessen und den Verursacher eingrenzen."
+      ],
+      "measure": {
+        "quantity": "Differenzstrom",
+        "symbol": "IΔ",
+        "unit": "mA",
+        "inputs": [{ "id": "i_diff", "label": "IΔ gesamt", "unit": "mA" }],
+        "aggregate": "max"
+      },
+      "limitRef": "anlage-differenzstrom",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-differenzstrom-verbraucher"],
+      "wiki": ["messverfahren-differenzstrom"],
+      "protocolLabel": "Differenzstrom (Ersatz für Isolationsmessung)",
+      "tags": ["messung", "wiederholung"]
     },
     {
       "id": "s-selv-pelv-trennung",
@@ -639,13 +739,29 @@
       "when": { "world": "industrie" },
       "verdict": { "rule": "manual" },
       "checklist": [
-        { "id": "c-plakette", "label": "Prüfplakette angebracht" },
-        { "id": "c-frist", "label": "Nächste Prüffrist mit dem Betreiber festgelegt" },
-        { "id": "c-gefaehrdung", "label": "Grundlage der Frist dokumentiert (Gefährdungsbeurteilung)" }
+        { "id": "c-plakette", "label": "Prüfplakette angebracht und lesbar" },
+        { "id": "c-anlagenbuch", "label": "Eintrag im Anlagen- oder Prüfbuch vorgenommen" }
       ],
       "wiki": ["prueffristen-uebersicht"],
-      "protocolLabel": "Prüfplakette / Frist",
+      "protocolLabel": "Prüfplakette",
       "tags": ["dguv3", "prueffristen"]
+    },
+    {
+      "id": "s-frist",
+      "type": "doku",
+      "phase": "dokumentieren",
+      "order": 880,
+      "title": "Nächste Prüffrist festlegen",
+      "short": "Frist",
+      "interval": { "scope": "anlage" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-frist-abgestimmt", "label": "Frist mit dem Betreiber abgestimmt" },
+        { "id": "c-gefaehrdung", "label": "Grundlage der Frist dokumentiert (Gefährdungsbeurteilung)", "when": { "world": "industrie" } }
+      ],
+      "wiki": ["prueffristen-uebersicht"],
+      "protocolLabel": "Nächste Prüffrist",
+      "tags": ["prueffristen"]
     },
     {
       "id": "s-doku-protokoll",

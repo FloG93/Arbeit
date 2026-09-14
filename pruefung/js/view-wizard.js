@@ -162,7 +162,10 @@
         class: 'btn btn-outline', type: 'button',
         onClick: () => {
           if (!confirm('Fragen von vorn durchgehen? Der Prüfplan wird neu berechnet, erfasste Messwerte bleiben erhalten.')) return;
-          P.store.patchJob(job.id, j => { j.session = P.wizard.start(pack, j.world); j.plan = null; });
+          P.store.patchJob(job.id, j => {
+            j.session = P.wizard.start(pack, j.world, P.data.variant(j.normId, j.variantId));
+            j.plan = null;
+          });
         },
       }, 'Von vorn'),
     ]);

@@ -149,6 +149,24 @@
       "related": ["messverfahren-erdungswiderstand-ra", "netzform-tt"]
     },
     {
+      "id": "fehler-differenzstrom-verbraucher",
+      "title": "Differenzstrom ohne Betriebszustand bewertet",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "wiederholung"],
+      "summary": "Derselbe Stromkreis liefert je nach eingeschalteten Verbrauchern völlig verschiedene Werte.",
+      "search": "differenzstrom schwankt verbraucher betriebszustand vergleich",
+      "body": [
+        { "type": "p", "text": "Jedes Schaltnetzteil bringt seinen Y-Kondensator mit, und der erzeugt einen Ableitstrom. Zwanzig Rechner in einem Stromkreis summieren sich auf mehrere Milliampere — ohne dass ein Fehler vorliegt." },
+        { "type": "bullets", "items": [
+          "Betriebszustand zur Messung notieren, sonst ist der nächste Vergleich wertlos.",
+          "Bei hohen Werten einzelne Verbraucher abschalten und die Differenz beobachten.",
+          "Einen dauerhaft hohen Summenwert nicht als Fehler abhaken: er erklärt Fehlauslösungen des RCD im laufenden Betrieb."
+        ] }
+      ],
+      "related": ["messverfahren-differenzstrom", "s-w-differenzstrom"]
+    },
+    {
       "id": "fehler-messung-unter-spannung",
       "title": "Falsche Messung am spannungsführenden Teil",
       "kind": "fehler",

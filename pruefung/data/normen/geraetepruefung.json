@@ -1,0 +1,402 @@
+{
+  "schema": 1,
+  "id": "geraet",
+  "norm": "Geräteprüfung",
+  "title": "Prüfung ortsveränderlicher elektrischer Betriebsmittel",
+  "status": "aktiv",
+  "worlds": ["efh", "industrie"],
+  "datenstand": "2026-09",
+  "reviewed": { "by": "", "date": "" },
+  "note": "50678 (nach Instandsetzung) und 50699 (Wiederholungsprüfung) teilen sich Ablauf und Grenzwerte. Der Anlass steckt in der Variante und schaltet nur die Spannungsprüfung zu.",
+  "variants": [
+    {
+      "id": "wiederholung",
+      "norm": "DIN EN 50699",
+      "short": "Geräte-Wiederholungsprüfung",
+      "title": "Wiederholungsprüfung ortsveränderlicher Geräte",
+      "edition": "2021-03",
+      "status": "aktiv",
+      "worlds": ["efh", "industrie"],
+      "entry": "q-g-schutzklasse",
+      "presetFacts": { "geraeteanlass": "wiederholung" }
+    },
+    {
+      "id": "nach-instandsetzung",
+      "norm": "DIN EN 50678",
+      "short": "Gerät nach Instandsetzung",
+      "title": "Prüfung nach Instandsetzung oder Änderung",
+      "edition": "2021-03",
+      "status": "aktiv",
+      "worlds": ["efh", "industrie"],
+      "entry": "q-g-schutzklasse",
+      "presetFacts": { "geraeteanlass": "instandsetzung" }
+    }
+  ],
+  "sources": [
+    { "label": "DIN EN 50678 (VDE 0701):2021-03", "note": "Prüfung nach Instandsetzung — eigene Zusammenfassung, kein Normtext." },
+    { "label": "DIN EN 50699 (VDE 0702):2021-03", "note": "Wiederholungsprüfung ortsveränderlicher Geräte." },
+    { "label": "DGUV Vorschrift 3", "note": "Prüffristen als Richtwerte." }
+  ],
+  "phases": [
+    { "id": "besichtigen", "label": "Besichtigen", "order": 100, "hint": "Findet die meisten Mängel — Leitung und Stecker zuerst." },
+    { "id": "messen", "label": "Messen", "order": 200, "hint": "Gerät vom Netz getrennt, Schalter in Ein-Stellung." },
+    { "id": "erproben", "label": "Ableitströme und Funktion", "order": 600, "hint": "Erst nach bestandener Isolationsmessung." },
+    { "id": "dokumentieren", "label": "Dokumentieren", "order": 900, "hint": "Plakette, Frist, Protokoll." }
+  ],
+  "protocol": {
+    "titleField": "geraet",
+    "fields": [
+      { "id": "geraet", "label": "Gerät", "kind": "text", "required": true, "perDevice": true },
+      { "id": "hersteller", "label": "Hersteller / Typ", "kind": "text", "perDevice": true },
+      { "id": "inventarnummer", "label": "Inventar-/Seriennummer", "kind": "text", "perDevice": true },
+      { "id": "schutzklasse", "label": "Schutzklasse", "kind": "fact", "factKey": "schutzklasse" },
+      { "id": "objekt", "label": "Betriebsstätte", "termKey": "objekt", "kind": "text" },
+      { "id": "pruefer", "label": "Prüfer", "kind": "text", "sticky": true },
+      { "id": "messgeraet", "label": "Messgerät / Kalibrierung", "kind": "text", "sticky": true },
+      { "id": "datum", "label": "Prüfdatum", "kind": "date", "default": "today" }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "q-g-schutzklasse",
+      "type": "question",
+      "title": "Welche Schutzklasse hat das Gerät?",
+      "help": "Steht als Symbol auf dem Typenschild. Sie entscheidet, was überhaupt gemessen wird — ein Gerät der Schutzklasse II hat keinen Schutzleiter.",
+      "wiki": ["begriff-schutzklassen"],
+      "defaultNext": "q-g-geraeteart",
+      "options": [
+        { "id": "o-sk1", "label": "Schutzklasse I", "sub": "Schutzleiter am Stecker, Symbol ⏚", "set": { "schutzklasse": "sk1", "isoFall": "sk1", "beruehrungsstromNoetig": "nein" }, "next": "q-g-geraeteart" },
+        { "id": "o-sk2", "label": "Schutzklasse II", "sub": "Schutzisoliert, Doppelquadrat-Symbol", "set": { "schutzklasse": "sk2", "isoFall": "sk2", "beruehrungsstromNoetig": "ja" }, "next": "q-g-geraeteart" },
+        { "id": "o-sk3", "label": "Schutzklasse III", "sub": "Schutzkleinspannung SELV/PELV", "set": { "schutzklasse": "sk3", "isoFall": "sk3", "beruehrungsstromNoetig": "nein" }, "next": "q-g-geraeteart" }
+      ]
+    },
+    {
+      "id": "q-g-geraeteart",
+      "type": "question",
+      "title": "Um was für ein Betriebsmittel handelt es sich?",
+      "help": "Bestimmt Zusatzschritte und beim Schutzleiterwiderstand den Grenzwert.",
+      "wiki": ["begriff-ortsfest-ortsveraenderlich"],
+      "defaultNext": "q-g-ableitverfahren",
+      "options": [
+        { "id": "o-g-handgeraet", "label": "Handgeführtes Gerät", "sub": "Bohrmaschine, Winkelschleifer, Föhn", "set": { "geraeteart": "handgeraet" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-g-standgeraet", "label": "Standgerät mit Stecker", "sub": "Kaffeemaschine, Werkstattgerät, Ständerbohrmaschine", "set": { "geraeteart": "standgeraet" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-g-leitung", "label": "Verlängerungs- oder Anschlussleitung", "sub": "Auch Kabeltrommel", "set": { "geraeteart": "leitung" }, "addTags": ["leitung"], "next": "q-g-leitungslaenge" },
+        { "id": "o-g-mehrfach", "label": "Mehrfachsteckdose", "sub": "Steckdosenleiste, auch mit Schalter", "set": { "geraeteart": "mehrfachsteckdose" }, "addTags": ["leitung"], "next": "q-g-leitungslaenge" },
+        { "id": "o-g-it", "label": "IT- oder Bürogerät", "sub": "Rechner, Netzteil, Monitor — hoher Schutzleiterstrom möglich", "set": { "geraeteart": "it" }, "addTags": ["it"], "next": "q-g-ableitverfahren" },
+        { "id": "o-g-heiz", "label": "Heizgerät", "sub": "Heizlüfter, Kochplatte, Bautrockner", "set": { "geraeteart": "heizgeraet" }, "next": "q-g-heizleistung" }
+      ]
+    },
+    {
+      "id": "q-g-leitungslaenge",
+      "type": "question",
+      "title": "Wie lang ist die Leitung?",
+      "help": "Der zulässige Schutzleiterwiderstand wächst mit der Länge: 0,3 Ω bis 5 m, je weitere 7,5 m 0,1 Ω mehr, höchstens 1 Ω.",
+      "when": { "geraeteart": ["leitung", "mehrfachsteckdose"] },
+      "wiki": ["grenzwerte-geraet"],
+      "defaultNext": "q-g-ableitverfahren",
+      "options": [
+        { "id": "o-len-5", "label": "bis 5 m", "set": { "leitungslaenge": "bis5" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-len-12", "label": "über 5 m bis 12,5 m", "set": { "leitungslaenge": "bis12_5" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-len-20", "label": "über 12,5 m bis 20 m", "set": { "leitungslaenge": "bis20" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-len-lang", "label": "über 20 m", "sub": "Kabeltrommel, Baustellenleitung", "set": { "leitungslaenge": "ueber20" }, "next": "q-g-ableitverfahren" }
+      ]
+    },
+    {
+      "id": "q-g-heizleistung",
+      "type": "question",
+      "title": "Welche Heizleistung hat das Gerät?",
+      "help": "Über 3,5 kW gilt für den Schutzleiterstrom nicht der feste Wert, sondern 1 mA je kW Heizleistung — höchstens 10 mA. Der Isolationswiderstand darf bei Heizgeräten kleiner sein.",
+      "when": { "geraeteart": "heizgeraet" },
+      "wiki": ["grenzwerte-geraet"],
+      "defaultNext": "q-g-ableitverfahren",
+      "options": [
+        { "id": "o-heiz-klein", "label": "bis 3,5 kW", "set": { "heizleistung": "bis3_5kw" }, "next": "q-g-ableitverfahren" },
+        { "id": "o-heiz-gross", "label": "über 3,5 kW", "sub": "Grenzwert wird leistungsabhängig", "set": { "heizleistung": "ueber3_5kw", "isoFall": "heizgeraet" }, "next": "q-g-ableitverfahren" }
+      ]
+    },
+    {
+      "id": "q-g-ableitverfahren",
+      "type": "question",
+      "title": "Womit wird der Ableitstrom gemessen?",
+      "help": "Alle drei Verfahren sind zulässig. Sie liefern aber nicht dieselben Werte — das Verfahren gehört deshalb ins Protokoll.",
+      "when": { "schutzklasse": ["sk1", "sk2"] },
+      "wiki": ["messverfahren-ableitstrom"],
+      "defaultNext": "q-g-besonderheiten",
+      "options": [
+        { "id": "o-verf-ersatz", "label": "Ersatzableitstrom", "sub": "Gerät stromlos, Standardverfahren der Prüfgeräte", "set": { "ableitverfahren": "ersatz" }, "next": "q-g-besonderheiten" },
+        { "id": "o-verf-differenz", "label": "Differenzstrom", "sub": "Gerät in Betrieb, erfasst auch Fehler über fremde Erde", "set": { "ableitverfahren": "differenz" }, "next": "q-g-besonderheiten" },
+        { "id": "o-verf-direkt", "label": "Direktes Verfahren", "sub": "Gerät in Betrieb, Messung über Shunt", "set": { "ableitverfahren": "direkt" }, "next": "q-g-besonderheiten" }
+      ]
+    },
+    {
+      "id": "q-g-besonderheiten",
+      "type": "question",
+      "multi": true,
+      "title": "Trifft etwas davon zu?",
+      "hint": "Mehrfachauswahl — schaltet zusätzliche Schritte zu. Nichts zutreffend? Direkt weiter.",
+      "defaultNext": null,
+      "options": [
+        { "id": "o-g-beruehrbar", "label": "Berührbare leitfähige Teile ohne Schutzleiteranschluss", "sub": "Schutzklasse I mit isolierten Gehäuseteilen", "when": { "schutzklasse": "sk1" }, "set": { "beruehrungsstromNoetig": "ja" } },
+        { "id": "o-g-selv", "label": "Gerät enthält SELV-/PELV-Teile", "set": { "selvteil": "ja" } },
+        { "id": "o-g-akku", "label": "Akkubetrieb mit Ladegerät", "sub": "Ladegerät getrennt prüfen", "set": { "akku": "ja" } },
+        { "id": "o-g-schweiss", "label": "Schweißgerät", "sub": "Zusätzlich DIN EN 60974-4", "when": { "world": "industrie" }, "set": { "schweissgeraet": "ja" }, "addTags": ["schweissen"] },
+        { "id": "o-g-medizin", "label": "Medizinisches Gerät", "sub": "Andere Norm zuständig", "set": { "medizin": "ja" }, "next": "r-g-medizin" }
+      ]
+    },
+    {
+      "id": "r-g-medizin",
+      "type": "result",
+      "kind": "warnung",
+      "title": "Medizinische Geräte: DIN EN 62353",
+      "continue": true,
+      "continueLabel": "Trotzdem Prüfplan erstellen",
+      "body": [
+        { "type": "warn", "text": "Medizinisch genutzte elektrische Geräte werden nach DIN EN 62353 geprüft — mit anderen Grenzwerten für Ableitströme und zusätzlichen Anforderungen an Anwendungsteile." },
+        { "type": "p", "text": "Diese App deckt das nicht ab. Der Prüfplan unten enthält nur den allgemeinen Teil und ersetzt die Prüfung nach 62353 nicht." }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s-g-sicht",
+      "type": "sicht",
+      "phase": "besichtigen",
+      "order": 100,
+      "title": "Gerät besichtigen",
+      "short": "Sicht",
+      "safety": "Netzstecker gezogen.",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-g-gehaeuse", "label": "Gehäuse unbeschädigt, keine Risse oder fehlenden Teile" },
+        { "id": "c-g-leitung", "label": "Anschlussleitung ohne Quetschungen, Schnitte, Brandstellen" },
+        { "id": "c-g-stecker", "label": "Stecker unbeschädigt, Kontakte fest, keine Anschmorungen" },
+        { "id": "c-g-knickschutz", "label": "Knickschutz und Zugentlastung wirksam" },
+        { "id": "c-g-lueftung", "label": "Lüftungsöffnungen frei, keine Verschmutzung im Gerät" },
+        { "id": "c-g-bedien", "label": "Schalter und Bedienelemente funktionsfähig, nicht überbrückt" },
+        { "id": "c-g-aufschrift", "label": "Typenschild und Warnhinweise vorhanden und lesbar" },
+        { "id": "c-g-bestimmung", "label": "Gerät passt zum Einsatzort (Schutzart, Beanspruchung)" },
+        { "id": "c-g-reparatur", "label": "Instandsetzung fachgerecht, Originalteile verwendet", "when": { "geraeteanlass": "instandsetzung" } }
+      ],
+      "wiki": ["messverfahren-geraet-schutzleiter"],
+      "protocolLabel": "Besichtigung",
+      "tags": ["sicht", "geraet"]
+    },
+    {
+      "id": "s-g-leiter-durchgang",
+      "type": "messung",
+      "phase": "besichtigen",
+      "order": 190,
+      "title": "Leiter auf Durchgang und Vertauschung prüfen",
+      "short": "Adern",
+      "when": { "geraeteart": ["leitung", "mehrfachsteckdose"] },
+      "instrument": "Durchgangsprüfer oder Installationstester",
+      "procedure": [
+        "Jeden Leiter einzeln auf Durchgang prüfen: L, N und PE.",
+        "Auf Vertauschung prüfen — L gegen N und beide gegen PE.",
+        "Auf Kurzschluss zwischen den Leitern prüfen.",
+        "Kabeltrommel dabei vollständig abrollen."
+      ],
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-g-durchgang", "label": "Alle Leiter durchgängig" },
+        { "id": "c-g-vertauscht", "label": "Keine Vertauschung von L, N oder PE" },
+        { "id": "c-g-kurzschluss", "label": "Kein Kurzschluss zwischen den Leitern" }
+      ],
+      "pitfalls": ["fehler-pe-n-vertauscht"],
+      "protocolLabel": "Durchgang der Leiter",
+      "tags": ["geraet", "leitung"]
+    },
+    {
+      "id": "s-g-schutzleiter",
+      "type": "messung",
+      "phase": "messen",
+      "order": 200,
+      "title": "Schutzleiterwiderstand messen",
+      "short": "R-PE",
+      "when": { "schutzklasse": "sk1" },
+      "instrument": "Prüfgerät mit mindestens 200 mA Prüfstrom",
+      "safety": "Gerät vom Netz getrennt.",
+      "procedure": [
+        "Messleitungen abgleichen (Eigenwiderstand nullen).",
+        "Vom Schutzkontakt des Steckers zu jedem berührbaren Metallteil messen.",
+        "Anschlussleitung dabei über die ganze Länge bewegen — besonders an Stecker und Geräteeinführung.",
+        "Den größten Wert festhalten; springende Werte weisen auf einen Aderbruch hin."
+      ],
+      "measure": {
+        "quantity": "Schutzleiterwiderstand",
+        "symbol": "RPE",
+        "unit": "Ω",
+        "inputs": [{ "id": "r_pe", "label": "größter Wert", "unit": "Ω", "quickValues": [{ "label": "0,1", "value": 0.1 }, { "label": "0,3", "value": 0.3 }] }],
+        "aggregate": "max"
+      },
+      "limitRef": "geraet-schutzleiterwiderstand",
+      "limitKeyFrom": "leitungslaenge",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-geraet-leitung-nicht-bewegt", "fehler-messleitung-nicht-abgeglichen"],
+      "wiki": ["messverfahren-geraet-schutzleiter"],
+      "protocolLabel": "Schutzleiterwiderstand",
+      "tags": ["messung", "geraet"]
+    },
+    {
+      "id": "s-g-iso",
+      "type": "messung",
+      "phase": "messen",
+      "order": 300,
+      "title": "Isolationswiderstand messen",
+      "short": "Riso",
+      "requires": ["s-g-schutzleiter"],
+      "requiresReason": "Bei Schutzklasse I misst die Isolationsmessung gegen den Schutzleiter — ist der unterbrochen, ist das Ergebnis wertlos.",
+      "instrument": "Isolationsmessgerät, 500 V DC",
+      "safety": "Gerät vom Netz getrennt. Bei Geräten mit Elektronik Herstellerangabe beachten — sonst 250 V DC und im Protokoll vermerken.",
+      "procedure": [
+        "Gerät einschalten, Schalter in Ein-Stellung bringen (auch mehrstufige Schalter durchfahren).",
+        "L und N gegen Schutzleiter beziehungsweise berührbare Metallteile messen.",
+        "Bei Schutzklasse II gegen die berührbaren leitfähigen Teile messen.",
+        "Nach der Messung entladen."
+      ],
+      "measure": {
+        "quantity": "Isolationswiderstand",
+        "symbol": "Riso",
+        "unit": "MΩ",
+        "inputs": [{ "id": "riso", "label": "Riso", "unit": "MΩ", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] }],
+        "aggregate": "min"
+      },
+      "limitRef": "geraet-iso",
+      "limitKeyFrom": "isoFall",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-geraet-nicht-eingeschaltet", "fehler-iso-verbraucher"],
+      "wiki": ["grenzwerte-geraet", "messverfahren-isolationswiderstand"],
+      "protocolLabel": "Isolationswiderstand",
+      "tags": ["messung", "geraet", "riso"]
+    },
+    {
+      "id": "s-g-spannungspruefung",
+      "type": "messung",
+      "phase": "messen",
+      "order": 400,
+      "title": "Spannungsfestigkeit prüfen",
+      "short": "Uprüf",
+      "when": { "geraeteanlass": "instandsetzung" },
+      "optional": true,
+      "optionalReason": "Nur nötig, wenn die Instandsetzung isolierende Teile betroffen hat und der Hersteller es vorsieht.",
+      "safety": "Hochspannungsprüfung. Nur mit dafür gebautem Prüfplatz und unterwiesener Person, Bereich absperren.",
+      "verdict": { "rule": "manual" },
+      "protocolLabel": "Spannungsfestigkeit",
+      "tags": ["geraet", "instandsetzung"]
+    },
+    {
+      "id": "s-g-schutzleiterstrom",
+      "type": "messung",
+      "phase": "erproben",
+      "order": 600,
+      "title": "Schutzleiterstrom messen",
+      "short": "IPE",
+      "when": { "schutzklasse": "sk1" },
+      "requires": ["s-g-iso"],
+      "requiresReason": "Erst die bestandene Isolationsmessung erlaubt es, das Gerät für die Ableitstrommessung ans Netz zu nehmen.",
+      "instrument": "Prüfgerät mit Ersatzableitstrom-, Differenzstrom- oder Direktmessung",
+      "safety": "Bei Differenzstrom- und Direktmessung ist das Gerät in Betrieb — auf anlaufende Teile achten.",
+      "procedure": [
+        "Gewähltes Messverfahren am Prüfgerät einstellen und im Protokoll vermerken.",
+        "Gerät einschalten und in Betrieb nehmen (bei Ersatzableitstrom stromlos).",
+        "Netzstecker in beiden Steckrichtungen prüfen, den größeren Wert bewerten.",
+        "Bei IT-Geräten mit hohem Schutzleiterstrom die Herstellerangabe heranziehen."
+      ],
+      "measure": {
+        "quantity": "Schutzleiterstrom",
+        "symbol": "IPE",
+        "unit": "mA",
+        "inputs": [{ "id": "i_pe", "label": "IPE", "unit": "mA" }],
+        "aggregate": "max"
+      },
+      "limitRef": "geraet-schutzleiterstrom",
+      "limitKeyFrom": "heizleistung",
+      "verdict": { "rule": "limit" },
+      "pitfalls": ["fehler-ersatzableitstrom-elektronik"],
+      "wiki": ["messverfahren-ableitstrom"],
+      "protocolLabel": "Schutzleiterstrom",
+      "tags": ["messung", "geraet", "ableitstrom"]
+    },
+    {
+      "id": "s-g-beruehrungsstrom",
+      "type": "messung",
+      "phase": "erproben",
+      "order": 610,
+      "title": "Berührungsstrom messen",
+      "short": "IB",
+      "when": { "beruehrungsstromNoetig": "ja" },
+      "requires": ["s-g-iso"],
+      "requiresReason": "Auch hier gilt: erst Isolation bestanden, dann ans Netz.",
+      "instrument": "Prüfgerät mit Berührungsstrommessung",
+      "procedure": [
+        "Alle berührbaren leitfähigen Teile ohne Schutzleiteranschluss erfassen.",
+        "Netzstecker in beiden Steckrichtungen prüfen, den größeren Wert bewerten.",
+        "Bei Schutzklasse II ersetzt diese Messung den Schutzleiterstrom."
+      ],
+      "measure": {
+        "quantity": "Berührungsstrom",
+        "symbol": "IB",
+        "unit": "mA",
+        "inputs": [{ "id": "i_b", "label": "IB", "unit": "mA" }],
+        "aggregate": "max"
+      },
+      "limitRef": "geraet-beruehrungsstrom",
+      "verdict": { "rule": "limit" },
+      "wiki": ["messverfahren-ableitstrom"],
+      "protocolLabel": "Berührungsstrom",
+      "tags": ["messung", "geraet", "ableitstrom"]
+    },
+    {
+      "id": "s-g-funktion",
+      "type": "erprobung",
+      "phase": "erproben",
+      "order": 650,
+      "title": "Funktion erproben",
+      "short": "Funktion",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-g-einschalten", "label": "Gerät läuft bestimmungsgemäß an und schaltet sauber ab" },
+        { "id": "c-g-schutzeinrichtung", "label": "Schutz- und Sicherheitseinrichtungen wirksam (Bremse, Verriegelung, Not-Aus)" },
+        { "id": "c-g-drehrichtung", "label": "Drehrichtung stimmt", "when": { "geraeteart": "handgeraet" } },
+        { "id": "c-g-pruefstecker", "label": "PRCD oder Personenschutzstecker löst aus", "when": { "world": "industrie" } },
+        { "id": "c-g-geraeusch", "label": "Keine auffälligen Geräusche, Gerüche oder Erwärmung" }
+      ],
+      "protocolLabel": "Funktionsprüfung",
+      "tags": ["geraet"]
+    },
+    {
+      "id": "s-g-frist",
+      "type": "doku",
+      "phase": "dokumentieren",
+      "order": 890,
+      "title": "Plakette und nächste Prüffrist",
+      "short": "Frist",
+      "interval": { "scope": "geraet" },
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-g-plakette", "label": "Prüfplakette mit Datum angebracht" },
+        { "id": "c-g-frist-abgestimmt", "label": "Frist mit dem Betreiber abgestimmt" }
+      ],
+      "wiki": ["prueffristen-uebersicht"],
+      "protocolLabel": "Nächste Prüffrist",
+      "tags": ["prueffristen", "geraet"]
+    },
+    {
+      "id": "s-g-doku",
+      "type": "doku",
+      "phase": "dokumentieren",
+      "order": 900,
+      "title": "Protokoll erstellen",
+      "short": "Protokoll",
+      "verdict": { "rule": "manual" },
+      "checklist": [
+        { "id": "c-g-messwerte", "label": "Messwerte mit Verfahren und Grenzwert erfasst" },
+        { "id": "c-g-identifikation", "label": "Gerät eindeutig bezeichnet (Inventar- oder Seriennummer)" },
+        { "id": "c-g-maengel", "label": "Mängel benannt, Gerät bei Gefahr der Nutzung entzogen" },
+        { "id": "c-g-uebergabe", "label": "Protokoll unterschrieben und übergeben" }
+      ],
+      "protocolLabel": "Dokumentation",
+      "tags": ["doku", "geraet"]
+    }
+  ]
+}

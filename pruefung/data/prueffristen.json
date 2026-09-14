@@ -9,6 +9,10 @@
     { "id": "buero", "label": "Büro, trockene Räume", "worlds": ["efh", "industrie"], "intervalMonths": 48, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "anlage" },
     { "id": "wohnanlage", "label": "Wohnanlage (Empfehlung)", "worlds": ["efh"], "intervalMonths": 48, "basis": "Empfehlung, keine allgemeine Prüfpflicht für selbstgenutztes Wohneigentum", "scope": "anlage" },
     { "id": "vermietung", "label": "Vermietete Wohnung / Mietobjekt", "worlds": ["efh"], "intervalMonths": 60, "basis": "Empfehlung aus der Betreiberverantwortung des Vermieters", "scope": "anlage" },
-    { "id": "rcd-nutzerpruefung", "label": "RCD-Funktionsprüfung durch den Nutzer", "worlds": ["efh", "industrie"], "intervalMonths": 6, "basis": "Empfehlung, Prüftaste", "scope": "geraet" }
+    { "id": "geraet-baustelle", "label": "Geräte auf Baustellen", "worlds": ["industrie"], "intervalMonths": 3, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "geraet" },
+    { "id": "geraet-werkstatt", "label": "Geräte in Werkstatt und Produktion", "worlds": ["industrie"], "intervalMonths": 6, "basis": "DGUV Vorschrift 3, Richtwert; bei Fehlerquote unter 2 % verlängerbar", "scope": "geraet" },
+    { "id": "geraet-buero", "label": "Geräte in Büro und trockenen Räumen", "worlds": ["efh", "industrie"], "intervalMonths": 24, "basis": "DGUV Vorschrift 3, Richtwert", "scope": "geraet" },
+    { "id": "geraet-leitung", "label": "Verlängerungsleitungen und Mehrfachsteckdosen", "worlds": ["efh", "industrie"], "intervalMonths": 12, "basis": "DGUV Vorschrift 3, Richtwert für erhöhte Beanspruchung", "scope": "geraet" },
+    { "id": "geraet-privat", "label": "Privat genutztes Gerät (Empfehlung)", "worlds": ["efh"], "intervalMonths": 48, "basis": "Empfehlung, keine Prüfpflicht im privaten Bereich", "scope": "geraet" }
   ]
 }

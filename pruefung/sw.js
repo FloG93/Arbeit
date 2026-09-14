@@ -5,7 +5,7 @@
 //
 // Bei jeder Änderung an Dateien oder Daten die CACHE-Version hochzählen:
 // install() lädt dann alles neu, activate() räumt die alte Fassung weg.
-const CACHE = 'pruefung-v1';
+const CACHE = 'pruefung-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
   './js/util.js',
   './js/data.js',
   './js/limits.js',
+  './js/intervals.js',
   './js/wizard.js',
   './js/plan.js',
   './js/store.js',
@@ -30,12 +31,12 @@ const ASSETS = [
   './data/welten.json',
   './data/grenzwerte.json',
   './data/prueffristen.json',
-  './data/normen/vde-0100-600.json',
-  './data/normen/vde-0105-100.json',
-  './data/normen/en-50678-50699.json',
+  './data/normen/anlagenpruefung.json',
+  './data/normen/geraetepruefung.json',
   './data/wiki/messverfahren.json',
   './data/wiki/netzformen.json',
   './data/wiki/fehlerquellen.json',
+  './data/wiki/geraete.json',
   './data/wiki/grundlagen.json',
   './fonts/hanken-grotesk-latin.woff2',
   './fonts/space-grotesk-latin.woff2',

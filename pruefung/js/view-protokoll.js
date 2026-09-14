@@ -9,6 +9,12 @@
 
   P.views = P.views || {};
 
+  function protocolValue(pack, job, field) {
+    if (field.kind === 'fact') return P.plan.factLabel(pack, job.session, field.factKey);
+    if (field.kind === 'date') return formatDateDE(job.protocol[field.id]);
+    return job.protocol[field.id];
+  }
+
   function valueText(step, result) {
     const key = P.plan.keyValue(step, result);
     if (!key) return '—';
@@ -61,10 +67,10 @@
           ? el('div', { class: 'hint-text' }, 'Offene Schritte erscheinen im Bogen ohne Bewertung — ein Protokoll mit Lücken ist kein abgeschlossener Nachweis.')
           : null,
       ]),
-      U.sectionHead('Kopfdaten', pack.norm),
+      U.sectionHead('Kopfdaten', (P.data.variant(job.normId, job.variantId) || {}).norm || ''),
       U.card(null, [el('div', { class: 'w-kv' }, fields.map(field => el('div', { class: 'row' }, [
         el('div', { class: 'k' }, P.data.term(field.termKey, job.world, field.label)),
-        el('div', { class: 'v' }, (field.kind === 'date' ? formatDateDE(job.protocol[field.id]) : job.protocol[field.id]) || '—'),
+        el('div', { class: 'v' }, protocolValue(pack, job, field) || '—'),
       ])))]),
       U.sectionHead('Messwerte', 'Soll / Ist'),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [
@@ -107,19 +113,21 @@
     root.innerHTML = '';
     const fields = (pack.protocol && pack.protocol.fields) || [];
     const world = P.data.world(job.world);
+    const variant = P.data.variant(job.normId, job.variantId);
+    const due = job.interval && job.interval.nextDue;
 
     root.appendChild(el('div', { class: 'p-doc' }, [
       el('div', { class: 'p-head' }, [
         el('div', {}, [
           el('div', { class: 'p-eyebrow' }, 'Prüfprotokoll'),
-          el('div', { class: 'p-title' }, pack.norm),
-          el('div', { class: 'p-sub' }, pack.title + ' · ' + (world ? world.label : '')),
+          el('div', { class: 'p-title' }, variant ? variant.norm : pack.norm),
+          el('div', { class: 'p-sub' }, (variant ? variant.title : pack.title) + ' · ' + (world ? world.label : '')),
         ]),
         el('div', { class: 'p-date' }, formatDateDE(job.protocol.datum) || ''),
       ]),
       el('div', { class: 'p-fields' }, fields.map(field => el('div', { class: 'p-field' }, [
         el('div', { class: 'k' }, P.data.term(field.termKey, job.world, field.label)),
-        el('div', { class: 'v' }, (field.kind === 'date' ? formatDateDE(job.protocol[field.id]) : job.protocol[field.id]) || ''),
+        el('div', { class: 'v' }, protocolValue(pack, job, field) || ''),
       ]))),
       el('div', { class: 'p-section' }, 'Prüfschritte, Soll- und Istwerte'),
       el('div', {}, [
@@ -138,6 +146,12 @@
         : sum.open
           ? sum.open + ' Prüfschritte sind offen — das Protokoll ist unvollständig.'
           : 'Kein Mangel festgestellt. Alle vorgesehenen Prüfschritte sind bewertet.'),
+      due
+        ? el('p', { class: 'p-note' }, 'Nächste Prüfung: ' + formatDateDE(due)
+            + ' (Richtwert ' + P.intervals.label(job.interval.months)
+            + (P.intervals.byId(job.interval.presetId) ? ', ' + P.intervals.byId(job.interval.presetId).label : '')
+            + '). Verbindlich ist die Festlegung des Betreibers.')
+        : null,
       el('div', { class: 'p-sign' }, [
         el('div', {}, 'Prüfer'),
         el('div', {}, 'Auftraggeber / Betreiber'),

@@ -96,6 +96,58 @@
         { "key": "beleuchtung", "label": "Beleuchtungsstromkreise", "max": 3, "unit": "%" },
         { "key": "sonstige", "label": "Übrige Verbrauchsmittel", "max": 5, "unit": "%", "default": true }
       ]
+    },
+    {
+      "id": "anlage-differenzstrom",
+      "title": "Differenzstrom einer Anlage im Betrieb",
+      "source": "Richtwert für die Bewertung, DIN VDE 0105-100",
+      "keyLabel": "Fall",
+      "rows": [
+        { "key": "richtwert", "label": "Differenzstrom je Stromkreis", "max": 3.5, "unit": "mA", "default": true, "note": "Richtwert. Maßgeblich ist die Entwicklung über mehrere Prüfungen und der Vergleich mit dem Nennfehlerstrom des RCD — ein Drittel von IΔn gilt als Aufmerksamkeitsschwelle." }
+      ]
+    },
+    {
+      "id": "geraet-schutzleiterwiderstand",
+      "title": "Schutzleiterwiderstand ortsveränderlicher Betriebsmittel",
+      "source": "DIN EN 50678 / DIN EN 50699",
+      "keyLabel": "Länge der Anschlussleitung",
+      "rows": [
+        { "key": "bis5", "label": "bis 5 m", "max": 0.3, "unit": "Ω", "default": true },
+        { "key": "bis12_5", "label": "über 5 m bis 12,5 m", "max": 0.4, "unit": "Ω" },
+        { "key": "bis20", "label": "über 12,5 m bis 20 m", "max": 0.5, "unit": "Ω" },
+        { "key": "ueber20", "label": "über 20 m", "max": 1.0, "unit": "Ω", "note": "Je weitere angefangene 7,5 m 0,1 Ω mehr, insgesamt höchstens 1 Ω." }
+      ]
+    },
+    {
+      "id": "geraet-iso",
+      "title": "Isolationswiderstand ortsveränderlicher Betriebsmittel",
+      "source": "DIN EN 50678 / DIN EN 50699",
+      "keyLabel": "Geräteart",
+      "rows": [
+        { "key": "sk1", "label": "Schutzklasse I", "min": 1.0, "unit": "MΩ", "default": true },
+        { "key": "sk2", "label": "Schutzklasse II", "min": 2.0, "unit": "MΩ" },
+        { "key": "sk3", "label": "Schutzklasse III", "min": 0.25, "unit": "MΩ" },
+        { "key": "heizgeraet", "label": "Heizgerät über 3,5 kW", "min": 0.3, "unit": "MΩ", "note": "Offene Heizwendeln senken den Wert bauartbedingt." }
+      ]
+    },
+    {
+      "id": "geraet-schutzleiterstrom",
+      "title": "Schutzleiterstrom ortsveränderlicher Betriebsmittel",
+      "source": "DIN EN 50678 / DIN EN 50699",
+      "keyLabel": "Geräteart",
+      "rows": [
+        { "key": "standard", "label": "Geräte allgemein", "max": 3.5, "unit": "mA", "default": true },
+        { "key": "ueber3_5kw", "label": "Heizgeräte über 3,5 kW", "max": 10, "unit": "mA", "note": "Zulässig sind 1 mA je kW Heizleistung, höchstens 10 mA — der Tabellenwert ist die obere Schranke." }
+      ]
+    },
+    {
+      "id": "geraet-beruehrungsstrom",
+      "title": "Berührungsstrom ortsveränderlicher Betriebsmittel",
+      "source": "DIN EN 50678 / DIN EN 50699",
+      "keyLabel": "Fall",
+      "rows": [
+        { "key": "standard", "label": "Berührbare leitfähige Teile", "max": 0.5, "unit": "mA", "default": true }
+      ]
     }
   ],
   "formulas": [
@@ -110,6 +162,18 @@
       "label": "Zulässiger Erdungswiderstand (TT)",
       "expr": "RA ≤ 50 V / IΔn",
       "note": "Grundlage der Tabelle „Erdungswiderstand RA im TT-System“."
+    },
+    {
+      "id": "ipe-heizgeraet",
+      "label": "Schutzleiterstrom bei Heizgeräten",
+      "expr": "IPE ≤ 1 mA je kW Heizleistung",
+      "note": "Gilt über 3,5 kW Heizleistung, insgesamt höchstens 10 mA. Beispiel: 6 kW Bautrockner → zulässig bis 6 mA."
+    },
+    {
+      "id": "rpe-leitung",
+      "label": "Schutzleiterwiderstand nach Leitungslänge",
+      "expr": "RPE ≤ 0,3 Ω + 0,1 Ω je weitere 7,5 m",
+      "note": "Ab 5 m Leitungslänge, insgesamt höchstens 1 Ω. Eine 25-m-Kabeltrommel landet damit bei 0,6 Ω."
     },
     {
       "id": "r-leiter",

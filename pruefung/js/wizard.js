@@ -38,10 +38,17 @@
   }
   W.resolveCursor = resolveCursor;
 
-  W.start = function start(pack, world) {
-    const facts = { world: world };
+  /* Die Sitzung trägt Einstieg und Vorab-Fakten ihrer Variante selbst — dann
+   * braucht das Replay beim Zurückgehen nichts außer der Sitzung. */
+  W.start = function start(pack, world, variant) {
+    const presetFacts = (variant && variant.presetFacts) || {};
+    const entry = (variant && variant.entry) || pack.entry;
+    const facts = Object.assign({ world: world }, presetFacts);
     return {
-      cursor: resolveCursor(pack, pack.entry, facts),
+      variantId: variant ? variant.id : null,
+      entry,
+      presetFacts,
+      cursor: resolveCursor(pack, entry, facts),
       facts,
       history: [],
       extraSteps: [],
@@ -90,14 +97,17 @@
 
   function replayFrom(pack, session, history) {
     const world = session.facts.world;
-    session.facts = { world };
+    session.facts = Object.assign({ world }, session.presetFacts || {});
     session.extraSteps = [];
     session.tags = [];
     session.history = [];
     session.done = false;
     session.resultId = null;
-    session.cursor = resolveCursor(pack, pack.entry, session.facts);
+    session.cursor = resolveCursor(pack, session.entry || pack.entry, session.facts);
     for (const entry of history) {
+      // Ein Daten-Update kann einen Knoten entfernt haben. Dann fehlt diese
+      // Antwort eben — besser als ein Auftrag, der beim Zurückgehen abbricht.
+      if (!pack.nodeById.has(entry.nodeId)) continue;
       session.cursor = entry.nodeId;
       W.answer(pack, session, entry.optionIds);
     }
@@ -113,13 +123,15 @@
     return replayFrom(pack, session, session.history.slice(0, -1));
   };
 
-  /* Ein Hinweis-Knoten mit continue lässt den Prüfplan trotzdem bauen — der
-   * EX-Hinweis darf die restliche Prüfung nicht blockieren. */
+  /* Ein Hinweis-Knoten mit continue blockiert die Prüfung nicht: mit next geht
+   * es im Baum weiter (der geänderte Anlagenteil braucht zwar eine eigene
+   * Erstprüfung, der Bestand wird trotzdem geprüft), ohne next ist der
+   * Assistent fertig und der Prüfplan wird gebaut. */
   W.finish = function finish(pack, session) {
     const node = W.node(pack, session);
     session.resultId = node ? node.id : session.resultId;
-    session.cursor = null;
-    session.done = true;
+    session.cursor = node && node.next ? resolveCursor(pack, node.next, session.facts) : null;
+    session.done = !session.cursor;
     return session;
   };
 

@@ -56,6 +56,10 @@
       for (const reqId of current.step.requires || []) {
         const req = pack.stepById.get(reqId);
         if (!req) { console.warn('[Prüfassistent] requires verweist auf unbekannten Schritt:', reqId); continue; }
+        // Eine Voraussetzung, die auf diese Prüfung nicht zutrifft, ist keine:
+        // die Isolationsmessung setzt den Schutzleiterwiderstand voraus — aber
+        // ein Gerät der Schutzklasse II hat keinen Schutzleiter.
+        if (req.when && !matches(req.when, facts)) continue;
         if (picked.has(reqId)) continue;
         picked.set(reqId, { step: req, reason: 'voraussetzung', requiredBy: current.step.id });
         queue.push(reqId);
@@ -272,6 +276,10 @@
     const hit = optionsFromHistory(pack, session).find(o => (o.addSteps || []).includes(stepId));
     return hit ? hit.label : null;
   }
+
+  /* Klartext zu einem Fakt — für Protokollfelder, die eine Antwort aus dem
+   * Assistenten übernehmen, statt sie ein zweites Mal abzufragen. */
+  PL.factLabel = (pack, session, factKey) => labelForFact(pack, session, factKey);
 
   function labelForFact(pack, session, factKey) {
     if (factKey === 'world') {

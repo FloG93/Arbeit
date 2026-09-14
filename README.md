@@ -7,7 +7,7 @@ Login, jede läuft für sich.
 | --- | --- | --- |
 | [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
-| [Prüfassistent](#prüfassistent) | `/pruefung/` | VDE-Prüfung Schritt für Schritt: Assistent, Grenzwerte, Messwerte, Protokoll |
+| [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 
 Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner),
 https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator,
@@ -478,11 +478,20 @@ und eine Zeile in der Stilauswahl.
 ## Prüfassistent
 
 Werkzeug für Elektrofachkräfte auf der Baustelle: Der Assistent fragt ab, was
-geprüft wird — Netzform, Stromkreisart, RCD, Besonderheiten — und stellt daraus
-den Prüfplan zusammen, in der Reihenfolge, die fachlich nötig ist. Zu jedem
-Schritt stehen Ablauf, Messmittel, Grenzwert und typische Fehlerquellen dabei;
-Messwerte werden direkt gegen den Grenzwert bewertet und am Ende als Protokoll
-gedruckt.
+geprüft wird — bei Anlagen Netzform, Stromkreisart und RCD, bei Geräten
+Schutzklasse, Geräteart und Messverfahren — und stellt daraus den Prüfplan
+zusammen, in der Reihenfolge, die fachlich nötig ist. Zu jedem Schritt stehen
+Ablauf, Messmittel, Grenzwert und typische Fehlerquellen dabei; Messwerte
+werden direkt gegen den Grenzwert bewertet und am Ende als Protokoll gedruckt.
+
+Vier Normen, zwei Datenpakete:
+
+| Norm | Was |
+| --- | --- |
+| DIN VDE 0100-600 | Erstprüfung ortsfester Anlagen |
+| DIN VDE 0105-100 | Wiederholungsprüfung im Betrieb — auch ohne Freischaltung |
+| DIN EN 50699 | Wiederholungsprüfung ortsveränderlicher Geräte |
+| DIN EN 50678 | Geräteprüfung nach Instandsetzung |
 
 Läuft wie die anderen Apps ohne Build-Schritt, installierbar, und **vollständig
 offline** — im Hausanschlussraum, im Keller und in der Halle gibt es meist kein
@@ -513,19 +522,22 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 
 | Bereich | Stand |
 | --- | --- |
-| Assistent nach DIN VDE 0100-600 (Erstprüfung ortsfester Anlagen) | fertig |
+| Anlagen-Erstprüfung nach DIN VDE 0100-600 | fertig |
+| Wiederholungsprüfung nach DIN VDE 0105-100, auch ohne Freischaltung | fertig |
+| Geräteprüfung nach DIN EN 50678 / 50699, Schutzklasse I, II und III | fertig |
 | Zwei-Welten-Modus EFH / Industrie: Fragen, Schritte, Wiki und Begriffe | fertig |
 | Prüfplan mit verbindlicher Reihenfolge (`requires`) und Sperrhinweis | fertig |
 | Messwerte mit Live-Bewertung gegen den passenden Grenzwert | fertig |
 | Checklisten mit drei Zuständen, Bewertung je Schritt überschreibbar | fertig |
+| Prüffristen: Richtwert wählen, Fälligkeit im Auftrag und im Protokoll | fertig |
+| Serienprüfung: „Nächstes Gerät" übernimmt die Kopfdaten | fertig |
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
 | Protokoll als A4-Bogen über den Druckdialog (auch „Als PDF speichern") | fertig |
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
 | Offline-Betrieb inklusive aller Datenpakete | fertig |
-| DIN VDE 0105-100 (Wiederholungsprüfung) | geplant |
-| DIN EN 50678 / 50699 (Geräteprüfung, Schutzklassen I/II/III) | geplant |
-| Prüffristen-Verwaltung mit Erinnerung (Datenbasis liegt bereit) | geplant |
+| Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
+| Mängelfotos im Protokoll | geplant |
 
 ### Normdaten pflegen
 
@@ -538,6 +550,11 @@ Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 * **Neue Norm ergänzen** — Datei unter `data/normen/` anlegen und in
   `data/index.json` eintragen. `"status": "geplant"` zeigt sie als deaktivierte
   Karte, `"aktiv"` schaltet sie frei.
+* **Norm-Variante ergänzen** — unterscheiden sich zwei Normen nur im Anlass,
+  gehören sie ins selbe Paket: ein Eintrag unter `variants` mit eigenem
+  Einstiegsknoten (`entry`) und Vorab-Fakten (`presetFacts`) ergibt eine eigene
+  Karte in der Normauswahl, ohne einen einzigen Prüfschritt zu duplizieren.
+  So teilen sich 0100-600 und 0105-100 eine Datei, ebenso 50678 und 50699.
 * **Wiki-Eintrag ergänzen** — Objekt in eine der Dateien unter `data/wiki/`.
 
 Danach zwei Pflichten: die `CACHE`-Version in `pruefung/sw.js` hochzählen (sonst
@@ -555,6 +572,10 @@ Die wichtigsten Felder:
 | `phase` + `order` | grobe und feine Sortierung im Prüfplan |
 | `requires` | zwingende Vorbedingung — schlägt jede Sortierung |
 | `limitRef` + `limitKeyFrom` | Grenzwerttabelle und der Fakt, der die Zeile bestimmt |
+| `limitKeySuffix` | an einem Eingabefeld: eigene Zeile derselben Tabelle (5 × IΔn) |
+| `interval` | macht einen Schritt zum Fristen-Schritt (`{"scope": "anlage"}`) |
+| `perDevice` | Protokollfeld, das „Nächstes Gerät" leert (Gerät, Seriennummer) |
+| `kind: "fact"` | Protokollfeld, das eine Antwort aus dem Assistenten übernimmt |
 
 ### Wissenswertes zur Umsetzung
 
@@ -572,6 +593,18 @@ werden, ohne gespeicherte Aufträge oder `when`-Bedingungen zu brechen. „Zurü
 ist aus demselben Grund kein Rückgängig, sondern ein Replay der Antwort-Historie
 von vorn — so kann kein Fakt hängen bleiben, dessen Antwort widerrufen wurde.
 
+Zwei Normen, die sich nur im Anlass unterscheiden, liegen in einer Datei.
+0100-600 und 0105-100 teilen sich rund 80 % der Prüfschritte; was sie trennt —
+Freischaltbarkeit, Umfang, Sicherheitshinweise — steckt in `when`-Bedingungen
+und in den Vorab-Fakten der Variante. Zwei gepflegte Dateien mit denselben
+Grenzwerten wären zwei Gelegenheiten, eine Korrektur zu vergessen.
+
+Eine Voraussetzung, die auf die laufende Prüfung nicht zutrifft, ist keine: die
+Isolationsmessung am Gerät verlangt `requires: ["s-g-schutzleiter"]`, aber ein
+Gerät der Schutzklasse II hat keinen Schutzleiter. Der Prüfplan zieht eine
+Vorbedingung deshalb nur nach, wenn ihr eigenes `when` zu den Antworten passt —
+sonst stünde im Plan ein Schritt, den es für dieses Gerät gar nicht gibt.
+
 Der Zwei-Welten-Modus ist kein Sonderfall in der Engine: `"worlds": [...]` wird
 beim Laden zu `when.world` normalisiert. Damit ist EFH oder Industrie ein Fakt
 wie jeder andere und kann Fragen überspringen, Prüfschritte zuschalten und das
@@ -584,6 +617,13 @@ Der Prüfplan eines Auftrags wird beim ersten Öffnen eingefroren. Ein späteres
 Daten-Update sortiert eine laufende Prüfung dadurch nicht um; neu
 hinzugekommene Schritte hängen hinten an und sind als „neu" markiert, statt
 lautlos zwischen bereits erledigte Zeilen zu rutschen.
+
+Der Selbsttest rät keine Fakten mehr, sondern läuft den Entscheidungsbaum ab:
+von jedem Varianten-Einstieg aus jede sichtbare Antwort, bei Mehrfachauswahl
+zusätzlich „nichts davon". Für jedes erreichte Ende muss ein Prüfplan entstehen,
+der alle `requires`-Kanten einhält. Vorher stand dort eine Handvoll fest
+verdrahteter Anlagen-Fakten — für ein Gerätepaket hätte die Prüfung nur
+„leerer Prüfplan" gemeldet und nichts geprüft.
 
 Zahlenfelder sind wie im Raumrechner bewusst **kein** `type="number"` — dieses
 Feld verschluckt das Komma der deutschen Tastatur, aus „0,4" würde 4. Bei einem
@@ -620,8 +660,9 @@ pruefung/
   js/
     sw-guard.js         räumt fremde Cache-Einträge dieser App weg (zuerst geladen)
     util.js             el(), Zahlen-/Komma-Behandlung, matches(), Fokusrettung
-    data.js             lädt die Datenpakete, baut Indizes, Welt-Terminologie
+    data.js             lädt die Datenpakete, baut Indizes, Varianten, Welt-Terminologie
     limits.js           Grenzwerte auflösen, formatieren, bewerten
+    intervals.js        Prüffristen: Richtwerte, Fälligkeitsdatum
     wizard.js           Entscheidungsbaum: Fragen überspringen, antworten, Replay
     plan.js             Prüfplan bauen, topologisch ordnen, Bewertungen ableiten
     store.js            Zustand, localStorage, Aufträge und Messergebnisse
@@ -636,7 +677,9 @@ pruefung/
     index.json          Registry: Datenstand, Welten, Grenzwerte, Normen, Wiki
     welten.json         EFH und Industrie: Labels, Begriffe, Akzent, Schwerpunkte
     grenzwerte.json     alle Grenzwerttabellen und Formeln, per ID referenzierbar
-    prueffristen.json   Richtwerte für Prüffristen (Datenbasis fürs spätere Modul)
-    normen/             ein Paket je Norm (Fragen, Prüfschritte, Protokollfelder)
-    wiki/               Messverfahren, Netzformen, Fehlerquellen, Grundlagen
+    prueffristen.json   Richtwerte für Prüffristen, getrennt nach Anlage und Gerät
+    normen/
+      anlagenpruefung.json   DIN VDE 0100-600 und 0105-100 als zwei Varianten
+      geraetepruefung.json   DIN EN 50678 und 50699 als zwei Varianten
+    wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen
 ```

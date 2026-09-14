@@ -105,6 +105,30 @@
     return verdict ? U.verdictLabel(verdict) : 'offen';
   }
 
+  /* Die Frist legt der Betreiber fest — die App bietet die Richtwerte an und
+   * rechnet das Datum aus, damit es im Protokoll steht und nicht auf einem
+   * Zettel im Schaltschrank. */
+  function intervalPicker(job, step) {
+    const presets = P.intervals.presetsFor(job.world, step.interval.scope);
+    const chosen = job.interval && job.interval.presetId;
+    const due = job.interval && job.interval.nextDue;
+    return el('div', { class: 'card-body' }, [
+      el('div', { class: 'chips' }, presets.map(preset => el('button', {
+        class: 'chip' + (chosen === preset.id ? ' active' : ''), type: 'button',
+        onClick: () => P.store.setInterval(job.id, chosen === preset.id ? null : preset),
+      }, preset.label + ' · ' + P.intervals.label(preset.intervalMonths)))),
+      due
+        ? el('div', { class: 'w-note' }, [
+            el('span', { class: 'sym' }, 'i'),
+            el('div', { class: 't' }, 'Nächste Prüfung: ' + P.util.formatDateDE(due)
+              + ' — Richtwert ' + P.intervals.label(job.interval.months)
+              + ' ab ' + (P.util.formatDateDE(job.protocol.datum) || 'heute') + '.'),
+          ])
+        : el('div', { class: 'hint-text' }, 'Ohne Auswahl bleibt das Protokoll ohne Fälligkeitsdatum.'),
+      el('div', { class: 'hint-text' }, 'Richtwerte aus der DGUV Vorschrift 3. Verbindlich ist die Festlegung des Betreibers aus der Gefährdungsbeurteilung.'),
+    ]);
+  }
+
   function stepDetail(job, pack, entries, entry) {
     const step = entry.step;
     const facts = job.session.facts;
@@ -181,6 +205,11 @@
       if (step.formulaRef) {
         children.push(el('div', { class: 'wiki-body' }, U.blocks([{ type: 'formula', formulaRef: step.formulaRef }], {})));
       }
+    }
+
+    if (step.interval) {
+      children.push(U.sectionHead('Nächste Prüffrist', 'Richtwert wählen'));
+      children.push(intervalPicker(job, step));
     }
 
     if (entry.checklist.length) {

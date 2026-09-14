@@ -43,10 +43,36 @@
       } catch { /* beschädigt — lieber frisch anfangen als abstürzen */ }
     }
     if (!S.state.world || !P.data.worldById.has(S.state.world)) S.state.world = P.data.defaultWorld;
-    for (const job of S.state.jobs) normalizeJob(job);
+    for (const job of S.state.jobs) migrateJob(normalizeJob(job));
     if (!S.state.jobs.some(j => j.id === S.state.activeJobId)) S.state.activeJobId = null;
     return S.state;
   };
+
+  /* Aus der ersten Fassung: ein Paket je Norm, keine Varianten. Die
+   * Erstprüfung ist seitdem eine Variante des Anlagenpakets — gespeicherte
+   * Aufträge werden umgehängt statt fallengelassen. */
+  const RENAMED = { 'vde-0100-600': 'anlage', 'vde-0105-100': 'anlage', 'en-50678-50699': 'geraet' };
+
+  function migrateJob(job) {
+    if (RENAMED[job.normId]) {
+      if (job.normId === 'vde-0100-600') {
+        job.variantId = job.variantId || 'erstpruefung';
+        job.session.facts.pruefanlass = job.session.facts.pruefanlass || 'erstpruefung';
+        job.session.facts.freischaltung = job.session.facts.freischaltung || 'ja';
+      }
+      job.normId = RENAMED[job.normId];
+    }
+    const pack = P.data.packById.get(job.normId);
+    if (pack && (!job.variantId || !pack.variantById.has(job.variantId))) {
+      job.variantId = pack.variants[0] ? pack.variants[0].id : null;
+    }
+    const variant = pack ? P.data.variant(job.normId, job.variantId) : null;
+    if (variant) {
+      job.session.entry = job.session.entry || variant.entry;
+      job.session.presetFacts = job.session.presetFacts || variant.presetFacts;
+    }
+    return job;
+  }
 
   function normalizeJob(job) {
     job.session = job.session || { cursor: null, facts: {}, history: [], extraSteps: [], tags: [], done: false, resultId: null };
@@ -88,7 +114,7 @@
     return job;
   };
 
-  S.newJob = function newJob(pack, world) {
+  S.newJob = function newJob(pack, variant, world) {
     const sticky = S.state.sticky || {};
     const protocol = {};
     for (const field of (pack.protocol && pack.protocol.fields) || []) {
@@ -99,8 +125,9 @@
       id: nid(),
       world: world || S.state.world,
       normId: pack.id,
+      variantId: variant ? variant.id : null,
       protocol,
-      session: P.wizard.start(pack, world || S.state.world),
+      session: P.wizard.start(pack, world || S.state.world, variant),
       plan: null,
       results: {},
       createdAt: Date.now(),
@@ -112,6 +139,47 @@
     S.save(true);
     notify();
     return job;
+  };
+
+  /* Geräteprüfung heißt: zwanzig gleichartige Geräte hintereinander. Die
+   * Kopfdaten und die Antworten bleiben, nur die gerätebezogenen Felder und
+   * die Messwerte werden geleert. */
+  S.duplicateJob = function duplicateJob(id) {
+    const src = S.job(id);
+    if (!src) return null;
+    const pack = P.data.packById.get(src.normId);
+    const protocol = Object.assign({}, src.protocol);
+    for (const field of (pack && pack.protocol && pack.protocol.fields) || []) {
+      if (field.perDevice) delete protocol[field.id];
+    }
+    const job = normalizeJob({
+      id: nid(),
+      world: src.world,
+      normId: src.normId,
+      variantId: src.variantId,
+      protocol,
+      session: JSON.parse(JSON.stringify(src.session)),
+      plan: src.plan ? src.plan.slice() : null,
+      results: {},
+      interval: { presetId: src.interval.presetId, months: src.interval.months, nextDue: null },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    S.state.jobs.unshift(job);
+    S.state.activeJobId = job.id;
+    S.state.tab = job.session.done ? 'plan' : 'wizard';
+    S.save(true);
+    notify();
+    return job;
+  };
+
+  S.setInterval = function setInterval(jobId, preset) {
+    return S.patchJob(jobId, job => {
+      const start = job.protocol.datum || P.util.todayISO();
+      job.interval = preset
+        ? { presetId: preset.id, months: preset.intervalMonths, nextDue: P.intervals.computeDue(start, preset.intervalMonths) }
+        : { presetId: null, months: null, nextDue: null };
+    });
   };
 
   S.removeJob = function removeJob(id) {

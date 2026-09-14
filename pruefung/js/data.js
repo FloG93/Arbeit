@@ -39,10 +39,35 @@
     return obj;
   }
 
+  /* Ein Paket kann mehrere Normen bedienen, die sich nur im Prüfanlass
+   * unterscheiden — 0100-600 und 0105-100 teilen rund 80 % der Prüfschritte.
+   * Jede Variante bringt ihren eigenen Einstiegsknoten und ihre Vorab-Fakten
+   * mit; für die Engine sind das ganz gewöhnliche Fakten. Ein Paket ohne
+   * variants bekommt eine implizite aus seinen eigenen Feldern. */
+  function normalizeVariants(pack) {
+    const declared = pack.variants && pack.variants.length ? pack.variants : [{ id: 'standard' }];
+    pack.variants = declared.map(v => ({
+      id: v.id,
+      packId: pack.id,
+      norm: v.norm || pack.norm,
+      title: v.title || pack.title,
+      short: v.short || pack.short || v.norm || pack.norm,
+      edition: v.edition || pack.edition,
+      status: v.status || pack.status,
+      worlds: v.worlds || pack.worlds,
+      entry: v.entry || pack.entry,
+      presetFacts: v.presetFacts || {},
+      plannedNote: v.plannedNote || pack.plannedNote,
+    }));
+    pack.variantById = byId(pack.variants);
+    return pack;
+  }
+
   function normalizePack(pack) {
     pack.nodes = pack.nodes || [];
     pack.steps = pack.steps || [];
     pack.phases = pack.phases || [];
+    normalizeVariants(pack);
     for (const node of pack.nodes) {
       normalizeWhen(node);
       for (const opt of node.options || []) normalizeWhen(opt);
@@ -101,6 +126,14 @@
   };
 
   D.activePacks = () => D.packs.filter(p => p.status === 'aktiv');
+
+  /* Die Normauswahl zeigt Varianten, nicht Pakete: eine Karte je Norm. */
+  D.variants = () => D.packs.flatMap(pack => pack.variants.map(v => ({ variant: v, pack })));
+  D.variant = function variant(packId, variantId) {
+    const pack = D.packById.get(packId);
+    if (!pack) return null;
+    return (variantId && pack.variantById.get(variantId)) || pack.variants[0] || null;
+  };
   D.world = id => D.worldById.get(id) || D.worldById.get(D.defaultWorld) || D.worlds[0];
 
   /* Terminologie je Welt: aus "Verteiler" wird im Industrie-Kontext
@@ -109,6 +142,12 @@
     const world = D.world(worldId);
     const value = world && world.terms ? world.terms[key] : null;
     return value || fallback || key;
+  };
+
+  D.jobTitle = function jobTitle(job) {
+    const pack = D.packById.get(job.normId);
+    const field = (pack && pack.protocol && pack.protocol.titleField) || 'objekt';
+    return job.protocol[field] || (field === 'geraet' ? 'Gerät ohne Bezeichnung' : 'Prüfung ohne Objekt');
   };
 
   D.wikiFor = function wikiFor(ids) {

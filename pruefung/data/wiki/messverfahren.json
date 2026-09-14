@@ -183,6 +183,28 @@
       "related": ["s-drehfeld"]
     },
     {
+      "id": "messverfahren-differenzstrom",
+      "title": "Differenzstrommessung an der Anlage",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["messung", "wiederholung", "0105-100"],
+      "summary": "Der Ersatz für die Isolationsmessung, wenn die Anlage nicht freigeschaltet werden kann.",
+      "search": "differenzstrom leckstrom zangenmessung wiederholungspruefung ohne freischaltung",
+      "body": [
+        { "type": "p", "text": "Gemessen wird die Summe aller Ströme in den aktiven Leitern eines Stromkreises. Ist sie ungleich null, fließt ein Teil des Stroms über den Schutzleiter oder über Erde zurück — genau das, was die Isolationsmessung im freigeschalteten Zustand sichtbar macht." },
+        { "type": "steps", "items": [
+          "Alle aktiven Leiter gemeinsam umfassen: L und N, bei Drehstrom alle drei Außenleiter und N.",
+          "Betriebszustand notieren — angeschlossene Verbraucher verändern den Wert erheblich.",
+          "Wert mit der letzten Prüfung vergleichen; der Trend sagt mehr als der Einzelwert.",
+          "Bei auffälligem Ergebnis stromkreisweise nachmessen."
+        ] },
+        { "type": "limits", "limitRef": "anlage-differenzstrom" },
+        { "type": "note", "text": "Ein Drittel des Nennfehlerstroms des vorgeschalteten RCD ist die praktische Aufmerksamkeitsschwelle: bei 30 mA also etwa 10 mA — darüber wird eine Fehlauslösung im Betrieb wahrscheinlich." },
+        { "type": "warn", "text": "Die Messung ersetzt die Isolationsmessung nur bei der Wiederholungsprüfung. Vor der Erstinbetriebnahme ist sie kein Ersatz." }
+      ],
+      "related": ["s-w-differenzstrom", "fehler-differenzstrom-verbraucher", "messverfahren-isolationswiderstand"]
+    },
+    {
       "id": "messverfahren-spannungsfall",
       "title": "Spannungsfall",
       "kind": "messverfahren",

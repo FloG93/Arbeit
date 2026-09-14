@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "collection": "geraete",
+  "entries": [
+    {
+      "id": "begriff-50678-50699",
+      "title": "50678 oder 50699 — welche Norm?",
+      "kind": "begriff",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "begriff"],
+      "summary": "Der Anlass entscheidet: nach einer Instandsetzung die 50678, im laufenden Betrieb die 50699.",
+      "search": "50678 50699 0701 0702 unterschied instandsetzung wiederholung geraetepruefung",
+      "body": [
+        { "type": "kv", "items": [
+          { "k": "DIN EN 50678 (VDE 0701)", "v": "Prüfung nach Instandsetzung oder Änderung. Sie weist nach, dass die Reparatur die Sicherheit wiederhergestellt hat — deshalb gehört hier auch eine Spannungsprüfung dazu, wenn isolierende Teile betroffen waren." },
+          { "k": "DIN EN 50699 (VDE 0702)", "v": "Wiederkehrende Prüfung im Betrieb. Sie weist nach, dass das Gerät seit der letzten Prüfung sicher geblieben ist." }
+        ] },
+        { "type": "p", "text": "Beide Normen lösen die frühere DIN VDE 0701-0702 ab. Der Messumfang ist weitgehend gleich: Besichtigen, Schutzleiterwiderstand bei Schutzklasse I, Isolationswiderstand, Ableitströme, Funktion." },
+        { "type": "note", "text": "Im Zweifel gilt: Wurde am Gerät gearbeitet, ist es die 50678. Wurde nur die Frist erreicht, die 50699." }
+      ],
+      "related": ["begriff-schutzklassen", "prueffristen-uebersicht"]
+    },
+    {
+      "id": "messverfahren-geraet-schutzleiter",
+      "title": "Schutzleiterwiderstand am Gerät",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "messung", "niederohm"],
+      "summary": "Mindestens 200 mA Prüfstrom — und die Leitung während der Messung über die ganze Länge bewegen.",
+      "search": "schutzleiterwiderstand geraet rpe leitung bewegen kabeltrommel 0,3 ohm",
+      "body": [
+        { "type": "p", "text": "Gemessen wird vom Schutzkontakt des Steckers zu jedem berührbaren Metallteil des Gerätes. Der zulässige Wert hängt an der Länge der Anschlussleitung, weil längere Leitungen von sich aus mehr Widerstand haben." },
+        { "type": "limits", "limitRef": "geraet-schutzleiterwiderstand" },
+        { "type": "formula", "formulaRef": "rpe-leitung" },
+        { "type": "steps", "items": [
+          "Messleitungen abgleichen — 0,2 Ω Eigenwiderstand sind bei einem Grenzwert von 0,3 Ω zwei Drittel des Budgets.",
+          "Kabeltrommel vollständig abrollen.",
+          "Leitung während der Messung bewegen, besonders an Stecker und Geräteeinführung.",
+          "Springt der Wert dabei, ist eine Ader angebrochen — auch wenn der Ruhewert passt."
+        ] },
+        { "type": "warn", "text": "Ein nicht bewegtes Kabel verbirgt genau den Fehler, der im Betrieb gefährlich wird: den Aderbruch im Knickbereich." }
+      ],
+      "related": ["s-g-schutzleiter", "fehler-geraet-leitung-nicht-bewegt", "grenzwerte-geraet"]
+    },
+    {
+      "id": "messverfahren-ableitstrom",
+      "title": "Ableitströme: drei Verfahren",
+      "kind": "messverfahren",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "messung", "ableitstrom"],
+      "summary": "Ersatzableitstrom, Differenzstrom, direktes Verfahren — zulässig ist jedes, vergleichbar sind sie nicht.",
+      "search": "ableitstrom ersatzableitstrom differenzstrom direktes verfahren schutzleiterstrom beruehrungsstrom",
+      "body": [
+        { "type": "table", "columns": [
+          { "id": "v", "label": "Verfahren" },
+          { "id": "betrieb", "label": "Gerät" },
+          { "id": "wofuer", "label": "Geeignet für" }
+        ], "rows": [
+          { "v": "Ersatzableitstrom", "betrieb": "stromlos", "wofuer": "Standard der Prüfgeräte, sicher und schnell; ungeeignet bei Geräten mit Elektronik, die erst im Betrieb leitet" },
+          { "v": "Differenzstrom", "betrieb": "in Betrieb", "wofuer": "erfasst auch Ströme über fremde Erdverbindungen — realistischster Wert" },
+          { "v": "Direktes Verfahren", "betrieb": "in Betrieb", "wofuer": "Messung über Shunt im Schutzleiter, braucht eine saubere Trennung vom Netz-PE" }
+        ] },
+        { "type": "limits", "limitRef": "geraet-schutzleiterstrom" },
+        { "type": "limits", "limitRef": "geraet-beruehrungsstrom" },
+        { "type": "formula", "formulaRef": "ipe-heizgeraet" },
+        { "type": "steps", "items": [
+          "Verfahren wählen und im Protokoll vermerken — ohne diese Angabe ist der Wert nicht nachvollziehbar.",
+          "Netzstecker in beiden Steckrichtungen messen, den größeren Wert bewerten.",
+          "Bei Geräten in Betrieb auf anlaufende Teile achten."
+        ] },
+        { "type": "note", "text": "IT-Geräte mit mehreren Netzteilen überschreiten die 3,5 mA bauartbedingt. Dann gilt die Herstellerangabe, und das Gerät braucht einen festen Anschluss oder eine Kennzeichnung." }
+      ],
+      "related": ["s-g-schutzleiterstrom", "s-g-beruehrungsstrom", "fehler-ersatzableitstrom-elektronik"]
+    },
+    {
+      "id": "grenzwerte-geraet",
+      "title": "Grenzwerte: Geräteprüfung",
+      "kind": "grenzwerte",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "grenzwerte"],
+      "summary": "Schutzleiterwiderstand, Isolationswiderstand und Ableitströme auf einen Blick.",
+      "search": "grenzwerte geraet 0,3 ohm 1 megaohm 3,5 ma 0,5 ma schutzklasse tabelle",
+      "body": [
+        { "type": "limits", "limitRef": "geraet-schutzleiterwiderstand" },
+        { "type": "limits", "limitRef": "geraet-iso" },
+        { "type": "limits", "limitRef": "geraet-schutzleiterstrom" },
+        { "type": "limits", "limitRef": "geraet-beruehrungsstrom" },
+        { "type": "note", "text": "Die Isolationsmessung darf bei Geräten mit Elektronik auf 250 V DC reduziert werden, wenn der Hersteller es verlangt — dann gehört die Prüfspannung ins Protokoll." }
+      ],
+      "related": ["s-g-schutzleiter", "s-g-iso", "begriff-schutzklassen"]
+    },
+    {
+      "id": "fehler-geraet-leitung-nicht-bewegt",
+      "title": "Leitung während der Messung nicht bewegt",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "niederohm"],
+      "summary": "Der Aderbruch im Knickbereich zeigt sich nur, wenn die Leitung bei der Messung bewegt wird.",
+      "search": "aderbruch knickschutz leitung bewegen schutzleiter springt",
+      "body": [
+        { "type": "p", "text": "Eine angebrochene Schutzleiterader liegt in Ruhe oft noch an und misst unauffällig. Erst Zug und Biegung an Stecker und Geräteeinführung trennen den Kontakt — also genau das, was im Betrieb ständig passiert." },
+        { "type": "bullets", "items": [
+          "Leitung über die ganze Länge durch die Hand laufen lassen, während das Prüfgerät misst.",
+          "An Stecker und Tülle besonders sorgfältig biegen.",
+          "Prüfgeräte mit Grenzwertüberwachung geben dabei akustisch Alarm — hinhören statt nur ablesen."
+        ] },
+        { "type": "warn", "text": "Ein springender Wert ist immer ein Mangel, auch wenn der Ruhewert innerhalb des Grenzwerts liegt." }
+      ],
+      "related": ["messverfahren-geraet-schutzleiter", "s-g-schutzleiter"]
+    },
+    {
+      "id": "fehler-geraet-nicht-eingeschaltet",
+      "title": "Gerät bei der Isolationsmessung nicht eingeschaltet",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "riso"],
+      "summary": "Ein offener Geräteschalter trennt genau den Teil ab, der geprüft werden soll.",
+      "search": "isolationsmessung geraet schalter ein stellung zu gut zu hoch",
+      "body": [
+        { "type": "p", "text": "Hinter dem Netzschalter liegt der größte Teil der Geräteisolierung. Bleibt der Schalter aus, misst man nur die Zuleitung — mit hervorragendem Ergebnis und ohne Aussage über das Gerät." },
+        { "type": "bullets", "items": [
+          "Schalter in Ein-Stellung bringen, bei mehrstufigen Schaltern alle Stufen durchfahren.",
+          "Geräte mit elektronischem Ein-Aus (Softtouch) lassen sich nicht so schalten: dort auf Ersatzableitstrom oder Differenzstrom ausweichen und das im Protokoll vermerken.",
+          "Ein auffällig perfekter Wert ist ein Grund zum Nachsehen, kein Grund zur Freude."
+        ] }
+      ],
+      "related": ["s-g-iso", "messverfahren-isolationswiderstand"]
+    },
+    {
+      "id": "fehler-ersatzableitstrom-elektronik",
+      "title": "Ersatzableitstrom bei Geräten mit Elektronik",
+      "kind": "fehler",
+      "worlds": ["efh", "industrie"],
+      "tags": ["geraet", "ableitstrom"],
+      "summary": "Das Verfahren speist eine Ersatzspannung ein — Schaltnetzteile verhalten sich dabei anders als im Betrieb.",
+      "search": "ersatzableitstrom schaltnetzteil zu hoch zu niedrig it geraet verfahren wechseln",
+      "body": [
+        { "type": "p", "text": "Beim Ersatzableitstromverfahren ist das Gerät stromlos; die Messspannung liegt zwischen den kurzgeschlossenen Netzpolen und dem Schutzleiter. Geräte, deren Ableitpfad erst im Betrieb entsteht, liefern dann zu kleine Werte — Geräte mit Y-Kondensatoren dagegen oft zu große." },
+        { "type": "bullets", "items": [
+          "Bei unplausiblem Ergebnis auf Differenzstrom oder das direkte Verfahren wechseln.",
+          "Das verwendete Verfahren immer ins Protokoll schreiben.",
+          "Werte verschiedener Verfahren nicht miteinander vergleichen — auch nicht über die Jahre hinweg."
+        ] }
+      ],
+      "related": ["messverfahren-ableitstrom", "s-g-schutzleiterstrom"]
+    }
+  ]
+}

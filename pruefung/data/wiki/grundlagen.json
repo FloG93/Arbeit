@@ -93,9 +93,11 @@
           { "k": "Schutzklasse II", "v": "Schutzisoliert, kein Schutzleiter. Geprüft werden Isolationswiderstand und Berührungsstrom." },
           { "k": "Schutzklasse III", "v": "Schutzkleinspannung (SELV). Sichtprüfung und Nachweis der Versorgung aus einer Sicherheitsquelle." }
         ] },
-        { "type": "p", "text": "Diese App deckt im aktuellen Stand die Anlagenprüfung ab. Der Entscheidungsbaum für die Geräteprüfung nach DIN EN 50678 / 50699 verzweigt genau über diese drei Fälle und folgt als eigenes Norm-Paket." }
+        { "type": "p", "text": "Der Assistent für die Geräteprüfung fragt die Schutzklasse als Erstes ab: sie entscheidet, ob ein Schutzleiterwiderstand gemessen wird und ob der Schutzleiterstrom oder der Berührungsstrom zu bewerten ist." },
+        { "type": "limits", "limitRef": "geraet-iso" },
+        { "type": "link", "to": "begriff-50678-50699", "label": "50678 oder 50699 — welche Norm?" }
       ],
-      "related": ["begriff-ortsfest-ortsveraenderlich"]
+      "related": ["begriff-ortsfest-ortsveraenderlich", "grenzwerte-geraet", "begriff-50678-50699"]
     },
     {
       "id": "begriff-rcd-typen",
@@ -153,7 +155,7 @@
       "body": [
         { "type": "p", "text": "Die Fristen unten sind Richtwerte. Verbindlich ist die Festlegung des Betreibers auf Basis der Gefährdungsbeurteilung — bei rauem Betrieb kürzer, bei nachweisbar niedriger Fehlerquote länger." },
         { "type": "intervals" },
-        { "type": "note", "text": "Fristenverwaltung mit Erinnerung ist für eine späterere Ausbaustufe dieser App vorgesehen; die Datenbasis dafür liegt schon in data/prueffristen.json." }
+        { "type": "note", "text": "Im Abschlussschritt jeder Prüfung lässt sich einer dieser Richtwerte wählen — die App rechnet daraus das Fälligkeitsdatum und schreibt es in die Auftragsliste und ins Protokoll." }
       ],
       "related": ["s-pruefplakette", "begriff-maschinenpruefung"]
     }
