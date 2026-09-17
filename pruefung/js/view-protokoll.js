@@ -9,6 +9,27 @@
 
   P.views = P.views || {};
 
+  /* Ein Satz über die Herkunft der Grenzwerte, mit denen hier bewertet wurde.
+   * Steht auf dem Bogen über der Unterschrift und auf dem Bildschirm, damit
+   * niemand ungeprüfte Zahlen für gesicherte hält. */
+  function reviewNote(entries) {
+    const status = P.limits.reviewStatus(entries.map(e => e.limit && e.limit.tableId));
+    if (!status.gesamt) return null;
+    if (!status.offen) {
+      const teile = ['Grenzwerte gegengeprüft'];
+      if (status.pruefer.length) teile.push('von ' + status.pruefer.join(', '));
+      if (status.datum) teile.push('am ' + formatDateDE(status.datum));
+      if (status.editions.length) teile.push('gegen ' + status.editions.join(', '));
+      return { text: teile.join(' ') + '.', offen: false };
+    }
+    return {
+      text: 'Grenzwerte der Datenbasis nicht vollständig gegengeprüft: '
+        + status.offen + ' von ' + status.gesamt + ' verwendeten Tabellen ohne Nachweis gegen die Normfassung. '
+        + 'Die Bewertungen sind insoweit eine Arbeitshilfe und ersetzen die eigene Prüfung nicht.',
+      offen: true,
+    };
+  }
+
   function protocolValue(pack, job, field) {
     if (field.kind === 'fact') return P.plan.factLabel(pack, job.session, field.factKey);
     if (field.kind === 'date') return formatDateDE(job.protocol[field.id]);
@@ -92,6 +113,14 @@
       ]))));
     }
 
+    const review = reviewNote(entries);
+    if (review) {
+      children.push(el('div', { class: review.offen ? 'w-warn' : 'w-note' }, [
+        el('span', { class: 'sym' }, review.offen ? '!' : 'i'),
+        el('div', { class: 't' }, review.text),
+      ]));
+    }
+
     children.push(el('div', { class: 'footnote' }, P.data.registry.disclaimer));
 
     const bottom = U.bottomBar([
@@ -152,6 +181,10 @@
             + (P.intervals.byId(job.interval.presetId) ? ', ' + P.intervals.byId(job.interval.presetId).label : '')
             + '). Verbindlich ist die Festlegung des Betreibers.')
         : null,
+      (() => {
+        const review = reviewNote(P.plan.ensure(job, pack));
+        return review ? el('p', { class: 'p-note' }, review.text) : null;
+      })(),
       el('div', { class: 'p-sign' }, [
         el('div', {}, 'Prüfer'),
         el('div', {}, 'Auftraggeber / Betreiber'),

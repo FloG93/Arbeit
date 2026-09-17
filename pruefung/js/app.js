@@ -259,6 +259,13 @@
       }
     }
 
+    // Ungeprüfte Grenzwerte sind kein Defekt, sondern ein Zustand — aber einer,
+    // den man sehen muss. Deshalb Statuszeile statt Befund.
+    const ungeprueft = (P.data.limits.tables || []).filter(t => !(t.reviewed && t.reviewed.date));
+    const reviewStatus = ungeprueft.length
+      ? ungeprueft.length + ' von ' + (P.data.limits.tables || []).length + ' Grenzwerttabellen sind nicht gegen die Normfassung geprüft: ' + ungeprueft.map(t => t.id).join(', ')
+      : 'Alle Grenzwerttabellen sind gegengeprüft.';
+
     for (const table of (P.data.limits.tables || [])) {
       const defaults = (table.rows || []).filter(r => r.default);
       if (defaults.length !== 1) note('Grenzwert', 'Tabelle „' + table.id + '“ hat ' + defaults.length + ' default-Zeilen (genau eine erwartet)');
@@ -309,6 +316,7 @@
       console.group('[Prüfassistent] Selbsttest');
       if (problems.length) problems.forEach(p => console.warn(p));
       else console.log('Datenbasis in Ordnung: Verweise, Erreichbarkeit, Grenzwerte und Reihenfolge geprüft.');
+      console.log('Prüfstand: ' + reviewStatus);
       if (ok != null) console.log(ok);
       console.groupEnd();
       return problems;

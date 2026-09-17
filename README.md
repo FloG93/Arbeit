@@ -561,6 +561,21 @@ Danach zwei Pflichten: die `CACHE`-Version in `pruefung/sw.js` hochzählen (sons
 liefert der Service Worker installierten Geräten weiter den alten Stand) und
 `datenstand` in `data/index.json` setzen.
 
+**Prüfstand der Zahlen.** Jede Grenzwerttabelle trägt einen `reviewed`-Block:
+
+```json
+"reviewed": { "by": "M. Keller", "date": "2026-09-17",
+              "edition": "DIN VDE 0100-600:2017-06", "fundstelle": "Tab. 61.1" }
+```
+
+Solange `date` leer ist, zeigt die App an jeder Stelle, die diese Tabelle
+darstellt, ein Badge **„Datenbasis ungeprüft"**, und das Protokoll nennt über dem
+Unterschriftsfeld, wie viele der verwendeten Tabellen ohne Nachweis sind. Ist der
+Block gefüllt, steht dort stattdessen, wer wann gegen welche Ausgabe geprüft hat.
+Die Werte stammen aus öffentlich zugänglichen Zusammenstellungen — sie sind eine
+Arbeitshilfe, bis jemand sie mit der Norm in der Hand bestätigt hat, und die App
+behauptet nichts anderes.
+
 Die wichtigsten Felder:
 
 | Feld | Bedeutung |

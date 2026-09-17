@@ -130,6 +130,24 @@
 
   U.bottomBar = children => el('div', { class: 'bottom-bar' }, children);
 
+  /* Sagt, woran man ist: solange niemand die Zahlen gegen die Normfassung
+   * gehalten hat, steht das an jeder Tabelle. Die App soll über ihren eigenen
+   * Stand nicht schweigen — daraufhin wird ein Protokoll unterschrieben. */
+  U.isReviewed = rev => !!(rev && rev.date);
+
+  U.reviewLine = function reviewLine(rev) {
+    if (!U.isReviewed(rev)) {
+      return el('div', { class: 'chips', style: { margin: '.125rem 0' } }, [
+        el('span', { class: 'badge grenzwertig' }, '⚠ Datenbasis ungeprüft'),
+      ]);
+    }
+    const parts = ['geprüft'];
+    if (rev.by) parts.push('von ' + rev.by);
+    parts.push('am ' + P.util.formatDateDE(rev.date));
+    if (rev.edition) parts.push('gegen ' + rev.edition);
+    return el('div', { class: 'src' }, parts.join(' ') + (rev.fundstelle ? ' · ' + rev.fundstelle : ''));
+  };
+
   /* ─── Grenzwerttabellen und Wiki-Blöcke ───
    * Eine Grenzwerttabelle wird nur hier gerendert — aus grenzwerte.json. So
    * steht ein Grenzwert an genau einer Stelle im Repo, egal ob ihn ein
@@ -153,6 +171,7 @@
     const notes = (table.rows || []).filter(r => r.note).map(r => el('div', { class: 'src' }, r.label + ': ' + r.note));
     return el('div', { class: 'w-table' }, [
       table.title ? el('div', { class: 'cap' }, table.title) : null,
+      U.reviewLine(table.reviewed),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [el('thead', {}, head), el('tbody', {}, rows)])]),
       table.source ? el('div', { class: 'src' }, 'Quelle: ' + table.source) : null,
       notes,
@@ -182,6 +201,7 @@
       el('td', {}, preset.basis),
     ]));
     return el('div', { class: 'w-table' }, [
+      U.reviewLine(data.reviewed),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [
         el('thead', {}, el('tr', {}, [el('th', {}, 'Bereich'), el('th', {}, 'Richtwert'), el('th', {}, 'Grundlage')])),
         el('tbody', {}, rows),

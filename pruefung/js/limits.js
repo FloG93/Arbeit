@@ -12,6 +12,20 @@
   const L = {};
 
   L.table = id => P.data.limitTableById.get(id) || null;
+
+  /* Prüfstand der Grenzwerte, die in diesem Auftrag tatsächlich verwendet
+   * wurden — nicht der aller Tabellen: was nicht gemessen wurde, muss auch
+   * nicht gegengeprüft sein, damit das Protokoll sauber ist. */
+  L.reviewStatus = function reviewStatus(tableIds) {
+    const seen = new Set((tableIds || []).filter(Boolean));
+    const tables = Array.from(seen).map(L.table).filter(Boolean);
+    const offen = tables.filter(t => !(t.reviewed && t.reviewed.date));
+    const geprueft = tables.filter(t => t.reviewed && t.reviewed.date);
+    const editions = Array.from(new Set(geprueft.map(t => t.reviewed.edition).filter(Boolean)));
+    const pruefer = Array.from(new Set(geprueft.map(t => t.reviewed.by).filter(Boolean)));
+    const datum = geprueft.map(t => t.reviewed.date).sort().pop() || null;
+    return { gesamt: tables.length, offen: offen.length, geprueft: geprueft.length, editions, pruefer, datum };
+  };
   L.formula = id => P.data.formulaById.get(id) || null;
 
   function rowFor(table, key) {

@@ -6,6 +6,7 @@
   "tables": [
     {
       "id": "iso-nach-nennspannung",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Mindest-Isolationswiderstand nach Nennspannung",
       "source": "DIN VDE 0100-600",
       "keyLabel": "Nennspannung des Stromkreises",
@@ -22,6 +23,7 @@
     },
     {
       "id": "rcd-ausloesezeit",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "RCD — zulässige Auslösezeiten",
       "source": "DIN VDE 0100-600 / DIN EN 61008, 61009",
       "keyLabel": "Bauart und Prüfstrom",
@@ -34,6 +36,7 @@
     },
     {
       "id": "rcd-ausloesestrom",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "RCD — zulässiger Auslösestrom",
       "source": "DIN VDE 0100-600",
       "keyLabel": "Bauart",
@@ -43,6 +46,7 @@
     },
     {
       "id": "rcd-ausloesestrom-abs",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "RCD — zulässiger Auslösestrom in mA",
       "source": "Abgeleitet aus 0,5 bis 1,0 × IΔn",
       "keyLabel": "Nennfehlerstrom IΔn",
@@ -55,6 +59,7 @@
     },
     {
       "id": "abschaltzeit",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Zulässige Abschaltzeiten (Schutz durch automatische Abschaltung)",
       "source": "DIN VDE 0100-410",
       "keyLabel": "Netzform und Stromkreis",
@@ -67,6 +72,7 @@
     },
     {
       "id": "schutzleiter-durchgang",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Schutzleiter- und Verbindungswiderstand (Niederohmmessung)",
       "source": "Richtwert, DIN VDE 0100-600",
       "keyLabel": "Fall",
@@ -77,6 +83,7 @@
     },
     {
       "id": "erdungswiderstand-tt",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Erdungswiderstand RA im TT-System",
       "source": "Berechnet aus RA ≤ 50 V / IΔn (DIN VDE 0100-410)",
       "keyLabel": "Nennfehlerstrom des vorgeschalteten RCD",
@@ -89,6 +96,7 @@
     },
     {
       "id": "spannungsfall",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Spannungsfall vom Übergabepunkt bis zum Verbrauchsmittel",
       "source": "Richtwerte, DIN VDE 0100-520 Beiblatt",
       "keyLabel": "Art des Stromkreises",
@@ -99,6 +107,7 @@
     },
     {
       "id": "anlage-differenzstrom",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Differenzstrom einer Anlage im Betrieb",
       "source": "Richtwert für die Bewertung, DIN VDE 0105-100",
       "keyLabel": "Fall",
@@ -108,6 +117,7 @@
     },
     {
       "id": "geraet-schutzleiterwiderstand",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Schutzleiterwiderstand ortsveränderlicher Betriebsmittel",
       "source": "DIN EN 50678 / DIN EN 50699",
       "keyLabel": "Länge der Anschlussleitung",
@@ -120,6 +130,7 @@
     },
     {
       "id": "geraet-iso",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Isolationswiderstand ortsveränderlicher Betriebsmittel",
       "source": "DIN EN 50678 / DIN EN 50699",
       "keyLabel": "Geräteart",
@@ -132,6 +143,7 @@
     },
     {
       "id": "geraet-schutzleiterstrom",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Schutzleiterstrom ortsveränderlicher Betriebsmittel",
       "source": "DIN EN 50678 / DIN EN 50699",
       "keyLabel": "Geräteart",
@@ -142,6 +154,7 @@
     },
     {
       "id": "geraet-beruehrungsstrom",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Berührungsstrom ortsveränderlicher Betriebsmittel",
       "source": "DIN EN 50678 / DIN EN 50699",
       "keyLabel": "Fall",
