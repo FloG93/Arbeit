@@ -1,0 +1,421 @@
+<title>Grenzwert-Abgleich</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --ground:#f6f7f9;
+  --surface:#ffffff;
+  --surface-2:#eef1f5;
+  --line:rgba(16,24,40,.12);
+  --line-strong:rgba(16,24,40,.24);
+  --ink:#10151c;
+  --ink-2:#39414d;
+  --muted:#5b6472;
+  --accent:#1f6fd0;
+  --accent-soft:rgba(31,111,208,.10);
+  --ok:#0f7a4f;
+  --ok-soft:rgba(15,122,79,.10);
+  --abw:#c0202a;
+  --abw-soft:rgba(192,32,42,.09);
+  --offen:#8a5a00;
+  --offen-soft:rgba(138,90,0,.10);
+  --on-accent:#ffffff;
+  --ui:'Hanken Grotesk',system-ui,-apple-system,sans-serif;
+  --display:'Space Grotesk','Hanken Grotesk',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1116;
+    --surface:#161b22;
+    --surface-2:#1d232c;
+    --line:rgba(255,255,255,.10);
+    --line-strong:rgba(255,255,255,.22);
+    --ink:#f2f5f9;
+    --ink-2:#d7dde5;
+    --muted:#98a2b3;
+    --accent:#5ba8f0;
+    --accent-soft:rgba(91,168,240,.14);
+    --on-accent:#0b1016;
+    --ok:#5bd6a0;
+    --ok-soft:rgba(91,214,160,.14);
+    --abw:#f0676c;
+    --abw-soft:rgba(240,103,108,.14);
+    --offen:#e9b44c;
+    --offen-soft:rgba(233,180,76,.14);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1116;
+  --surface:#161b22;
+  --surface-2:#1d232c;
+  --line:rgba(255,255,255,.10);
+  --line-strong:rgba(255,255,255,.22);
+  --ink:#f2f5f9;
+  --ink-2:#d7dde5;
+  --muted:#98a2b3;
+  --accent:#5ba8f0;
+  --accent-soft:rgba(91,168,240,.14);
+  --on-accent:#0b1016;
+  --ok:#5bd6a0;
+  --ok-soft:rgba(91,214,160,.14);
+  --abw:#f0676c;
+  --abw-soft:rgba(240,103,108,.14);
+  --offen:#e9b44c;
+  --offen-soft:rgba(233,180,76,.14);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--ui);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:46rem;margin:0 auto;padding-inline:16px;padding-block:0 4rem}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── Kopf ── */
+.top{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:10;
+  background:var(--ground);border-bottom:1px solid var(--line);
+  padding-block:.875rem .625rem;
+}
+.top-inner{max-width:46rem;margin:0 auto;padding-inline:16px;display:flex;flex-direction:column;gap:.625rem}
+h1{font:600 1.375rem/1.2 var(--display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);font-size:.875rem;max-width:42rem}
+.bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0%;transition:width .25s ease}
+.counts{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;font:500 .8125rem/1 var(--display);color:var(--muted)}
+.counts b{color:var(--ink);font-weight:600}
+.filters{display:flex;gap:.375rem;flex-wrap:wrap}
+.chip{
+  min-height:2.25rem;padding:0 .75rem;border-radius:99px;cursor:pointer;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);
+  font:600 .8125rem/1 var(--ui);
+}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+/* ── Abschnitte ── */
+section{margin-top:2rem}
+.sec-head{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.75rem}
+.sec-norm{font:600 1.0625rem/1.25 var(--display);color:var(--ink)}
+.sec-sub{font-size:.8125rem;color:var(--muted)}
+.sec-meta{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.5rem}
+label{font:500 .75rem/1.3 var(--ui);color:var(--muted)}
+input[type=text],textarea{
+  font:inherit;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:8px;
+  padding:.5rem .625rem;min-height:2.5rem;width:100%;
+}
+textarea{min-height:3.25rem;resize:vertical;line-height:1.45}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
+.field{display:flex;flex-direction:column;gap:.25rem;flex:1 1 12rem;min-width:0}
+
+/* ── Karten ── */
+.list{display:flex;flex-direction:column;gap:.625rem}
+.item{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:.875rem;display:flex;flex-direction:column;gap:.625rem;
+}
+.item[data-verdict="ok"]{border-left:3px solid var(--ok)}
+.item[data-verdict="abweichend"]{border-left:3px solid var(--abw)}
+.item[data-verdict="fehlt"]{border-left:3px solid var(--offen)}
+.item-head{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.kind{
+  font:600 .6875rem/1.4 var(--ui);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);
+}
+.topic{font-size:.75rem;color:var(--muted);flex:1 1 auto;min-width:0}
+.claim{font:500 1.0625rem/1.45 var(--ui);color:var(--ink);font-variant-numeric:tabular-nums}
+.addr{font:500 .75rem/1.4 var(--display);color:var(--muted);word-break:break-word}
+.src{font-size:.75rem;color:var(--muted)}
+.hint{font-size:.8125rem;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:.5rem .625rem}
+.verdicts{display:grid;grid-template-columns:repeat(3,1fr);gap:.375rem}
+.vbtn{
+  min-height:3rem;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);
+  font:600 .875rem/1.2 var(--ui);display:flex;align-items:center;justify-content:center;gap:.375rem;
+  padding:.25rem;text-align:center;
+}
+.vbtn:hover{border-color:var(--accent)}
+.vbtn[aria-pressed="true"][data-v="ok"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.vbtn[aria-pressed="true"][data-v="abweichend"]{background:var(--abw-soft);border-color:var(--abw);color:var(--abw)}
+.vbtn[aria-pressed="true"][data-v="fehlt"]{background:var(--offen-soft);border-color:var(--offen);color:var(--offen)}
+.detail{display:flex;flex-wrap:wrap;gap:.625rem}
+.saved{font:500 .75rem/1 var(--display);color:var(--ok);opacity:0;transition:opacity .2s ease}
+.saved.on{opacity:1}
+
+.banner{
+  margin-top:1rem;border:1px solid var(--offen);background:var(--offen-soft);
+  border-radius:10px;padding:.75rem .875rem;font-size:.875rem;color:var(--ink);
+}
+.foot{margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.8125rem;color:var(--muted)}
+.empty{padding:2rem 0;text-align:center;color:var(--muted);font-size:.875rem}
+</style>
+
+<div class="top">
+  <div class="top-inner">
+    <h1>Grenzwert-Abgleich</h1>
+    <p class="lede">Jede Zahl, die der Prüfassistent als Grenzwert ausgibt — einmal gegen die Normfassung im Ordner gehalten. Was hier bestätigt oder korrigiert wird, pflege ich anschließend in die Datenbasis der App ein.</p>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="counts">
+      <span><b id="c-done">0</b> von <b id="c-all">0</b> geprüft</span>
+      <span id="c-abw"></span>
+      <span id="c-fehlt"></span>
+    </div>
+    <div class="filters" role="group" aria-label="Filter">
+      <button class="chip" type="button" id="f-alle" data-f="alle" aria-pressed="true">Alle</button>
+      <button class="chip" type="button" id="f-offen" data-f="offen" aria-pressed="false">Nur offene</button>
+      <button class="chip" type="button" id="f-abw" data-f="abw" aria-pressed="false">Abweichungen</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="banner"></div>
+  <div class="sec-meta" style="margin-top:1.25rem">
+    <div class="field">
+      <label for="pruefer">Wer prüft ab</label>
+      <input type="text" id="pruefer" placeholder="Name, kommt später ins reviewed-Feld">
+    </div>
+  </div>
+  <div id="sections"></div>
+  <p class="foot" id="foot">Die Seite zitiert keinen Normtext. Sie legt nur offen, was die App behauptet, damit du es gegen deine Ausgabe hältst. Stand der Datenbasis: <span id="stand"></span>.</p>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+(function () {
+  'use strict';
+  var DATA = JSON.parse(document.getElementById('data').textContent);
+  var ITEMS = DATA.items, GROUPS = DATA.groups;
+  var state = {};     // itemId -> {verdict, correct, fundstelle, note}
+  var meta = {};      // 'global' | groupId -> {pruefer|edition}
+  var db = null;
+  var filter = 'alle';
+  var timers = {};
+
+  var VERDICTS = [
+    { v: 'ok', label: 'stimmt' },
+    { v: 'abweichend', label: 'weicht ab' },
+    { v: 'fehlt', label: 'nicht gefunden' },
+  ];
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'class') n.className = v;
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2).toLowerCase(), v);
+      else n.setAttribute(k, v);
+    });
+    (Array.isArray(kids) ? kids : [kids]).forEach(function (c) {
+      if (c == null || c === false) return;
+      n.appendChild(c.nodeType ? c : document.createTextNode(String(c)));
+    });
+    return n;
+  }
+
+  function entry(id) {
+    if (!state[id]) state[id] = { verdict: '', correct: '', fundstelle: '', note: '' };
+    return state[id];
+  }
+
+  function counts() {
+    var done = 0, abw = 0, fehlt = 0;
+    ITEMS.forEach(function (it) {
+      var e = state[it.id];
+      if (!e || !e.verdict) return;
+      done++;
+      if (e.verdict === 'abweichend') abw++;
+      if (e.verdict === 'fehlt') fehlt++;
+    });
+    return { done: done, abw: abw, fehlt: fehlt, all: ITEMS.length };
+  }
+
+  function paintCounts() {
+    var c = counts();
+    document.getElementById('c-done').textContent = c.done;
+    document.getElementById('c-all').textContent = c.all;
+    document.getElementById('bar').style.width = (c.all ? Math.round(c.done / c.all * 100) : 0) + '%';
+    document.getElementById('c-abw').textContent = c.abw ? '· ' + c.abw + ' Abweichung' + (c.abw === 1 ? '' : 'en') : '';
+    document.getElementById('c-fehlt').textContent = c.fehlt ? '· ' + c.fehlt + ' nicht gefunden' : '';
+  }
+
+  function visible(it) {
+    var e = state[it.id];
+    if (filter === 'offen') return !e || !e.verdict;
+    if (filter === 'abw') return e && (e.verdict === 'abweichend' || e.verdict === 'fehlt');
+    return true;
+  }
+
+  function saveItem(id) {
+    var node = document.querySelector('[data-id="' + id + '"] .saved');
+    if (!db) { flashSaved(node, 'nur in diesem Fenster'); return; }
+    var body = Object.assign({}, entry(id), { at: new Date().toISOString() });
+    db.doc('review/' + id).set(body).then(function () {
+      flashSaved(node, 'gespeichert');
+    }).catch(function (err) {
+      flashSaved(node, err && err.code === 'invalid_argument' ? 'kein Schreibrecht' : 'nicht gespeichert');
+    });
+  }
+
+  function flashSaved(node, text) {
+    if (!node) return;
+    node.textContent = text;
+    node.classList.add('on');
+    clearTimeout(node._t);
+    node._t = setTimeout(function () { node.classList.remove('on'); }, 1800);
+  }
+
+  function saveMeta(key, body) {
+    meta[key] = Object.assign({}, meta[key], body);
+    if (!db) return;
+    db.doc('meta/' + key).set(Object.assign({}, meta[key], { at: new Date().toISOString() })).catch(function () {});
+  }
+
+  function debounce(key, fn) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, 700);
+  }
+
+  function itemCard(it) {
+    var e = entry(it.id);
+    var detail = el('div', { class: 'detail', hidden: e.verdict ? null : 'hidden' }, [
+      e.verdict === 'abweichend' ? field('Richtig wäre', 'text', e.correct, 'korrigierter Wert', function (v) {
+        entry(it.id).correct = v; debounce(it.id, function () { saveItem(it.id); });
+      }) : null,
+      field('Fundstelle', 'text', e.fundstelle, 'Abschnitt oder Tabelle', function (v) {
+        entry(it.id).fundstelle = v; debounce(it.id, function () { saveItem(it.id); });
+      }),
+      field('Bemerkung', 'area', e.note, 'optional', function (v) {
+        entry(it.id).note = v; debounce(it.id, function () { saveItem(it.id); });
+      }),
+    ]);
+
+    return el('article', { class: 'item', 'data-id': it.id, 'data-verdict': e.verdict || null }, [
+      el('div', { class: 'item-head' }, [
+        el('span', { class: 'kind' }, it.kind),
+        el('span', { class: 'topic' }, it.topic),
+        el('span', { class: 'saved' }, ''),
+      ]),
+      el('div', { class: 'claim' }, it.claim),
+      it.note ? el('div', { class: 'hint' }, it.note) : null,
+      el('div', { class: 'addr' }, it.addr + (it.source ? ' · laut Datenbasis: ' + it.source : '')),
+      el('div', { class: 'verdicts' }, VERDICTS.map(function (v) {
+        return el('button', {
+          class: 'vbtn', type: 'button', 'data-v': v.v,
+          'aria-pressed': e.verdict === v.v ? 'true' : 'false',
+          onclick: function () {
+            var cur = entry(it.id);
+            cur.verdict = cur.verdict === v.v ? '' : v.v;
+            if (cur.verdict !== 'abweichend') cur.correct = '';
+            saveItem(it.id);
+            render();
+          },
+        }, v.label);
+      })),
+      detail,
+    ]);
+  }
+
+  function field(labelText, kind, value, placeholder, onInput) {
+    var id = 'f' + Math.random().toString(36).slice(2, 9);
+    var input = el(kind === 'area' ? 'textarea' : 'input', {
+      type: kind === 'area' ? null : 'text', id: id, placeholder: placeholder,
+      oninput: function (ev) { onInput(ev.target.value); },
+    });
+    input.value = value || '';
+    return el('div', { class: 'field' }, [el('label', { for: id }, labelText), input]);
+  }
+
+  function render() {
+    var host = document.getElementById('sections');
+    var open = document.activeElement && document.activeElement.id;
+    host.textContent = '';
+    var shown = 0;
+
+    GROUPS.forEach(function (g) {
+      var mine = ITEMS.filter(function (it) { return it.group === g.id; }).filter(visible);
+      if (!mine.length) return;
+      shown += mine.length;
+      var editionId = 'ed-' + g.id;
+      var edition = el('input', {
+        type: 'text', id: editionId, placeholder: 'z. B. 2017-06',
+        oninput: function (ev) {
+          var val = ev.target.value;
+          debounce('meta-' + g.id, function () { saveMeta(g.id, { edition: val }); });
+        },
+      });
+      edition.value = (meta[g.id] && meta[g.id].edition) || '';
+
+      host.appendChild(el('section', {}, [
+        el('div', { class: 'sec-head' }, [
+          el('div', { class: 'sec-norm' }, g.norm),
+          el('div', { class: 'sec-sub' }, g.sub),
+          g.id === 'f' ? null : el('div', { class: 'sec-meta' }, [
+            el('div', { class: 'field' }, [
+              el('label', { for: editionId }, 'Ausgabestand deines Ordners'),
+              edition,
+            ]),
+          ]),
+        ]),
+        el('div', { class: 'list' }, mine.map(itemCard)),
+      ]));
+    });
+
+    if (!shown) host.appendChild(el('div', { class: 'empty' }, filter === 'offen' ? 'Nichts mehr offen.' : 'Keine Abweichungen eingetragen.'));
+    paintCounts();
+    if (open) { var again = document.getElementById(open); if (again) again.focus(); }
+  }
+
+  ['f-alle', 'f-offen', 'f-abw'].forEach(function (id) {
+    document.getElementById(id).addEventListener('click', function () {
+      filter = this.getAttribute('data-f');
+      ['f-alle', 'f-offen', 'f-abw'].forEach(function (other) {
+        var n = document.getElementById(other);
+        n.setAttribute('aria-pressed', n.getAttribute('data-f') === filter ? 'true' : 'false');
+      });
+      render();
+    });
+  });
+
+  var prueferInput = document.getElementById('pruefer');
+  prueferInput.addEventListener('input', function () {
+    var val = prueferInput.value;
+    debounce('meta-global', function () { saveMeta('global', { pruefer: val }); });
+  });
+
+  document.getElementById('stand').textContent = DATA.datenstand || '—';
+  render();
+
+  // Gespeicherten Stand nachladen, sobald die Ablage antwortet. Die Seite
+  // steht vorher schon — sie wartet nicht auf das Netz.
+  (window.claude && window.claude.use ? window.claude.use('db') : Promise.resolve(null))
+    .then(function (handle) {
+      db = handle;
+      if (!db) {
+        document.getElementById('banner').appendChild(el('div', { class: 'banner' },
+          'Speichern ist in dieser Ansicht nicht möglich. Eintragungen bleiben nur bis zum Neuladen erhalten.'));
+        return null;
+      }
+      return Promise.all([db.collection('review').get(), db.collection('meta').get()]);
+    })
+    .then(function (res) {
+      if (!res) return;
+      res[0].docs.forEach(function (d) { state[d.id] = Object.assign(entry(d.id), d.data()); });
+      res[1].docs.forEach(function (d) { meta[d.id] = d.data(); });
+      prueferInput.value = (meta.global && meta.global.pruefer) || '';
+      render();
+    })
+    .catch(function () {
+      document.getElementById('banner').appendChild(el('div', { class: 'banner' },
+        'Der gespeicherte Stand konnte nicht geladen werden. Neu laden hilft meistens.'));
+    });
+})();
+</script>
