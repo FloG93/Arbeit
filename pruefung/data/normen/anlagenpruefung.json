@@ -49,10 +49,15 @@
       { "id": "objekt", "label": "Objekt", "termKey": "objekt", "kind": "text", "required": true },
       { "id": "anlagenteil", "label": "Anlagenteil", "termKey": "verteiler", "kind": "text" },
       { "id": "auftraggeber", "label": "Auftraggeber", "termKey": "auftraggeber", "kind": "text" },
-      { "id": "pruefer", "label": "Prüfer", "kind": "text", "sticky": true },
+      { "id": "pruefer", "label": "Prüfer", "required": true, "kind": "text", "sticky": true },
       { "id": "messgeraet", "label": "Messgerät / Kalibrierung", "kind": "text", "sticky": true },
-      { "id": "datum", "label": "Prüfdatum", "kind": "date", "default": "today" }
-    ]
+      { "id": "datum", "label": "Prüfdatum", "required": true, "kind": "date", "default": "today" }
+    ],
+    "resultText": {
+      "mangel": "{n} festgestellt. Die Anlage entspricht in diesem Zustand nicht den Anforderungen; die Mängel sind zu beseitigen, bei unmittelbarer Gefahr vor der weiteren Nutzung.",
+      "offen": "{n} offen — das Protokoll ist unvollständig.",
+      "ok": "Kein Mangel festgestellt. Alle vorgesehenen Prüfschritte sind bewertet."
+    }
   },
   "nodes": [
     {
@@ -485,14 +490,16 @@
         "symbol": "Zs",
         "unit": "Ω",
         "inputs": [
-          { "id": "zs", "label": "Zs L–PE", "unit": "Ω" },
-          { "id": "zs_soll", "label": "Sollwert (aus Ia)", "unit": "Ω", "optional": true }
+          { "id": "zs", "label": "Zs L–PE", "unit": "Ω", "limitFromInput": "zs_soll" },
+          { "id": "zs_soll", "label": "Sollwert (aus Ia)", "unit": "Ω", "optional": true, "role": "reference",
+            "hint": "Zs,max = U0 / Ia — Zs wird gegen diesen Wert bewertet" }
         ],
         "aggregate": "max"
       },
       "formulaRef": "zs-max",
       "limitHint": "Zulässig ist Zs ≤ U0 / Ia — den Sollwert aus der Auslösekennlinie der Schutzeinrichtung ablesen. Beispiel B16: Ia = 80 A → Zs ≤ 2,87 Ω.",
-      "verdict": { "rule": "manual" },
+      "protocolSoll": "≤ U0 / Ia",
+      "verdict": { "rule": "limit" },
       "pitfalls": ["fehler-zs-messleitung", "fehler-rcd-vorgelagert"],
       "wiki": ["messverfahren-schleifenimpedanz", "grenzwerte-abschaltzeit"],
       "protocolLabel": "Schleifenimpedanz Zs",

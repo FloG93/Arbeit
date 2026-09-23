@@ -6,7 +6,7 @@
  * mit Begründung, aber nicht verriegelt: eine Prüfung im Feld läuft nie ganz
  * linear, und ein bevormundendes Werkzeug wird umgangen statt benutzt. */
 (function (P) {
-  const { el, num } = P.util;
+  const { el, num, plural } = P.util;
   const U = P.ui;
 
   P.views = P.views || {};
@@ -40,7 +40,7 @@
     const children = [];
 
     children.push(U.progress(sum.done, sum.total,
-      sum.done + ' von ' + sum.total + ' erledigt' + (sum.mangel ? ' · ' + sum.mangel + ' Mangel' : '') + (sum.grenzwertig ? ' · ' + sum.grenzwertig + ' grenzwertig' : '')));
+      sum.done + ' von ' + sum.total + ' erledigt' + (sum.mangel ? ' · ' + plural(sum.mangel, 'Mangel', 'Mängel') : '') + (sum.grenzwertig ? ' · ' + sum.grenzwertig + ' grenzwertig' : '')));
 
     let lastPhase = null;
     let nr = 0;
@@ -58,9 +58,14 @@
       const result = job.results[step.id];
       const verdict = P.plan.verdict(pack, step, facts, result);
       const blocked = entry.blockedBy.length > 0;
-      const sub = blocked
-        ? 'Erst „' + (pack.stepById.get(entry.blockedBy[0]) || {}).title + '“ — ' + (step.requiresReason || 'Vorbedingung offen')
-        : subtitleFor(entry, result, verdict);
+      const overridden = P.plan.overridden(pack, step, facts, result);
+      // Ein überstimmter Messmangel wiegt schwerer als eine offene
+      // Vorbedingung — er steht deshalb vorn.
+      const sub = overridden
+        ? 'Von Hand „' + U.verdictLabel(result.verdict) + '“ — Messwert außerhalb des Grenzwerts'
+        : blocked
+          ? 'Erst „' + (pack.stepById.get(entry.blockedBy[0]) || {}).title + '“ — ' + (step.requiresReason || 'Vorbedingung offen')
+          : subtitleFor(entry, result, verdict);
       children.push(el('button', {
         class: 'step-card' + (verdict === 'ok' ? ' done' : '') + (verdict === 'mangel' ? ' bad' : '') + (blocked ? ' blocked' : ''),
         type: 'button',
@@ -69,7 +74,7 @@
         el('span', { class: 'mark' }, verdict ? U.verdictSym(verdict) : String(nr)),
         el('span', { class: 'info' }, [
           el('span', { class: 't' }, step.title),
-          el('span', { class: 's' + (blocked ? ' blocked-why' : '') }, sub),
+          el('span', { class: 's' + (blocked || overridden ? ' blocked-why' : '') }, sub),
         ]),
         entry.isNew ? U.badge('neu') : step.optional ? U.badge('optional') : verdict ? U.verdictPill(verdict) : null,
       ]));
@@ -185,8 +190,9 @@
       children.push(U.sectionHead('Messwerte', step.measure.symbol ? step.measure.symbol + ' in ' + step.measure.unit : ''));
       children.push(el('div', { class: 'step-list' }, (step.measure.inputs || []).map(input => U.measureRow({
         input,
-        limit: entry.inputLimits[input.id] || entry.limit,
-        hint: step.limitHint,
+        // Ein Bezugsfeld wird nicht bewertet, es ist selbst der Maßstab.
+        limit: input.role === 'reference' ? null : (entry.inputLimits[input.id] || entry.limit),
+        hint: input.hint || step.limitHint,
         value: result.values ? result.values[input.id] : null,
         overrange: !!(result.overrange && result.overrange[input.id]),
         fkey: 'm-' + step.id + '-' + input.id,
@@ -199,7 +205,7 @@
           overrange: Object.assign({}, result.overrange, { [input.id]: v != null }),
         }),
       }))));
-      if (entry.limit) {
+      if (entry.limit && entry.limit.tableId) {
         children.push(el('div', { class: 'wiki-body' }, [U.limitTable(entry.limit.tableId, entry.limit.rowKey)]));
       }
       if (step.formulaRef) {
@@ -223,6 +229,12 @@
 
     children.push(U.sectionHead('Bewertung', verdict && !result.verdict ? 'automatisch: ' + U.verdictLabel(verdict) : ''));
     children.push(U.verdictSwitch(result.verdict || null, v => P.store.setResult(job.id, step.id, { verdict: v })));
+    if (P.plan.overridden(pack, step, facts, result)) {
+      children.push(el('div', { class: 'w-warn' }, [
+        el('span', { class: 'sym' }, '!'),
+        el('div', { class: 't' }, 'Von Hand als „' + U.verdictLabel(result.verdict) + '“ bewertet, obwohl ein Messwert den Grenzwert nicht einhält. Das Protokoll vermerkt die Abweichung — die Begründung gehört in die Bemerkung.'),
+      ]));
+    }
     children.push(el('div', { class: 'field' }, [
       el('label', { class: 'field-label' }, 'Bemerkung / Mangel'),
       el('textarea', {

@@ -4,7 +4,7 @@
  * Druckdialog (dort auch „Als PDF speichern“). Kein PDF-Generator im Gepäck —
  * der Druckdialog kann das auf jedem Gerät, offline, ohne Bibliothek. */
 (function (P) {
-  const { el, num, formatDateDE } = P.util;
+  const { el, num, formatDateDE, plural } = P.util;
   const U = P.ui;
 
   P.views = P.views || {};
@@ -43,19 +43,37 @@
     return num(key.value) + (key.unit ? ' ' + key.unit : '');
   }
 
+  /* Eine von Hand gesetzte Bewertung, die einem Messmangel widerspricht, steht
+   * als solche im Protokoll — mit Vermerk statt still. */
   function rowsFor(pack, job, entries) {
     const facts = job.session.facts;
     return entries.map(entry => {
       const step = entry.step;
       const result = job.results[step.id] || {};
+      const overridden = P.plan.overridden(pack, step, facts, result);
+      const notes = [];
+      if (overridden) notes.push('Bewertung von Hand, Messwert außerhalb des Grenzwerts');
+      if (result.note) notes.push(result.note);
       return {
         label: step.protocolLabel || step.title,
-        soll: entry.limit ? P.limits.format(entry.limit) : (step.limitHint ? 'siehe Hinweis' : '—'),
+        soll: entry.limit ? P.limits.format(entry.limit) : (step.protocolSoll || '—'),
         ist: step.measure ? valueText(step, result) : '—',
         verdict: P.plan.verdict(pack, step, facts, result),
-        note: result.note || '',
+        overridden,
+        note: notes.join(' — '),
       };
     });
+  }
+
+  const verdictCell = row => U.verdictSym(row.verdict) + ' ' + U.verdictLabel(row.verdict) + (row.overridden ? ' (von Hand)' : '');
+
+  /* Ergebnissatz aus dem Normpaket: eine Anlage wird nicht „übergeben“ wie
+   * ein Gerät, und ein Gerät hat keine „Anlage“. */
+  function resultSentence(pack, sum) {
+    const t = (pack.protocol && pack.protocol.resultText) || {};
+    if (sum.mangel) return (t.mangel || '{n} festgestellt.').replace('{n}', plural(sum.mangel, 'Mangel', 'Mängel'));
+    if (sum.open) return (t.offen || '{n} offen.').replace('{n}', plural(sum.open, 'Prüfschritt', 'Prüfschritte'));
+    return t.ok || 'Kein Mangel festgestellt.';
   }
 
   P.views.protokoll = function protokollView() {
@@ -73,14 +91,13 @@
     const entries = P.plan.ensure(job, pack);
     const sum = P.plan.summary(pack, job.session, entries, job.results);
     const rows = rowsFor(pack, job, entries);
-    const fields = (pack.protocol && pack.protocol.fields) || [];
     const maengel = rows.filter(r => r.verdict === 'mangel');
 
     const children = [
       U.card('Zusammenfassung', [
         el('div', { class: 'q-title' }, sum.done + ' von ' + sum.total + ' Schritten bewertet'),
         el('div', { class: 'chips' }, [
-          sum.mangel ? U.badge(sum.mangel + ' Mangel', 'mangel') : sum.done ? U.badge('kein Mangel', 'ok') : null,
+          sum.mangel ? U.badge(plural(sum.mangel, 'Mangel', 'Mängel'), 'mangel') : sum.done ? U.badge('kein Mangel', 'ok') : null,
           sum.grenzwertig ? U.badge(sum.grenzwertig + ' grenzwertig', 'grenzwertig') : null,
           sum.open ? U.badge(sum.open + ' offen') : null,
         ]),
@@ -89,10 +106,7 @@
           : null,
       ]),
       U.sectionHead('Kopfdaten', (P.data.variant(job.normId, job.variantId) || {}).norm || ''),
-      U.card(null, [el('div', { class: 'w-kv' }, fields.map(field => el('div', { class: 'row' }, [
-        el('div', { class: 'k' }, P.data.term(field.termKey, job.world, field.label)),
-        el('div', { class: 'v' }, protocolValue(pack, job, field) || '—'),
-      ])))]),
+      P.views.protocolFields(job, pack),
       U.sectionHead('Messwerte', 'Soll / Ist'),
       el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [
         el('thead', {}, el('tr', {}, [el('th', {}, 'Prüfschritt'), el('th', {}, 'Soll'), el('th', {}, 'Ist'), el('th', {}, 'Bewertung')])),
@@ -100,13 +114,13 @@
           el('td', {}, row.label),
           el('td', {}, row.soll),
           el('td', { class: 'v' }, row.ist),
-          el('td', {}, U.verdictSym(row.verdict) + ' ' + U.verdictLabel(row.verdict)),
+          el('td', {}, verdictCell(row)),
         ]))),
       ])]),
     ];
 
     if (maengel.length) {
-      children.push(U.sectionHead('Mängel', maengel.length + ' Punkte'));
+      children.push(U.sectionHead('Mängel', plural(maengel.length, 'Punkt', 'Punkte')));
       children.push(el('div', { class: 'step-list' }, maengel.map(row => el('div', { class: 'w-warn' }, [
         el('span', { class: 'sym' }, '!'),
         el('div', { class: 't' }, row.label + (row.note ? ': ' + row.note : '')),
@@ -120,6 +134,8 @@
         el('div', { class: 't' }, review.text),
       ]));
     }
+
+    children.push(P.views.missingNote(job, pack));
 
     children.push(el('div', { class: 'footnote' }, P.data.registry.disclaimer));
 
@@ -165,16 +181,12 @@
           el('div', {}, row.label),
           el('div', {}, row.soll),
           el('div', {}, row.ist),
-          el('div', {}, U.verdictSym(row.verdict) + ' ' + U.verdictLabel(row.verdict)),
+          el('div', {}, verdictCell(row)),
           row.note ? el('div', { class: 'p-note' }, row.note) : null,
         ])),
       ]),
       el('div', { class: 'p-section' }, 'Ergebnis'),
-      el('p', { class: 'p-note' }, sum.mangel
-        ? sum.mangel + ' Mangel festgestellt. Die Anlage ist in diesem Zustand nicht zur Übergabe geeignet.'
-        : sum.open
-          ? sum.open + ' Prüfschritte sind offen — das Protokoll ist unvollständig.'
-          : 'Kein Mangel festgestellt. Alle vorgesehenen Prüfschritte sind bewertet.'),
+      el('p', { class: 'p-note' }, resultSentence(pack, sum)),
       due
         ? el('p', { class: 'p-note' }, 'Nächste Prüfung: ' + formatDateDE(due)
             + ' (Richtwert ' + P.intervals.label(job.interval.months)

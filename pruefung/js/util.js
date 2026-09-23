@@ -84,6 +84,10 @@ window.Pruefung = window.Pruefung || {};
       .replace(/[\u0300-\u036f]/g, '');
   }
 
+  /* „1 Mangel“, „2 Mängel“ — Zahl und Wort in einem Zug, damit keine Stelle
+   * der App wieder „2 Mangel“ schreibt. */
+  const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
   const todayISO = () => {
     const d = new Date();
     const p = n => String(n).padStart(2, '0');
@@ -116,5 +120,5 @@ window.Pruefung = window.Pruefung || {};
     }
   }
 
-  P.util = { el, nf, num, inputNum, parseNum, matches, byId, fold, todayISO, formatDateDE, captureFocus, restoreFocus };
+  P.util = { el, nf, num, inputNum, parseNum, matches, byId, fold, plural, todayISO, formatDateDE, captureFocus, restoreFocus };
 })(window.Pruefung);

@@ -51,10 +51,15 @@
       { "id": "inventarnummer", "label": "Inventar-/Seriennummer", "kind": "text", "perDevice": true },
       { "id": "schutzklasse", "label": "Schutzklasse", "kind": "fact", "factKey": "schutzklasse" },
       { "id": "objekt", "label": "Betriebsstätte", "termKey": "objekt", "kind": "text" },
-      { "id": "pruefer", "label": "Prüfer", "kind": "text", "sticky": true },
+      { "id": "pruefer", "label": "Prüfer", "required": true, "kind": "text", "sticky": true },
       { "id": "messgeraet", "label": "Messgerät / Kalibrierung", "kind": "text", "sticky": true },
-      { "id": "datum", "label": "Prüfdatum", "kind": "date", "default": "today" }
-    ]
+      { "id": "datum", "label": "Prüfdatum", "required": true, "kind": "date", "default": "today" }
+    ],
+    "resultText": {
+      "mangel": "{n} festgestellt. Das Gerät hat die Prüfung nicht bestanden und darf bis zur Instandsetzung nicht benutzt werden.",
+      "offen": "{n} offen — das Protokoll ist unvollständig.",
+      "ok": "Kein Mangel festgestellt. Das Gerät hat die Prüfung bestanden."
+    }
   },
   "nodes": [
     {

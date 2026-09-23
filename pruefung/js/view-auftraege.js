@@ -6,7 +6,7 @@
  * späterer Wechsel im Kopf ändert sie nicht rückwirkend — sonst driften
  * Prüfplan und Antworten auseinander. */
 (function (P) {
-  const { el, formatDateDE } = P.util;
+  const { el, formatDateDE, plural } = P.util;
   const U = P.ui;
 
   P.views = P.views || {};
@@ -43,10 +43,68 @@
     if (!pack || !job.session.done) return U.badge('Assistent offen');
     const entries = P.plan.build(pack, job.session, job.results);
     const sum = P.plan.summary(pack, job.session, entries, job.results);
-    if (sum.mangel) return U.badge(sum.mangel + ' Mangel', 'mangel');
+    if (sum.mangel) return U.badge(plural(sum.mangel, 'Mangel', 'Mängel'), 'mangel');
     if (sum.open) return U.badge(sum.done + '/' + sum.total + ' erledigt');
     return U.badge('vollständig', 'ok');
   }
+
+  /* Kopfdaten eines Auftrags als Eingabefelder. Hier und im Protokoll
+   * dieselben Felder: eingetragen wird, wo man gerade ist — meist erst kurz
+   * vor dem Drucken.
+   *
+   * Beim Tippen wird nicht neu gezeichnet, sondern nur nachgeführt, was davon
+   * abhängt (Titel in Kopf und Liste, Pflichtangaben). Ein Neuzeichnen beim
+   * Verlassen des Feldes hat den Fokus des nächsten Feldes geschluckt — und
+   * zerstört auf dem Handy die Wortvorschläge der Tastatur. */
+  P.views.refreshJobMeta = function refreshJobMeta(job, pack) {
+    const title = P.data.jobTitle(job);
+    document.querySelectorAll('[data-job-title="' + job.id + '"]').forEach(node => { node.textContent = title; });
+    const missing = P.data.missingFields(job, pack);
+    const ids = new Set(missing.map(f => f.id));
+    document.querySelectorAll('[data-missing-for]').forEach(node => node.classList.toggle('missing', ids.has(node.getAttribute('data-missing-for'))));
+    const note = document.querySelector('[data-missing-note]');
+    if (note) {
+      note.hidden = !missing.length;
+      note.querySelector('.t').textContent = missingText(job, missing);
+    }
+  };
+
+  function missingText(job, missing) {
+    return 'Pflichtangaben fehlen: ' + missing.map(f => P.data.term(f.termKey, job.world, f.label)).join(', ')
+      + '. Unter „Kopfdaten“ eintragen — ohne sie ist der Bogen kein Nachweis.';
+  }
+
+  /* Hinweis auf fehlende Pflichtangaben — immer im DOM, nur ausgeblendet,
+   * damit refreshJobMeta ihn beim Tippen ein- und ausschalten kann. */
+  P.views.missingNote = function missingNote(job, pack) {
+    const missing = P.data.missingFields(job, pack);
+    return el('div', { class: 'w-warn', 'data-missing-note': '1', hidden: !missing.length }, [
+      el('span', { class: 'sym' }, '!'),
+      el('div', { class: 't' }, missingText(job, missing)),
+    ]);
+  };
+
+  P.views.protocolFields = function protocolFields(job, pack) {
+    const fields = (pack.protocol && pack.protocol.fields) || [];
+    const missing = new Set(P.data.missingFields(job, pack).map(f => f.id));
+    return U.card(null, fields.map(field => el('div', { class: 'field' }, [
+      el('label', { class: 'field-label' + (missing.has(field.id) ? ' missing' : ''), 'data-missing-for': field.id },
+        P.data.term(field.termKey, job.world, field.label) + (field.required ? ' *' : '')),
+      // Aus dem Assistenten übernommen — nicht zweimal abfragen.
+      field.kind === 'fact'
+        ? el('div', { class: 'input', style: { display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' } },
+            P.plan.factLabel(pack, job.session, field.factKey) || 'aus dem Assistenten')
+        : field.kind === 'date'
+          ? el('input', {
+              class: 'input', type: 'date', 'data-fkey': 'prot-' + field.id,
+              value: job.protocol[field.id] || '',
+              onChange: e => { P.store.setProtocolField(job.id, pack, field.id, e.target.value); P.render(); },
+            })
+          : U.textInput('prot-' + field.id, job.protocol[field.id] || '',
+              v => { P.store.setProtocolField(job.id, pack, field.id, v); P.views.refreshJobMeta(job, pack); },
+              { placeholder: field.sticky ? 'wird für weitere Prüfungen gemerkt' : '' }),
+    ])));
+  };
 
   P.views.auftraege = function auftraege() {
     const state = P.store.state;
@@ -61,7 +119,7 @@
       }, [
         el('button', { class: 'job-open', type: 'button', onClick: () => P.store.openJob(job.id) }, [
           el('div', { class: 'info' }, [
-            el('div', { class: 'name' }, jobTitle(job)),
+            el('div', { class: 'name', 'data-job-title': job.id }, jobTitle(job)),
             el('div', { class: 'meta' }, jobMeta(job)),
           ]),
           jobStatus(job),
@@ -86,6 +144,16 @@
       ]))));
     }
 
+    // Die Daten des laufenden Auftrags vor der Normauswahl: sonst liegen sie
+    // unter vier Normkarten außerhalb des Bildschirms.
+    const job = P.store.activeJob();
+    const pack = job ? P.data.packById.get(job.normId) : null;
+    if (job && pack) {
+      const variant = P.data.variant(job.normId, job.variantId);
+      children.push(U.sectionHead('Auftragsdaten', variant ? variant.norm : ''));
+      children.push(P.views.protocolFields(job, pack));
+    }
+
     // Eine Karte je Norm, nicht je Datei: 0100-600 und 0105-100 teilen sich ein
     // Paket, treten hier aber als zwei Normen auf.
     children.push(U.sectionHead('Neue Prüfung', world ? world.label : ''));
@@ -103,30 +171,6 @@
         planned ? U.badge('geplant') : U.badge('starten', 'accent'),
       ]);
     })));
-
-    const job = P.store.activeJob();
-    const pack = job ? P.data.packById.get(job.normId) : null;
-    if (job && pack) {
-      const variant = P.data.variant(job.normId, job.variantId);
-      const fields = (pack.protocol && pack.protocol.fields) || [];
-      children.push(U.sectionHead('Auftragsdaten', variant ? variant.norm : ''));
-      children.push(U.card(null, fields.map(field => el('div', { class: 'field' }, [
-        el('label', { class: 'field-label' }, P.data.term(field.termKey, job.world, field.label) + (field.required ? ' *' : '')),
-        // Aus dem Assistenten übernommen — nicht zweimal abfragen.
-        field.kind === 'fact'
-          ? el('div', { class: 'input', style: { display: 'flex', alignItems: 'center', color: 'var(--text-tertiary)' } },
-              P.plan.factLabel(pack, job.session, field.factKey) || 'aus dem Assistenten')
-          : field.kind === 'date'
-            ? el('input', {
-                class: 'input', type: 'date', 'data-fkey': 'prot-' + field.id,
-                value: job.protocol[field.id] || '',
-                onChange: e => P.store.setProtocolField(job.id, pack, field.id, e.target.value),
-              })
-            : U.textInput('prot-' + field.id, job.protocol[field.id] || '',
-                v => P.store.setProtocolField(job.id, pack, field.id, v),
-                { placeholder: field.sticky ? 'wird für weitere Prüfungen gemerkt' : '' }),
-      ]))));
-    }
 
     children.push(el('div', { class: 'footnote' }, [
       P.data.registry.disclaimer,

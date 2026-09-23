@@ -199,7 +199,16 @@
   S.setProtocolField = function setProtocolField(jobId, pack, fieldId, value) {
     const field = ((pack.protocol && pack.protocol.fields) || []).find(f => f.id === fieldId);
     if (field && field.sticky) S.state.sticky = Object.assign({}, S.state.sticky, { [fieldId]: value });
-    S.patchJob(jobId, job => { job.protocol = Object.assign({}, job.protocol, { [fieldId]: value }); }, { silent: true });
+    S.patchJob(jobId, job => {
+      job.protocol = Object.assign({}, job.protocol, { [fieldId]: value });
+      // Die Frist zählt ab dem Prüfdatum — wird es nachträglich korrigiert,
+      // wandert die Fälligkeit mit, statt am alten Datum hängen zu bleiben.
+      if (fieldId === 'datum' && job.interval && job.interval.months) {
+        job.interval = Object.assign({}, job.interval, {
+          nextDue: P.intervals.computeDue(value || P.util.todayISO(), job.interval.months),
+        });
+      }
+    }, { silent: true });
     S.save();
   };
 

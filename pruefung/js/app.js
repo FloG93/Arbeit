@@ -93,7 +93,7 @@
       el('div', { class: 'header-row' }, [
         el('div', { class: 'brand' }, [
           el('div', { class: 'eyebrow' }, variant ? variant.norm : 'Prüfassistent'),
-          el('div', { class: 'brand-name' }, job ? P.data.jobTitle(job) : 'VDE-Prüfungen'),
+          el('div', { class: 'brand-name', 'data-job-title': job ? job.id : null }, job ? P.data.jobTitle(job) : 'VDE-Prüfungen'),
         ]),
         el('div', { class: 'head-tools' }, [
           el('button', {
@@ -170,7 +170,50 @@
     if (result.bottom) app.appendChild(result.bottom);
     restoreFocus(mark);
     renderToast();
+    syncHistory();
   };
+
+  /* ─── Zurück-Taste ───
+   * Ohne Eintrag in der Browser-History führt die Zurück-Taste des Handys aus
+   * der App heraus — mitten aus dem Prüfschritt. Jede Ansicht, die man
+   * „betritt“ (Tab, Schritt, Wiki-Eintrag), bekommt deshalb einen Eintrag;
+   * Tippen in Felder oder Antworten im Assistenten ändern ihn nicht. */
+  let restoring = false;
+
+  function navState() {
+    const state = P.store.state;
+    return {
+      pruefung: true,
+      tab: state.tab,
+      jobId: state.activeJobId,
+      stepId: state.tab === 'plan' ? P.nav.stepId : null,
+      wikiId: state.tab === 'wiki' ? P.nav.wikiId : null,
+    };
+  }
+  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId].join('|');
+
+  function syncHistory() {
+    if (restoring || !window.history || !history.replaceState) return;
+    const next = navState();
+    const current = history.state;
+    if (!current || !current.pruefung) history.replaceState(next, '');
+    else if (navKey(current) !== navKey(next)) history.pushState(next, '');
+  }
+
+  window.addEventListener('popstate', e => {
+    const st = e.state;
+    if (!st || !st.pruefung || !P.data.ready) return;
+    restoring = true;
+    try {
+      P.nav.stepId = st.stepId || null;
+      P.nav.wikiId = st.wikiId || null;
+      const patch = { tab: st.tab || 'auftraege' };
+      if (st.jobId && P.store.job(st.jobId)) patch.activeJobId = st.jobId;
+      P.store.set(patch);
+    } finally {
+      restoring = false;
+    }
+  });
 
   /* ─── Selbsttest ───
    * Eine datengetriebene App steht und fällt mit der Integrität ihrer
@@ -246,6 +289,12 @@
         if (step.phase && !pack.phaseById.has(step.phase)) note('Schritt', pack.id + '/' + step.id + ': Phase „' + step.phase + '“ ist nicht definiert');
         if (step.limitRef && !P.limits.table(step.limitRef)) note('Grenzwert', pack.id + '/' + step.id + ': limitRef → „' + step.limitRef + '“ existiert nicht');
         if (step.formulaRef && !P.limits.formula(step.formulaRef)) note('Grenzwert', pack.id + '/' + step.id + ': formulaRef → „' + step.formulaRef + '“ existiert nicht');
+        const inputs = (step.measure && step.measure.inputs) || [];
+        for (const input of inputs) {
+          if (input.limitFromInput && !inputs.some(i => i.id === input.limitFromInput && i.id !== input.id)) {
+            note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': limitFromInput → „' + input.limitFromInput + '“ ist kein anderes Feld dieses Schrittes');
+          }
+        }
         // Zyklen in requires.
         const stack = [step.id];
         const visited = new Set();

@@ -70,11 +70,15 @@
 
     return ordered.map(item => {
       const step = item.step;
-      const limit = P.limits.forStep(step, facts);
+      const values = results && results[step.id] ? results[step.id].values : null;
       const inputLimits = {};
       for (const input of (step.measure && step.measure.inputs) || []) {
-        inputLimits[input.id] = P.limits.forInput(step, input, facts);
+        inputLimits[input.id] = P.limits.forInput(step, input, facts, values);
       }
+      // Ohne Tabellenwert gilt der aus einem Bezugsfeld (Zs-Sollwert) — so
+      // steht im Plan und im Protokoll der eingetragene Sollwert.
+      const limit = P.limits.forStep(step, facts)
+        || Object.values(inputLimits).find(l => l && l.fromInput) || null;
       const blockedBy = (step.requires || []).filter(reqId => {
         if (!picked.has(reqId)) return false;
         return PL.verdict(pack, picked.get(reqId).step, facts, results && results[reqId]) == null;
@@ -169,6 +173,9 @@
     let best = null;
     let overrange = false;
     for (const input of measure.inputs || []) {
+      // Ein Bezugsfeld (Sollwert) ist kein Messwert — sonst stünde bei Zs der
+      // Sollwert als Istwert im Protokoll, sobald er größer ist.
+      if (input.role === 'reference') continue;
       const value = result.values ? result.values[input.id] : null;
       if (result.overrange && result.overrange[input.id]) { overrange = true; continue; }
       if (value == null || !isFinite(value)) continue;
@@ -186,13 +193,14 @@
     let out = null;
     let missing = false;
     for (const input of measure.inputs || []) {
+      if (input.role === 'reference') continue;
       const value = result.values ? result.values[input.id] : null;
       const over = !!(result.overrange && result.overrange[input.id]);
       if (!over && (value == null || !isFinite(value))) {
         if (!input.optional) missing = true;
         continue;
       }
-      const limit = P.limits.forInput(step, input, facts) || P.limits.forStep(step, facts);
+      const limit = P.limits.forInput(step, input, facts, result.values) || P.limits.forStep(step, facts);
       out = worse(out, P.limits.evaluate(value, limit, { overrange: over }));
     }
     if (out === 'unbekannt') out = null;
@@ -224,6 +232,20 @@
     const fromChecklist = checklistVerdict(pack, step, facts, result);
     if (fromChecklist) return fromChecklist;
     return measureVerdict(pack, step, facts, result);
+  };
+
+  /* Was die Messwerte allein ergeben würden — ohne die Bewertung von Hand. */
+  PL.autoVerdict = function autoVerdict(pack, step, facts, result) {
+    if (!result || !result.verdict) return PL.verdict(pack, step, facts, result);
+    return PL.verdict(pack, step, facts, Object.assign({}, result, { verdict: null }));
+  };
+
+  /* Von Hand „OK“ (oder n. a.), obwohl ein Messwert den Grenzwert reißt: das
+   * bleibt erlaubt, darf aber nirgends still passieren — Schritt, Plan und
+   * Protokoll sagen es dazu. */
+  PL.overridden = function overridden(pack, step, facts, result) {
+    if (!result || !result.verdict || result.verdict === 'mangel') return false;
+    return PL.autoVerdict(pack, step, facts, result) === 'mangel';
   };
 
   PL.summary = function summary(pack, session, entries, results) {

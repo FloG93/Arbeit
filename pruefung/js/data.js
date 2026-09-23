@@ -150,6 +150,13 @@
     return job.protocol[field] || (field === 'geraet' ? 'Gerät ohne Bezeichnung' : 'Prüfung ohne Objekt');
   };
 
+  /* Pflichtangaben, die im Auftrag noch fehlen — das Protokoll nennt sie vor
+   * dem Drucken, statt einen Bogen ohne Prüfer hinauszulassen. */
+  D.missingFields = function missingFields(job, pack) {
+    return ((pack && pack.protocol && pack.protocol.fields) || [])
+      .filter(field => field.required && field.kind !== 'fact' && !String(job.protocol[field.id] || '').trim());
+  };
+
   D.wikiFor = function wikiFor(ids) {
     return (ids || []).map(id => D.wikiById.get(id)).filter(Boolean);
   };

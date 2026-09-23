@@ -70,9 +70,35 @@
     return L.resolve(step.limitRef, facts, { limitKey: step.limitKey, keyFrom: step.limitKeyFrom });
   };
 
+  /* Grenzwert, der kein Tabellenwert ist, sondern ein zweites Feld desselben
+   * Schrittes: bei der Schleifenimpedanz hängt Zs,max an der Schutzeinrichtung
+   * und steht erst nach dem Blick auf die Kennlinie fest. limitFromInput nennt
+   * das Feld, limitBound die Richtung (Standard: Obergrenze). */
+  L.fromInput = function fromInput(step, input, values) {
+    const refId = input.limitFromInput;
+    const ref = ((step.measure && step.measure.inputs) || []).find(i => i.id === refId);
+    const v = values ? values[refId] : null;
+    if (v == null || !isFinite(v)) return null;
+    const bound = input.limitBound === 'min' ? 'min' : 'max';
+    return {
+      tableId: null,
+      title: null,
+      source: null,
+      rowKey: null,
+      label: ref ? ref.label : refId,
+      min: bound === 'min' ? v : null,
+      max: bound === 'max' ? v : null,
+      unit: input.unit || (ref && ref.unit) || null,
+      note: null,
+      warnBand: 0.1,
+      fromInput: refId,
+    };
+  };
+
   /* Grenzwert eines einzelnen Eingabefeldes — erbt den des Schrittes, kann ihn
    * aber über limitKey oder limitKeySuffix verschieben. */
-  L.forInput = function forInput(step, input, facts) {
+  L.forInput = function forInput(step, input, facts, values) {
+    if (input && input.limitFromInput) return L.fromInput(step, input, values);
     if (!step || !step.limitRef) return null;
     return L.resolve(step.limitRef, facts, {
       limitKey: input.limitKey || step.limitKey,

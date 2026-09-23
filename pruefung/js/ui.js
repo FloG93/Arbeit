@@ -2,10 +2,12 @@
 
 /* Wiederverwendete Bausteine.
  *
- * Zwei Regeln ziehen sich durch alles hier: jedes Bedienelement ist mindestens
- * --tap-min hoch, und ein Zustand wird nie nur durch Farbe ausgedrückt —
- * immer Symbol plus Text plus Farbe. Mit Handschuhen, in der Sonne oder mit
- * Farbsehschwäche bleibt die Oberfläche damit bedienbar. */
+ * Zwei Regeln ziehen sich durch alles hier: was beim Messen getroffen werden
+ * muss (Antworten, Messfelder, Schnellwerte, Bewertung) ist mindestens
+ * --tap-min (56 px) hoch, alles Übrige mindestens 48 px — und ein Zustand
+ * wird nie nur durch Farbe ausgedrückt, immer Symbol plus Text plus Farbe.
+ * Mit Handschuhen, in der Sonne oder mit Farbsehschwäche bleibt die
+ * Oberfläche damit bedienbar. */
 (function (P) {
   const { el, num, inputNum, parseNum } = P.util;
 
@@ -60,12 +62,25 @@
   };
 
   /* Zahlenfeld: bewusst type="text" mit inputmode="decimal". Ein type="number"
-   * verschluckt auf deutschen Tastaturen das Komma — aus 0,4 wurde 4. */
-  U.numInput = (fkey, value, unit, onValue, extra) => el('input', Object.assign({
-    class: 'input', type: 'text', inputmode: 'decimal', enterkeyhint: 'next',
-    'data-fkey': fkey, value: inputNum(value),
-    onInput: e => onValue(parseNum(e.target.value, null)),
-  }, extra || {}));
+   * verschluckt auf deutschen Tastaturen das Komma — aus 0,4 wurde 4.
+   *
+   * Jeder Tastendruck zeichnet neu. Würde das Feld dabei aus dem geparsten
+   * Wert gefüllt, wäre „1," sofort wieder „1" und das nächste Zeichen machte
+   * aus 1,5 eine 15. Deshalb bleibt der getippte Rohtext stehen, solange er
+   * denselben Wert bedeutet; erst ein anderer Wert (Schnellwert, Auftrag
+   * gewechselt) überschreibt ihn. */
+  const drafts = new Map();
+
+  U.numInput = (fkey, value, unit, onValue, extra) => {
+    const draft = drafts.get(fkey);
+    const current = value == null || !isFinite(value) ? null : value;
+    const shown = draft != null && parseNum(draft, null) === current ? draft : inputNum(value);
+    return el('input', Object.assign({
+      class: 'input', type: 'text', inputmode: 'decimal', enterkeyhint: 'next',
+      'data-fkey': fkey, value: shown,
+      onInput: e => { drafts.set(fkey, e.target.value); onValue(parseNum(e.target.value, null)); },
+    }, extra || {}));
+  };
 
   U.textInput = (fkey, value, onValue, extra) => el('input', Object.assign({
     class: 'input', type: 'text', 'data-fkey': fkey, value: value == null ? '' : value,
@@ -195,9 +210,7 @@
     if (!data) return el('div', { class: 'empty-note' }, 'Keine Fristen-Daten geladen.');
     const rows = (data.presets || []).map(preset => el('tr', {}, [
       el('td', {}, preset.label),
-      el('td', { class: 'v' }, preset.intervalMonths >= 12 && preset.intervalMonths % 12 === 0
-        ? (preset.intervalMonths / 12) + ' Jahre'
-        : preset.intervalMonths + ' Monate'),
+      el('td', { class: 'v' }, P.intervals.label(preset.intervalMonths)),
       el('td', {}, preset.basis),
     ]));
     return el('div', { class: 'w-table' }, [
