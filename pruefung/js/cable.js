@@ -199,7 +199,7 @@
     if (osL) teile.push(`${z(e.fOS.f)} (Oberschw.)`);
     if (e.fOS && (osL || e.fOS.basis === 'N')) n.quellen.push(cb.faktoren.oberschwingungen.id);
     const iz = izTab * fOhneOS * (osL ? e.fOS.f : 1);
-    n.zeilen.push(`Iz = ${teile.join(' · ')} = ${z(iz, 1)} A`);
+    n.zeilen.push(teile.length > 1 ? `Iz = ${teile.join(' · ')} = ${z(iz, 1)} A` : `Iz = ${z(iz, 1)} A (Tabellenwert, keine Abminderung)`);
 
     const In = e.In;
     const i2 = e.schutz.i2f(In) * In;
@@ -338,9 +338,11 @@
       teile.push({ status: ok ? 'ok' : 'fail', grund: ok ? null : `Ik,max ${z(ikMax, 0)} A > Schaltvermögen ${z(icu, 0)} A` });
       n.werte.ikMax = ikMax;
     } else {
+      // Nur als Hinweis, nicht als Bedingung: Ein zu kleines Zs am Verteiler
+      // ist die Ausnahme (Trafonähe), und eine zweite Bedingung neben der
+      // Abschaltung würde jedes Ergebnis ohne Vorimpedanz verwässern.
       const zvMin = x.cMax * x.u0 * faktor3 / icu;
-      n.zeilen.push(`Schaltvermögen ${z(icu, 0)} A: erfüllt, wenn am Verteiler Zs ≥ ${z(x.cMax)} · ${z(x.u0, 0)} V${faktor3 !== 1 ? ' · ' + z(faktor3, 0) : ''} / ${z(icu, 0)} A = ${z(zvMin, 3)} Ω`);
-      teile.push({ status: 'cond', grund: `Zs am Verteiler ≥ ${z(zvMin, 3)} Ω`, bedingung: `Zs am Verteiler ≥ ${z(zvMin, 3)} Ω` });
+      n.hinweis = `Schaltvermögen ${z(icu, 0)} A reicht, solange am Verteiler Zs ≥ ${z(x.cMax)} · ${z(x.u0, 0)} V${faktor3 !== 1 ? ' · ' + z(faktor3, 0) : ''} / ${z(icu, 0)} A = ${z(zvMin, 3)} Ω — bei der Prüfung am Verteiler mit ansehen.`;
       n.werte.zvMin = zvMin;
     }
 

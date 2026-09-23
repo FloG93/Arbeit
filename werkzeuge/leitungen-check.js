@@ -38,6 +38,7 @@ if (zeigen) {
         console.log('  ' + ZEICHEN[n.status] + ' ' + n.titel + (n.bedingung ? ' — ' + n.bedingung : ''));
         for (const zl of n.zeilen) console.log('      ' + zl);
         if (n.messung) console.log('      ' + n.messung);
+        if (n.hinweis) console.log('      Hinweis: ' + n.hinweis);
       }
     }
     if (r.hinweise.length) console.log('  Hinweise: ' + r.hinweise.map(h => h.id).join(', '));

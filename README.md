@@ -1,4 +1,4 @@
-# Jungfernstieg
+# Arbeit
 
 Kleine, eigenständige Web-Apps in einem Repo — kein Build-Schritt, kein
 Login, jede läuft für sich.
