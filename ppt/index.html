@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PPT zu PPTX</title>
+  <meta name="description" content="Alte PowerPoint-Dateien (.ppt) direkt im Browser in .pptx umwandeln – ohne Upload.">
+  <!-- Setzt die für WebAssembly-Threads nötigen COOP/COEP-Header auf GitHub Pages. -->
+  <script src="coi-serviceworker.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #5f6b7a;
+      --border: #d9dee5; --accent: #c43e1c; --accent-soft: #fbeae5;
+      --ok: #1f7a4a; --err: #b42318;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14171c; --card: #1d2129; --text: #e7eaf0; --muted: #9aa4b2;
+        --border: #323845; --accent: #ff7a50; --accent-soft: #3a241d;
+        --ok: #5fd39a; --err: #ff8a80;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 640px; margin: 0 auto; padding: 48px 16px; }
+    h1 { font-size: 1.75rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 28px; }
+    #drop {
+      display: block; background: var(--card); border: 2px dashed var(--border);
+      border-radius: 14px; padding: 40px 20px; text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    #drop:hover, #drop.over { border-color: var(--accent); background: var(--accent-soft); }
+    #drop.disabled { cursor: progress; opacity: .6; }
+    #drop strong { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+    #drop span { color: var(--muted); font-size: .95rem; }
+    #input { display: none; }
+    #status { margin: 16px 0 0; color: var(--muted); font-size: .95rem; min-height: 1.5em; }
+    #status.err { color: var(--err); }
+    .spinner {
+      display: inline-block; width: .9em; height: .9em; margin-right: 6px; vertical-align: -1px;
+      border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ul { list-style: none; padding: 0; margin: 20px 0 0; }
+    li {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center;
+    }
+    li .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    li .state { font-size: .9rem; color: var(--muted); white-space: nowrap; }
+    li.done .state { color: var(--ok); }
+    li.failed .state { color: var(--err); white-space: normal; }
+    a.dl {
+      background: var(--accent); color: #fff; text-decoration: none; font-size: .9rem;
+      padding: 6px 12px; border-radius: 8px; white-space: nowrap;
+    }
+    footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+    footer a { color: inherit; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>PPT → PPTX</h1>
+    <p class="sub">Alte PowerPoint-Dateien umwandeln. Alles läuft in deinem Browser, die Dateien werden nirgendwohin hochgeladen.</p>
+
+    <label id="drop" class="disabled" for="input">
+      <strong>.ppt-Dateien hier ablegen</strong>
+      <span>oder klicken, um sie auszuwählen (mehrere möglich)</span>
+    </label>
+    <input type="file" id="input" accept=".ppt,.pps,.pot" multiple disabled>
+
+    <p id="status"><span class="spinner"></span>Konverter wird geladen … Beim ersten Mal kann das eine Minute dauern (ca. 50 MB, danach im Cache).</p>
+
+    <ul id="list"></ul>
+
+    <footer>
+      Die Umwandlung übernimmt LibreOffice als WebAssembly (<a href="https://zetaoffice.net" target="_blank" rel="noopener">ZetaOffice</a>).
+      Funktioniert in aktuellen Versionen von Chrome, Edge, Firefox und Safari auf dem Desktop.
+    </footer>
+  </main>
+
+  <canvas id="qtcanvas" style="display:none"></canvas>
+
+  <script type="module">
+    import { ZetaHelperMain } from './vendor/zetajs/zetaHelper.js';
+
+    const drop = document.getElementById('drop');
+    const input = document.getElementById('input');
+    const status = document.getElementById('status');
+    const list = document.getElementById('list');
+
+    const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    const queue = [];
+    const jobs = new Map();
+    let nextId = 1;
+    let ready = false;
+    let busy = false;
+
+    function setStatus(text, isError = false) {
+      status.textContent = text;
+      status.classList.toggle('err', isError);
+    }
+
+    // Merker gegen Neuladen in Endlosschleife; gelten nur für diesen Tab.
+    const ISOLATION_RETRY_KEY = 'ppt-isolation-retry';
+    const LOAD_RETRY_KEY = 'ppt-load-retry';
+    const session = {
+      get(key) { try { return sessionStorage.getItem(key); } catch { return '1'; } },
+      set(key) { try { sessionStorage.setItem(key, '1'); } catch {} },
+      clear(key) { try { sessionStorage.removeItem(key); } catch {} },
+    };
+
+    let zHM;
+    if (window.crossOriginIsolated) {
+      session.clear(ISOLATION_RETRY_KEY);
+      startOffice();
+    } else if ('serviceWorker' in navigator && !session.get(ISOLATION_RETRY_KEY)) {
+      // coi-serviceworker lädt beim ersten Besuch selbst neu. Gewinnt dabei ein
+      // Wettlauf gegen die Aktivierung, ist die Seite danach trotzdem nicht
+      // isoliert – dann einmal selbst nachladen, sobald der Worker aktiv ist.
+      // Gezielt auf den eigenen Scope warten: serviceWorker.ready würde auch
+      // durch den Worker des Raumrechners an der Seitenwurzel erfüllt.
+      const ownScope = new URL('./', location.href).href;
+      const poll = setInterval(async () => {
+        const reg = await navigator.serviceWorker.getRegistration(location.href).catch(() => null);
+        if (reg?.scope === ownScope && reg.active) {
+          clearInterval(poll);
+          setTimeout(() => { session.set(ISOLATION_RETRY_KEY); location.reload(); }, 1500);
+        }
+      }, 500);
+      setTimeout(() => setStatus('Die Seite konnte nicht vorbereitet werden. Bitte neu laden; hilft das nicht, eine aktuelle Version von Chrome, Edge oder Firefox verwenden.', true), 10000);
+    } else {
+      setStatus('Dein Browser unterstützt die nötige Technik nicht (SharedArrayBuffer). Bitte eine aktuelle Version von Chrome, Edge oder Firefox verwenden.', true);
+    }
+
+    function startOffice() {
+      // Ladefehler von soffice.js (z. B. kurzer Netzaussetzer): einmal selbst
+      // neu versuchen, erst danach die Fehlermeldung zeigen.
+      window.addEventListener('error', (e) => {
+        if (ready || !(e.target instanceof HTMLScriptElement)) return;
+        if (!session.get(LOAD_RETRY_KEY)) {
+          session.set(LOAD_RETRY_KEY);
+          location.reload();
+          return;
+        }
+        setStatus('Der Konverter konnte nicht geladen werden. Bitte Internetverbindung prüfen und die Seite neu laden.', true);
+      }, true);
+
+      zHM = new ZetaHelperMain('office_thread.js', { threadJsType: 'module' });
+      zHM.start(() => { zHM.thrPort.onmessage = onOfficeMessage; });
+    }
+
+    function onOfficeMessage(e) {
+      const { cmd, id } = e.data;
+      if (cmd === 'ready') {
+        ready = true;
+        session.clear(LOAD_RETRY_KEY);
+        input.disabled = false;
+        drop.classList.remove('disabled');
+        setStatus('Bereit.');
+        runNext();
+        return;
+      }
+      const job = jobs.get(id);
+      if (cmd === 'converted') {
+        const data = zHM.FS.readFile(e.data.to);
+        const url = URL.createObjectURL(new Blob([data], { type: PPTX_MIME }));
+        job.li.classList.add('done');
+        job.state.textContent = 'Fertig';
+        const a = document.createElement('a');
+        a.className = 'dl';
+        a.href = url;
+        a.download = job.outName;
+        a.textContent = 'Herunterladen';
+        job.li.append(a);
+        a.click();
+      } else if (cmd === 'error') {
+        job.li.classList.add('failed');
+        job.state.textContent = 'Fehler: ' + (e.data.message || 'Umwandlung fehlgeschlagen');
+      }
+      for (const p of [e.data.from, e.data.to]) { try { if (p) zHM.FS.unlink(p); } catch {} }
+      busy = false;
+      runNext();
+    }
+
+    function addFiles(files) {
+      for (const file of files) {
+        const li = document.createElement('li');
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = file.name;
+        const state = document.createElement('span');
+        state.className = 'state';
+        li.append(name, state);
+        list.prepend(li);
+
+        const dot = file.name.lastIndexOf('.');
+        const ext = dot > 0 ? file.name.slice(dot).toLowerCase() : '';
+        if (!['.ppt', '.pps', '.pot'].includes(ext)) {
+          li.classList.add('failed');
+          state.textContent = 'Keine .ppt-Datei';
+          continue;
+        }
+        const job = { id: nextId++, file, li, state, ext, outName: file.name.slice(0, dot) + '.pptx' };
+        state.textContent = 'Wartet …';
+        jobs.set(job.id, job);
+        queue.push(job);
+      }
+      runNext();
+    }
+
+    async function runNext() {
+      if (!ready || busy || queue.length === 0) return;
+      busy = true;
+      const job = queue.shift();
+      job.state.textContent = 'Wird umgewandelt …';
+      const from = `/tmp/input-${job.id}${job.ext}`;
+      const to = `/tmp/output-${job.id}.pptx`;
+      zHM.FS.writeFile(from, new Uint8Array(await job.file.arrayBuffer()));
+      zHM.thrPort.postMessage({ cmd: 'convert', id: job.id, from, to });
+    }
+
+    input.addEventListener('change', () => { addFiles(input.files); input.value = ''; });
+    for (const ev of ['dragenter', 'dragover']) {
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+    }
+    for (const ev of ['dragleave', 'drop']) {
+      drop.addEventListener(ev, () => drop.classList.remove('over'));
+    }
+    drop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!input.disabled) addFiles(e.dataTransfer.files);
+    });
+    // Datei, die neben der Ablagefläche fallen gelassen wird, nicht im Browser öffnen.
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+  </script>
+</body>
+</html>
