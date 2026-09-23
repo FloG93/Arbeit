@@ -3,7 +3,8 @@
 # freigegebene Fassung, ausgepackt aus dem in poster/release.json eingetragenen
 # Commit, und /poster/beta/ der aktuelle Stand des Branches. Freigeben heißt
 # damit: diesen Zeiger ändern — die Dateien liegen nur einmal im Repo. Der
-# Prüfassistent hat bewusst keinen Release-Kanal.
+# Prüfassistent hat bewusst keinen Release-Kanal. Der PPT-Konverter liegt
+# unter /ppt/.
 #
 # Alles ist reines HTML/CSS/JS ohne Build-Schritt; erzeugt wird lediglich je
 # Kanal eine build.js mit Version, Commit und Datum.
@@ -89,6 +90,10 @@ jobs:
           # Datenstand stehen in pruefung/version.json und data/index.json.
           mkdir -p dist/pruefung
           cp -r pruefung/. dist/pruefung/
+
+          # PPT-Konverter: ebenfalls reiner Kopiervorgang.
+          mkdir -p dist/ppt
+          cp -r ppt/. dist/ppt/
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
