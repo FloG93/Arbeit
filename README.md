@@ -9,12 +9,12 @@ Login, jede läuft für sich.
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 
-Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner),
-https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator,
+Live: https://flog93.github.io/Arbeit/ (Raumrechner),
+https://flog93.github.io/Arbeit/poster/ (Poster-Generator,
 freigegebene Fassung),
-https://flogramsch-blip.github.io/Jungfernstieg/poster/beta/ (derselbe
+https://flog93.github.io/Arbeit/poster/beta/ (derselbe
 Generator, aktueller Entwicklungsstand) und
-https://flogramsch-blip.github.io/Jungfernstieg/pruefung/ (Prüfassistent).
+https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent).
 
 ## Hosting
 

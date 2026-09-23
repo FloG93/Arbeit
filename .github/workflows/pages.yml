@@ -16,7 +16,6 @@ on:
   push:
     branches:
       - main
-      - claude/inspiring-ritchie-kaz8vn
     # Ohne paths-Filter: eine Freigabe ändert nur poster/release.json, und der
     # Lauf dauert keine halbe Minute — die Ersparnis wäre den Fallstrick nicht wert.
   workflow_dispatch:
