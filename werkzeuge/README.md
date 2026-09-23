@@ -62,5 +62,27 @@ je Grenzwert ein Dokument `review/<tabelle>__<zeile>`, je Normgruppe ein
 Dokument `meta/<gruppe>` (Ausgabestand, Prüfer). Neu veröffentlichen mit dem
 Artifact-Werkzeug und derselben URL; die Item-IDs nicht ändern, sonst gehen
 Eintragungen verloren. Auslesen der Eintragungen: `ArtifactData` → `list` auf
-`review` und `meta`. Wie Ergebnisse in die Daten kommen, steht in
-`UEBERGABE.md` (Abschnitt Grenzwerte).
+`review` und `meta`.
+
+### Ergebnisse der Betatester einpflegen
+
+Die Anpassung an die Normfassungen übernehmen die Betatester, nicht der
+Assistent. Liegen Eintragungen vor, je Item:
+
+- **stimmt** → den `reviewed`-Block der Tabelle füllen (`by`, `date`,
+  `edition`, `fundstelle`); das Badge „Datenbasis ungeprüft“ verschwindet für
+  genau diese Tabelle. Eine Tabelle gilt erst als geprüft, wenn alle ihre
+  Items bestätigt sind.
+- **weicht ab** → Wert in `pruefung/data/grenzwerte.json` bzw.
+  `leitungen.json` korrigieren, die Abweichung in der Commit-Nachricht nennen,
+  `note` der Zeile ergänzen. Bei Leitungsdaten danach
+  `node werkzeuge/leitungen-check.js`: ändert sich ein handgerechnetes
+  Beispiel, das Beispiel neu von Hand rechnen, nicht einfach anpassen.
+- **nicht gefunden** → ungeprüft lassen, in `note` festhalten.
+- Danach `CACHE` in `pruefung/sw.js` hochzählen und `datenstand` in
+  `pruefung/data/index.json` setzen.
+
+Neue Tabellen bekommen einen leeren `reviewed`-Block und werden in die
+Prüfliste aufgenommen: `build-review-items.py` erweitern (neue Gruppen hinten
+anhängen), unter derselben URL neu veröffentlichen, bestehende Item-IDs nicht
+ändern.

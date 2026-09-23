@@ -540,6 +540,12 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
 | Mängelfotos im Protokoll | geplant |
 
+Bekannte Grenze: Bemerkungsfelder und die Wiki-Suche zeichnen bei jedem
+Tastendruck neu. Auf Android-Tastaturen mit Wortvorschlägen kann das die
+Eingabe stören (ungetestet, kein Gerät). Falls gemeldet: wie bei den
+Kopfdaten und dem Namen einer Leitungsrechnung gezielt nachführen statt neu
+zeichnen.
+
 ### Leitungsberechnung
 
 Eigener Reiter „Leitungen“: Verbraucher, Schutzorgan, Leitung, Umgebung und
