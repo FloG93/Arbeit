@@ -5,6 +5,7 @@
   "worlds": "welten.json",
   "limits": "grenzwerte.json",
   "intervals": "prueffristen.json",
+  "cables": "leitungen.json",
   "norms": [
     { "file": "normen/anlagenpruefung.json", "status": "aktiv" },
     { "file": "normen/geraetepruefung.json", "status": "aktiv" }

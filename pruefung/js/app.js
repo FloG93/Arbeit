@@ -310,9 +310,10 @@
 
     // Ungeprüfte Grenzwerte sind kein Defekt, sondern ein Zustand — aber einer,
     // den man sehen muss. Deshalb Statuszeile statt Befund.
-    const ungeprueft = (P.data.limits.tables || []).filter(t => !(t.reviewed && t.reviewed.date));
+    const alleTabellen = (P.data.limits.tables || []).concat(P.data.cables ? P.cable.reviewTables(P.data.cables) : []);
+    const ungeprueft = alleTabellen.filter(t => !(t.reviewed && t.reviewed.date));
     const reviewStatus = ungeprueft.length
-      ? ungeprueft.length + ' von ' + (P.data.limits.tables || []).length + ' Grenzwerttabellen sind nicht gegen die Normfassung geprüft: ' + ungeprueft.map(t => t.id).join(', ')
+      ? ungeprueft.length + ' von ' + alleTabellen.length + ' Grenzwerttabellen sind nicht gegen die Normfassung geprüft: ' + ungeprueft.map(t => t.id).join(', ')
       : 'Alle Grenzwerttabellen sind gegengeprüft.';
 
     for (const table of (P.data.limits.tables || [])) {
@@ -323,6 +324,8 @@
         if (!row.unit) note('Grenzwert', table.id + '/' + row.key + ' hat keine Einheit');
       }
     }
+
+    if (P.data.cables) checkCables(P.data.cables, note);
 
     for (const entry of P.data.wiki) {
       checkWiki(entry.related && entry.related.filter(id => !isStepId(id)), 'wiki/' + entry.id + ' (related)');
@@ -376,6 +379,7 @@
     if (window.caches) {
       const expected = ['data/index.json', 'data/' + P.data.registry.worlds, 'data/' + P.data.registry.limits]
         .concat(P.data.registry.intervals ? ['data/' + P.data.registry.intervals] : [])
+        .concat(P.data.registry.cables ? ['data/' + P.data.registry.cables] : [])
         .concat((P.data.registry.norms || []).map(n => 'data/' + n.file))
         .concat((P.data.registry.wiki || []).map(f => 'data/' + f));
       // Den eigenen Cache suchen statt seinen Namen zu kennen: eine zweite
@@ -430,6 +434,61 @@
 
     walk(P.wizard.start(pack, worldId, variant), 0);
     return ends;
+  }
+
+  /* Leitungsdaten: eine Lücke in einer Tabelle wäre im Feld ein stilles
+   * „kein Wert“ — deshalb vollständig prüfen und die handgerechneten
+   * Beispiele nachrechnen. */
+  function checkCables(cb, note) {
+    const bel = cb.belastbarkeit;
+    const arten = new Set(cb.verlegearten.arten.map(a => a.id));
+    for (const t of cb.leitungstypen.typen) {
+      for (const va of t.verlegearten) {
+        if (!arten.has(va)) { note('Leitung', t.id + ': Verlegeart „' + va + '“ existiert nicht'); continue; }
+        for (const adern of ['2', '3']) {
+          const reihe = bel.werte[va] && bel.werte[va][adern];
+          if (!reihe || reihe.length !== bel.querschnitte.length) { note('Leitung', 'Belastbarkeit ' + va + '/' + adern + ' Adern unvollständig'); continue; }
+          for (const S of t.querschnitte) {
+            const i = bel.querschnitte.indexOf(S);
+            if (i < 0 || !(reihe[i] > 0)) note('Leitung', t.id + ' ' + S + ' mm² hat in ' + va + '/' + adern + ' keinen Belastbarkeitswert');
+          }
+          for (let i = 1; i < reihe.length; i++) if (!(reihe[i] > reihe[i - 1])) note('Leitung', 'Belastbarkeit ' + va + '/' + adern + ' steigt nicht mit dem Querschnitt bei ' + bel.querschnitte[i] + ' mm²');
+        }
+      }
+    }
+    const fallend = (list, key, where) => {
+      for (let i = 1; i < list.length; i++) {
+        if (!(list[i][key] > list[i - 1][key])) note('Leitung', where + ': Stufen nicht aufsteigend');
+        if (list[i].f > list[i - 1].f) note('Leitung', where + ': Faktor steigt bei ' + list[i][key]);
+      }
+    };
+    const temp = cb.faktoren.temperatur;
+    fallend(temp.luft.stufen, 'bis', 'Temperatur Luft');
+    fallend(temp.erde.stufen, 'bis', 'Temperatur Erde');
+    for (const a of cb.faktoren.haeufung.anordnungen) fallend(a.stufen, 'n', 'Häufung ' + a.id);
+    const ls = cb.schutzorgane.ls;
+    for (const ch of ls.charakteristiken) if (!(ch.ia_faktor > 0)) note('Leitung', 'LS ' + ch.id + ' ohne Ia-Faktor');
+    for (const b of cb.schutzorgane.ls_durchlass.bereiche) {
+      for (const ch of ['B', 'C']) if (!b[ch] || b[ch].length !== cb.schutzorgane.ls_durchlass.stufen_ik.length) note('Leitung', 'LS-Durchlass ' + ch + ' bis ' + b.in_max + ' A unvollständig');
+    }
+    const gg = cb.schutzorgane.gg;
+    for (const r of gg.reihe) {
+      for (const t of gg.zeiten) if (!(r.ia[String(t)] > 0)) note('Leitung', 'gG ' + r.in + ' A: Ia bei ' + t + ' s fehlt');
+      if (!(r.ia['5'] < r.ia['0.4'] && r.ia['0.4'] < r.ia['0.1'])) note('Leitung', 'gG ' + r.in + ' A: Ia steigt nicht mit kürzerer Zeit');
+      if (!(r.i2t > 0)) note('Leitung', 'gG ' + r.in + ' A: I²t fehlt');
+    }
+    const lim = P.limits.table('spannungsfall');
+    for (const [welt, v] of Object.entries(cb.vorbelegung)) {
+      if (!P.data.worldById.has(welt)) note('Leitung', 'Vorbelegung für unbekannte Welt „' + welt + '“');
+      if (!lim || !lim.rows.some(r => r.key === v.netz.duGrenze)) note('Leitung', 'Vorbelegung ' + welt + ': Spannungsfall-Grenze „' + v.netz.duGrenze + '“ fehlt');
+    }
+    for (const vl of cb.vorlagen) {
+      if (!P.data.worldById.has(vl.welt)) note('Leitung', 'Vorlage ' + vl.id + ': Welt „' + vl.welt + '“ existiert nicht');
+      const r = P.cable.compute(Object.assign({ vorlage: vl.id }, vl.calc, { leitung: Object.assign({ laenge: 20 }, vl.calc.leitung) }), { cables: cb, limits: P.data.limits }, vl.welt);
+      if (r.fehler.length) note('Leitung', 'Vorlage ' + vl.id + ': ' + r.fehler.join(' '));
+      else if (r.vorschlag == null) note('Leitung', 'Vorlage ' + vl.id + ': bei 20 m kein Querschnitt möglich');
+    }
+    for (const b of P.cable.checkExamples({ cables: cb, limits: P.data.limits })) note('Leitung', b);
   }
 
   function isStepId(id) {

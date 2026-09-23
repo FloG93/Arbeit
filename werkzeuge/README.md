@@ -33,6 +33,18 @@ Selbsttest: auf `localhost` läuft er automatisch (Konsole), sonst
 Erreichbarkeit im Entscheidungsbaum, Reihenfolge der Prüfschritte,
 Grenzwerttabellen und die Vollständigkeit des Offline-Caches.
 
+## `leitungen-check.js` — Rechenkern der Leitungsberechnung in Node
+
+Lädt `pruefung/js/util.js` und `cable.js` ohne Browser und rechnet die
+handgerechneten Beispiele aus `pruefung/data/leitungen.json` (`beispiele`)
+nach: Vorschlag, bestimmender Nachweis, Status und Einzelwerte. Derselbe
+Abgleich läuft im Selbsttest der App.
+
+```sh
+node werkzeuge/leitungen-check.js            # nur Ergebnis
+node werkzeuge/leitungen-check.js --zeigen   # Querschnittsleiter und Formeln je Beispiel
+```
+
 ## `pruefliste/` — Grenzwert-Abgleich für die Betatester
 
 `build-review-items.py` erzeugt aus `pruefung/data/grenzwerte.json` und

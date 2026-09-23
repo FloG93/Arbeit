@@ -1,0 +1,427 @@
+{
+  "schema": 1,
+  "datenstand": "2026-09",
+  "note": "Datenbasis der Leitungsberechnung: Belastbarkeiten, Umrechnungsfaktoren, Kennwerte der Schutzorgane und Rechenkonstanten. Keine Normzitate, nur Zahlenwerte mit Quelle und eigene Zusammenfassungen. Jede Tabelle ist ungeprüft, solange ihr reviewed-Block leer ist.",
+
+  "konstanten": {
+    "id": "leitung-konstanten",
+    "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+    "title": "Rechenkonstanten der Leitungsberechnung",
+    "source": "DIN VDE 0100-520 Beiblatt 2, DIN VDE 0100-430, DIN EN 60909-0",
+    "werte": {
+      "u0": { "wert": 230, "einheit": "V", "label": "Nennspannung gegen Erde U0" },
+      "u": { "wert": 400, "einheit": "V", "label": "Nennspannung Außenleiter–Außenleiter U" },
+      "rho20": { "wert": 0.0178, "einheit": "Ω·mm²/m", "label": "Spezifischer Widerstand Kupfer bei 20 °C", "note": "Entspricht κ = 56 m/(Ω·mm²), wie in der Formel „Erwarteter Leiterwiderstand“ der Grenzwerte." },
+      "f_betrieb": { "wert": 1.25, "einheit": "", "label": "Faktor ρ bei Betriebstemperatur (Spannungsfall)", "note": "ρ im Betrieb ≈ 1,25 × ρ20, daraus 0,0223 Ω·mm²/m." },
+      "f_fehler": { "wert": 1.24, "einheit": "", "label": "Faktor ρ bei 80 °C (Fehlerfall, Abschaltbedingung)", "note": "Leitertemperatur im Fehlerfall, daraus 0,0221 Ω·mm²/m." },
+      "c_min": { "wert": 0.95, "einheit": "", "label": "Spannungsfaktor c_min (kleinster Kurzschlussstrom)" },
+      "c_max": { "wert": 1.10, "einheit": "", "label": "Spannungsfaktor c_max (größter Kurzschlussstrom)" },
+      "k_cu_pvc": { "wert": 115, "einheit": "A·√s/mm²", "label": "Materialbeiwert k für Cu mit PVC-Isolierung", "note": "Gilt bis 300 mm²." },
+      "x_strich": { "wert": 0.00008, "einheit": "Ω/m", "label": "Induktiver Belag x′ je Leiter", "note": "Rund 0,08 Ω/km. Bei den Querschnitten dieser App fast bedeutungslos, rechnet aber bei cos φ < 1 mit." },
+      "ueberlast_i2": { "wert": 1.45, "einheit": "", "label": "Überlastschutz: I2 ≤ 1,45 × Iz" },
+      "zs_mess": { "zaehler": 2, "nenner": 3, "einheit": "", "label": "Anteil von U0/Ia für den Zs-Messwert am Leitungsende (2/3-Regel)", "note": "Deckt Erwärmung und Netzschwankung ab, wenn der Messwert kalt aufgenommen wird." },
+      "ik3_faktor": { "wert": 2, "einheit": "", "label": "Obere Abschätzung Ik3 / Ik1 am Verteiler (Drehstrom)", "note": "Aus der Schleifenimpedanz L–PE lässt sich der dreipolige Kurzschlussstrom nicht genau bestimmen. Ist der Rückleiter mindestens so gut wie der Außenleiter, liegt Ik3 höchstens beim Doppelten von Ik1 — die App rechnet deshalb für das Schaltvermögen auf der sicheren Seite mit diesem Faktor." }
+    }
+  },
+
+  "leitungstypen": {
+    "id": "leitung-typen",
+    "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+    "title": "Leitungstypen und zulässige Verlegearten",
+    "source": "DIN VDE 0298-3, DIN VDE 0298-4, Herstellerangaben",
+    "typen": [
+      {
+        "id": "NYM-J", "label": "NYM-J", "familie": "NYM", "isolierung": "PVC", "adern": "mit grün-gelbem Schutzleiter",
+        "beschreibung": "Mantelleitung für trockene, feuchte und nasse Räume, auf, im und unter Putz. Nicht in Erde, nicht direkt in Beton, der gerüttelt oder gestampft wird.",
+        "querschnitte": [1.5, 2.5, 4, 6, 10, 16, 25, 35],
+        "verlegearten": ["A2", "B2", "C", "E"]
+      },
+      {
+        "id": "NYM-O", "label": "NYM-O", "familie": "NYM", "isolierung": "PVC", "adern": "ohne grün-gelbe Ader",
+        "beschreibung": "Wie NYM-J, aber ohne Schutzleiterader — etwa für Steuerleitungen oder Stromkreise, deren Schutzleiter getrennt geführt wird.",
+        "querschnitte": [1.5, 2.5, 4, 6, 10, 16, 25, 35],
+        "verlegearten": ["A2", "B2", "C", "E"]
+      },
+      {
+        "id": "NYY-J", "label": "NYY-J", "familie": "NYY", "isolierung": "PVC", "adern": "mit grün-gelbem Schutzleiter",
+        "beschreibung": "Kabel für Innenräume, im Freien, in Erde, in Beton und auf Pritschen — der robuste Allrounder für Zuleitungen.",
+        "querschnitte": [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120],
+        "verlegearten": ["A2", "B2", "C", "D", "E"]
+      },
+      {
+        "id": "NYY-O", "label": "NYY-O", "familie": "NYY", "isolierung": "PVC", "adern": "ohne grün-gelbe Ader",
+        "beschreibung": "Wie NYY-J ohne Schutzleiterader.",
+        "querschnitte": [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120],
+        "verlegearten": ["A2", "B2", "C", "D", "E"]
+      },
+      {
+        "id": "H07V-U", "label": "H07V-U", "familie": "H07V", "isolierung": "PVC", "adern": "Einzelader, eindrähtig",
+        "beschreibung": "Aderleitung, nur geschützt verlegt: im Installationsrohr, im Kanal oder im Schaltschrank. Nie frei auf Putz oder in Erde.",
+        "querschnitte": [1.5, 2.5, 4, 6, 10],
+        "verlegearten": ["A1", "B1"]
+      },
+      {
+        "id": "H07V-R", "label": "H07V-R", "familie": "H07V", "isolierung": "PVC", "adern": "Einzelader, mehrdrähtig",
+        "beschreibung": "Wie H07V-U, mehrdrähtig für größere Querschnitte.",
+        "querschnitte": [6, 10, 16, 25, 35, 50, 70, 95, 120],
+        "verlegearten": ["A1", "B1"]
+      },
+      {
+        "id": "NYIF", "label": "NYIF", "familie": "NYIF", "isolierung": "PVC", "adern": "Stegleitung",
+        "beschreibung": "Stegleitung nur im oder unter Putz, in trockenen Räumen. Nicht auf Holz, nicht in Hohlwänden.",
+        "querschnitte": [1.5, 2.5, 4],
+        "verlegearten": ["C"]
+      }
+    ]
+  },
+
+  "verlegearten": {
+    "id": "leitung-verlegearten",
+    "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+    "title": "Referenz-Verlegearten",
+    "source": "DIN VDE 0298-4, DIN VDE 0100-520",
+    "arten": [
+      { "id": "A1", "kurz": "Aderleitungen im Rohr in wärmegedämmter Wand", "beispiele": "H07V im Rohr in einer Holzständerwand mit Dämmwolle", "umgebung": "luft" },
+      { "id": "A2", "kurz": "Mehradrige Leitung im Rohr in wärmegedämmter Wand", "beispiele": "NYM im Leerrohr in gedämmter Außenwand oder Dachschräge", "umgebung": "luft" },
+      { "id": "B1", "kurz": "Aderleitungen im Rohr oder Kanal auf der Wand", "beispiele": "H07V im Aufputzrohr, im Kabelkanal auf der Wand", "umgebung": "luft" },
+      { "id": "B2", "kurz": "Mehradrige Leitung im Rohr oder Kanal auf der Wand", "beispiele": "NYM im Aufputzrohr oder im Brüstungskanal", "umgebung": "luft" },
+      { "id": "C", "kurz": "Direkt auf oder in der Wand", "beispiele": "NYM mit Schellen auf der Wand, NYM oder NYIF im/unter Putz", "umgebung": "luft" },
+      { "id": "D", "kurz": "In Erde", "beispiele": "NYY im Schutzrohr im Erdreich zur Garage oder zum Nebengebäude", "umgebung": "erde" },
+      { "id": "E", "kurz": "Frei in Luft, mit Abstand zur Wand", "beispiele": "NYY auf gelochter Kabelpritsche oder Kabelleiter", "umgebung": "luft" }
+    ]
+  },
+
+  "belastbarkeit": {
+    "id": "leitung-belastbarkeit",
+    "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+    "title": "Strombelastbarkeit Iz, Kupfer, PVC-isoliert (70 °C)",
+    "source": "DIN VDE 0298-4 (Luft); Spalte D nach IEC 60364-5-52, Verlegung im Rohr in Erde",
+    "note": "Bezug: 30 °C Luft, 20 °C Erde mit 2,5 K·m/W. Spalte D gilt für Kabel im Rohr in Erde und liegt damit unter den Werten für direkt in Erde verlegte Kabel — auf der sicheren Seite.",
+    "einheit": "A",
+    "querschnitte": [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120],
+    "werte": {
+      "A1": { "2": [15.5, 19.5, 26, 34, 46, 61, 80, 99, 119, 151, 182, 210], "3": [13.5, 18, 24, 31, 42, 56, 73, 89, 108, 136, 164, 188] },
+      "A2": { "2": [15.5, 18.5, 25, 32, 43, 57, 75, 92, 110, 139, 167, 192], "3": [13, 17.5, 23, 29, 39, 52, 68, 83, 99, 125, 150, 172] },
+      "B1": { "2": [17.5, 24, 32, 41, 57, 76, 101, 125, 151, 192, 232, 269], "3": [15.5, 21, 28, 36, 50, 68, 89, 110, 134, 171, 207, 239] },
+      "B2": { "2": [16.5, 23, 30, 38, 52, 69, 90, 111, 133, 168, 201, 232], "3": [15, 20, 27, 34, 46, 62, 80, 99, 118, 149, 179, 206] },
+      "C":  { "2": [19.5, 27, 36, 46, 63, 85, 112, 138, 168, 213, 258, 299], "3": [17.5, 24, 32, 41, 57, 76, 96, 119, 144, 184, 223, 259] },
+      "D":  { "2": [22, 29, 38, 47, 63, 81, 104, 125, 148, 183, 216, 246], "3": [18, 24, 31, 39, 52, 67, 86, 103, 122, 151, 179, 203] },
+      "E":  { "2": [22, 30, 40, 51, 70, 94, 119, 148, 180, 232, 282, 328], "3": [18.5, 25, 34, 43, 60, 80, 101, 126, 153, 196, 238, 276] }
+    }
+  },
+
+  "faktoren": {
+    "temperatur": {
+      "id": "leitung-faktor-temperatur",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Umrechnungsfaktor Umgebungstemperatur, PVC 70 °C",
+      "source": "DIN VDE 0298-4",
+      "note": "Zwischenwerte rechnet die App nicht an, sie nimmt die nächsthöhere Temperaturstufe.",
+      "luft": { "bezug": 30, "stufen": [
+        { "bis": 10, "f": 1.22 }, { "bis": 15, "f": 1.17 }, { "bis": 20, "f": 1.12 }, { "bis": 25, "f": 1.06 },
+        { "bis": 30, "f": 1.00 }, { "bis": 35, "f": 0.94 }, { "bis": 40, "f": 0.87 }, { "bis": 45, "f": 0.79 },
+        { "bis": 50, "f": 0.71 }, { "bis": 55, "f": 0.61 }, { "bis": 60, "f": 0.50 }
+      ] },
+      "erde": { "bezug": 20, "stufen": [
+        { "bis": 10, "f": 1.10 }, { "bis": 15, "f": 1.05 }, { "bis": 20, "f": 1.00 }, { "bis": 25, "f": 0.95 },
+        { "bis": 30, "f": 0.89 }, { "bis": 35, "f": 0.84 }, { "bis": 40, "f": 0.77 }, { "bis": 45, "f": 0.71 },
+        { "bis": 50, "f": 0.63 }
+      ] }
+    },
+    "haeufung": {
+      "id": "leitung-faktor-haeufung",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Umrechnungsfaktor Häufung",
+      "source": "DIN VDE 0298-4",
+      "note": "Anzahl der mehradrigen Leitungen oder Stromkreise, die sich gegenseitig erwärmen. Zwischenwerte: nächsthöhere Stufe.",
+      "anordnungen": [
+        { "id": "gebuendelt", "label": "Gebündelt, im Rohr oder Kanal", "stufen": [
+          { "n": 1, "f": 1.00 }, { "n": 2, "f": 0.80 }, { "n": 3, "f": 0.70 }, { "n": 4, "f": 0.65 }, { "n": 5, "f": 0.60 },
+          { "n": 6, "f": 0.57 }, { "n": 7, "f": 0.54 }, { "n": 8, "f": 0.52 }, { "n": 9, "f": 0.50 }, { "n": 12, "f": 0.45 },
+          { "n": 16, "f": 0.41 }, { "n": 20, "f": 0.38 }
+        ], "darueber": "unzulaessig" },
+        { "id": "wand", "label": "Einlagig auf Wand oder Boden, berührend", "stufen": [
+          { "n": 1, "f": 1.00 }, { "n": 2, "f": 0.85 }, { "n": 3, "f": 0.79 }, { "n": 4, "f": 0.75 }, { "n": 5, "f": 0.73 },
+          { "n": 6, "f": 0.72 }, { "n": 7, "f": 0.72 }, { "n": 8, "f": 0.71 }, { "n": 9, "f": 0.70 }
+        ], "darueber": "konstant" },
+        { "id": "pritsche", "label": "Einlagig auf gelochter Pritsche, berührend", "stufen": [
+          { "n": 1, "f": 1.00 }, { "n": 2, "f": 0.88 }, { "n": 3, "f": 0.82 }, { "n": 4, "f": 0.77 }, { "n": 5, "f": 0.75 },
+          { "n": 6, "f": 0.73 }, { "n": 7, "f": 0.73 }, { "n": 8, "f": 0.72 }, { "n": 9, "f": 0.72 }
+        ], "darueber": "konstant" },
+        { "id": "erde", "label": "In Erde, nebeneinander ohne Abstand", "nurErde": true, "stufen": [
+          { "n": 1, "f": 1.00 }, { "n": 2, "f": 0.75 }, { "n": 3, "f": 0.65 }, { "n": 4, "f": 0.60 }, { "n": 5, "f": 0.55 },
+          { "n": 6, "f": 0.50 }
+        ], "darueber": "unzulaessig" }
+      ]
+    },
+    "daemmung": {
+      "id": "leitung-faktor-daemmung",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Umrechnungsfaktor Wärmedämmung",
+      "source": "DIN VDE 0100-520",
+      "note": "Für eine Leitung, die auf der angegebenen Länge vollständig von Wärmedämmung umschlossen ist. Gilt nicht zusätzlich zu A1/A2, dort ist die Dämmung schon eingerechnet.",
+      "stufen": [
+        { "id": "keine", "label": "Keine", "f": 1.00 },
+        { "id": "5cm", "label": "5 cm umschlossen", "f": 0.88 },
+        { "id": "10cm", "label": "10 cm umschlossen", "f": 0.78 },
+        { "id": "20cm", "label": "20 cm umschlossen", "f": 0.63 },
+        { "id": "40cm", "label": "40 cm umschlossen", "f": 0.51 },
+        { "id": "voll", "label": "0,5 m und mehr umschlossen", "f": 0.50 }
+      ]
+    },
+    "oberschwingungen": {
+      "id": "leitung-faktor-oberschwingungen",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Umrechnungsfaktor Oberschwingungen im Neutralleiter",
+      "source": "DIN VDE 0298-4 / IEC 60364-5-52",
+      "note": "Für vier- und fünfadrige Leitungen bei Drehstrom mit N. Über 33 % Anteil der 3. Oberschwingung trägt der Neutralleiter mehr als die Außenleiter: dann wird nach dem N-Strom bemessen, IN = 3 × Anteil × Ib.",
+      "n_faktor": 3,
+      "stufen": [
+        { "bis": 15, "f": 1.00, "basis": "L", "label": "bis 15 %" },
+        { "bis": 33, "f": 0.86, "basis": "L", "label": "über 15 % bis 33 %" },
+        { "bis": 45, "f": 0.86, "basis": "N", "label": "über 33 % bis 45 %" },
+        { "bis": 100, "f": 1.00, "basis": "N", "label": "über 45 %" }
+      ]
+    }
+  },
+
+  "schutzorgane": {
+    "ls": {
+      "id": "leitung-ls",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "LS-Schalter — Auslösestrom, I2, Schaltvermögen",
+      "source": "DIN EN 60898-1",
+      "note": "Ia ist die obere Grenze des unverzögerten Auslösers: darüber schaltet der LS sicher unter 0,1 s ab. Für 5 s und 0,4 s gilt deshalb derselbe Wert.",
+      "nennstroeme": [6, 10, 13, 16, 20, 25, 32, 40, 50, 63],
+      "i2_faktor": 1.45,
+      "charakteristiken": [
+        { "id": "B", "label": "B", "ia_faktor": 5 },
+        { "id": "C", "label": "C", "ia_faktor": 10 },
+        { "id": "D", "label": "D", "ia_faktor": 20 }
+      ],
+      "zeiten": [5, 0.4, 0.1],
+      "schaltvermoegen": [
+        { "wert": 6000, "label": "6 kA", "default": true },
+        { "wert": 10000, "label": "10 kA" }
+      ]
+    },
+    "ls_durchlass": {
+      "id": "leitung-ls-durchlass",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "LS-Schalter Energiebegrenzungsklasse 3 — höchstes Durchlass-I²t",
+      "source": "DIN EN 60898-1, Anhang ZA",
+      "note": "Werte in A²s je unbeeinflusstem Kurzschlussstrom. D-Charakteristik und Nennströme über 32 A sind nicht erfasst — dort braucht es die Herstellerangabe.",
+      "stufen_ik": [3000, 4500, 6000, 10000],
+      "bereiche": [
+        { "in_max": 16, "B": [15000, 25000, 35000, 70000], "C": [18000, 30000, 42000, 84000] },
+        { "in_max": 32, "B": [18000, 32000, 45000, 90000], "C": [22000, 39000, 55000, 110000] }
+      ]
+    },
+    "gg": {
+      "id": "leitung-gg",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Schmelzsicherung gG — Ausschaltströme, I2, Ausschalt-I²t",
+      "source": "DIN VDE 0636-2 / IEC 60269-1 (Tore 5 s und 0,1 s), Herstellerkennlinien (0,4 s, I²t)",
+      "note": "Ia bei 5 s und 0,1 s sind die oberen Torwerte der Norm. Die 0,4-s-Werte und das Ausschalt-I²t sind typischen Herstellerkennlinien entnommen — beim Abgleich besonders prüfen. 35 A fehlt bewusst: die D-Sicherung 35 A hat keinen Torwert in derselben Reihe.",
+      "schaltvermoegen": 50000,
+      "zeiten": [5, 0.4, 0.1],
+      "i2": [
+        { "in_max": 4, "f": 2.1 },
+        { "in_max": 13, "f": 1.9 },
+        { "in_max": null, "f": 1.6 }
+      ],
+      "reihe": [
+        { "in": 16,  "ia": { "5": 65,   "0.4": 107,  "0.1": 150 },  "i2t": 1000 },
+        { "in": 20,  "ia": { "5": 85,   "0.4": 145,  "0.1": 200 },  "i2t": 1800 },
+        { "in": 25,  "ia": { "5": 110,  "0.4": 180,  "0.1": 260 },  "i2t": 3000 },
+        { "in": 32,  "ia": { "5": 150,  "0.4": 265,  "0.1": 350 },  "i2t": 5500 },
+        { "in": 40,  "ia": { "5": 190,  "0.4": 310,  "0.1": 450 },  "i2t": 9500 },
+        { "in": 50,  "ia": { "5": 250,  "0.4": 460,  "0.1": 610 },  "i2t": 16000 },
+        { "in": 63,  "ia": { "5": 320,  "0.4": 550,  "0.1": 820 },  "i2t": 27000 },
+        { "in": 80,  "ia": { "5": 425,  "0.4": 700,  "0.1": 1100 }, "i2t": 46000 },
+        { "in": 100, "ia": { "5": 580,  "0.4": 950,  "0.1": 1450 }, "i2t": 86000 },
+        { "in": 125, "ia": { "5": 715,  "0.4": 1250, "0.1": 1910 }, "i2t": 140000 },
+        { "in": 160, "ia": { "5": 950,  "0.4": 1650, "0.1": 2590 }, "i2t": 250000 },
+        { "in": 200, "ia": { "5": 1250, "0.4": 2200, "0.1": 3420 }, "i2t": 400000 }
+      ]
+    }
+  },
+
+  "vorbelegung": {
+    "efh": {
+      "verbraucher": { "phasen": 1, "mitN": true, "modus": "a", "leistung": null, "strom": 16, "cosphi": 1 },
+      "schutz": { "art": "ls", "char": "B", "In": null, "icu": 6000 },
+      "leitung": { "typ": "NYM-J", "verlegeart": "C", "laenge": null },
+      "umgebung": { "temp": 30, "anzahl": 1, "anordnung": "gebuendelt", "daemmung": "keine", "os": 0, "ort": "innen" },
+      "netz": { "form": "TN", "kreis": "end", "rcd": true, "zv": null, "duVor": 0, "duGrenze": "ab-zaehler" }
+    },
+    "industrie": {
+      "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "leistung": null, "strom": 16, "cosphi": 0.9 },
+      "schutz": { "art": "ls", "char": "C", "In": null, "icu": 6000 },
+      "leitung": { "typ": "NYY-J", "verlegeart": "E", "laenge": null },
+      "umgebung": { "temp": 35, "anzahl": 1, "anordnung": "pritsche", "daemmung": "keine", "os": 0, "ort": "innen" },
+      "netz": { "form": "TN", "kreis": "end", "rcd": false, "zv": null, "duVor": 0, "duGrenze": "sonstige" }
+    }
+  },
+
+  "vorlagen": [
+    { "id": "steckdosen", "welt": "efh", "label": "Steckdosen", "sub": "1~ · B16 · NYM-J 3×…",
+      "calc": { "verbraucher": { "phasen": 1, "modus": "a", "strom": 16, "cosphi": 1 }, "schutz": { "char": "B", "In": 16 } } },
+    { "id": "licht", "welt": "efh", "label": "Licht", "sub": "1~ · B10 · NYM-J 3×…",
+      "calc": { "verbraucher": { "phasen": 1, "modus": "a", "strom": 10, "cosphi": 1 }, "schutz": { "char": "B", "In": 10 } } },
+    { "id": "herd", "welt": "efh", "label": "Herd", "sub": "3~ · 11 kW · NYM-J 5×…",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "kw", "leistung": 11, "cosphi": 1 }, "schutz": { "char": "B" } } },
+    { "id": "durchlauferhitzer", "welt": "efh", "label": "Durchlauferhitzer", "sub": "3~ ohne N · 21 kW",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": false, "modus": "kw", "leistung": 21, "cosphi": 1 }, "schutz": { "char": "B" } } },
+    { "id": "wallbox-11", "welt": "efh", "label": "Wallbox 11 kW", "sub": "3~ · 16 A · NYM-J 5×…",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "kw", "leistung": 11, "cosphi": 1 }, "schutz": { "char": "B" } } },
+    { "id": "wallbox-22", "welt": "efh", "label": "Wallbox 22 kW", "sub": "3~ · 32 A · NYM-J 5×…",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "kw", "leistung": 22, "cosphi": 1 }, "schutz": { "char": "B" } } },
+    { "id": "waermepumpe", "welt": "efh", "label": "Wärmepumpe", "sub": "3~ · Verdichter · C-Charakteristik",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": false, "modus": "kw", "leistung": 8, "cosphi": 0.85 }, "schutz": { "char": "C" } } },
+    { "id": "uv-zuleitung", "welt": "efh", "label": "UV-Zuleitung", "sub": "3~ · gG · NYM-J 5×…",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 32, "cosphi": 1 }, "schutz": { "art": "gg", "In": null }, "netz": { "kreis": "verteilung", "rcd": false } } },
+
+    { "id": "motor", "welt": "industrie", "label": "Motor", "sub": "3~ ohne N · 7,5 kW · cos φ 0,85",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": false, "modus": "kw", "leistung": 7.5, "cosphi": 0.85 }, "schutz": { "char": "C" } } },
+    { "id": "maschine", "welt": "industrie", "label": "Maschine", "sub": "3~ mit N · 25 A",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 25, "cosphi": 0.9 }, "schutz": { "char": "C" } } },
+    { "id": "cee-16", "welt": "industrie", "label": "CEE 16 A", "sub": "3~ · C16 · RCD",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 16, "cosphi": 0.9 }, "schutz": { "char": "C", "In": 16 }, "netz": { "rcd": true } } },
+    { "id": "cee-32", "welt": "industrie", "label": "CEE 32 A", "sub": "3~ · C32 · RCD",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 32, "cosphi": 0.9 }, "schutz": { "char": "C", "In": 32 }, "netz": { "rcd": true } } },
+    { "id": "uv-zuleitung-gg", "welt": "industrie", "label": "UV-Zuleitung gG", "sub": "3~ · gG 63 A · NYY-J",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 63, "cosphi": 0.9 }, "schutz": { "art": "gg", "In": 63 }, "netz": { "kreis": "verteilung" } } },
+    { "id": "baustrom", "welt": "industrie", "label": "Baustromverteiler", "sub": "3~ · gG 63 A · NYY-J in Erde",
+      "calc": { "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 63, "cosphi": 0.9 }, "schutz": { "art": "gg", "In": 63 }, "leitung": { "typ": "NYY-J", "verlegeart": "D" }, "umgebung": { "temp": 20, "anordnung": "erde", "ort": "freien" }, "netz": { "kreis": "verteilung" } } }
+  ],
+
+  "hinweise": [
+    { "id": "nym-freien", "stufe": "warnung", "when": { "familie": "NYM", "ort": "freien" },
+      "text": "NYM im Freien nur geschützt gegen direkte Sonne verlegen — der PVC-Mantel ist nicht UV-beständig. Für Außenwand und Carport besser NYY." },
+    { "id": "nym-beton", "stufe": "warnung", "when": { "familie": "NYM", "ort": "beton" },
+      "text": "NYM nicht direkt in Beton einbetten, der gerüttelt oder gestampft wird — nur im Leerrohr. Direkt einbetonieren: NYY." },
+    { "id": "nyif-ort", "stufe": "warnung", "when": { "familie": "NYIF", "ort": ["freien", "beton"] },
+      "text": "Stegleitung nur im oder unter Putz in trockenen Räumen." },
+    { "id": "h07v-geschuetzt", "stufe": "info", "when": { "familie": "H07V" },
+      "text": "Aderleitungen nur im geschlossenen Rohr, Kanal oder Gehäuse. Für den Schutzleiter eine eigene grün-gelbe Ader mitziehen." },
+    { "id": "erde-rohr", "stufe": "info", "when": { "verlegeart": "D" },
+      "text": "In Erde: Verlegetiefe, Sandbett und Warnband einhalten; an Hauseinführung und Übergängen mechanisch schützen." },
+    { "id": "oberschwingungen", "stufe": "warnung", "when": { "osBasis": "N" },
+      "text": "Mehr als ein Drittel 3. Oberschwingung: der Neutralleiter ist höher belastet als die Außenleiter. Die App bemisst deshalb nach dem N-Strom — Überlastschutz im N-Leiter mitdenken." },
+    { "id": "wallbox-rcd", "stufe": "warnung", "when": { "vorlage": ["wallbox-11", "wallbox-22"] },
+      "text": "Wallbox: eigener Stromkreis, RCD Typ A mit Gleichfehlerstrom-Erkennung 6 mA (in der Box) oder RCD Typ B. Anmeldung beim Netzbetreiber, ab 12 kW Zustimmung nötig." },
+    { "id": "durchlauferhitzer", "stufe": "info", "when": { "vorlage": "durchlauferhitzer" },
+      "text": "Durchlauferhitzer über 12 kW brauchen die Zustimmung des Netzbetreibers." },
+    { "id": "tt-ohne-rcd", "stufe": "warnung", "when": { "netzform": "TT", "rcd": false },
+      "text": "TT-System ohne RCD: die Abschaltbedingung hängt am Erdungswiderstand und ist mit einem Überstrom-Schutzorgan allein kaum erreichbar. Fehlerschutz über RCD vorsehen." },
+    { "id": "rcd-kurzschluss", "stufe": "info", "when": { "rcd": true },
+      "text": "Mit RCD als Fehlerschutz steht die Abschaltbedingung nur noch als Kurzschlussschutz (5 s) da. Die RCD-Auslösung selbst wird bei der Prüfung gemessen." },
+    { "id": "ohne-vorimpedanz", "stufe": "info", "when": { "zvBekannt": false },
+      "text": "Ohne Vorimpedanz rechnet die App zurück, welche Schleifenimpedanz am Verteiler höchstens vorliegen darf. Den Wert bei der Prüfung am Verteiler messen und vergleichen." }
+  ],
+
+  "beispiele": [
+    {
+      "id": "steckdosen-20m",
+      "titel": "Steckdosenkreis NYM-J 3×…, B16, Verlegeart C, 30 °C, 20 m",
+      "rechnung": "Iz(1,5; C; 2 Adern) = 19,5 A ≥ In 16 A, I2 = 23,2 A ≤ 1,45 · 19,5 = 28,3 A → Belastbarkeit ✓. ΔU(1,5) = 2 · 20 · 16 · 0,02225 / 1,5 = 9,49 V = 4,13 % > 3 % ✗. ΔU(2,5) = 5,70 V = 2,48 % ✓. Ohne Vorimpedanz: Z_L(2,5) = 2 · 20 · 0,022072 / 2,5 = 0,353 Ω, Zs,max = 0,95 · 230 / 80 = 2,731 Ω → bedingt, Z_V ≤ 2,378 Ω.",
+      "calc": {
+        "verbraucher": { "phasen": 1, "modus": "a", "strom": 16, "cosphi": 1 },
+        "schutz": { "art": "ls", "char": "B", "In": 16, "icu": 6000 },
+        "leitung": { "typ": "NYM-J", "verlegeart": "C", "laenge": 20 },
+        "umgebung": { "temp": 30, "anzahl": 1, "anordnung": "gebuendelt", "daemmung": "keine" },
+        "netz": { "form": "TN", "kreis": "end", "rcd": false, "zv": null, "duVor": 0, "duGrenze": "ab-zaehler" }
+      },
+      "erwartet": {
+        "querschnitt": 2.5, "status": "bedingt", "bestimmend": ["spannungsfall"],
+        "werte": [
+          { "S": 1.5, "nachweis": "belastbarkeit", "groesse": "iz", "wert": 19.5 },
+          { "S": 1.5, "nachweis": "spannungsfall", "groesse": "pct", "wert": 4.128 },
+          { "S": 2.5, "nachweis": "spannungsfall", "groesse": "pct", "wert": 2.477 },
+          { "S": 2.5, "nachweis": "abschaltung", "groesse": "zvMax", "wert": 2.378 }
+        ]
+      }
+    },
+    {
+      "id": "wallbox-11-28m",
+      "titel": "Wallbox 11 kW, 3~, NYM-J 5×…, B16, Verlegeart C, 35 °C, 2 gebündelt, 28 m",
+      "rechnung": "Ib = 11 000 / (√3 · 400) = 15,88 A → In 16 A. Iz(1,5; C; 3 Adern) = 17,5 · 0,94 · 0,80 = 13,16 A < 16 A ✗. Iz(2,5) = 24 · 0,752 = 18,05 A ✓, I2 = 23,2 A ≤ 26,17 A ✓. ΔU(2,5) = √3 · 28 · 15,88 · 0,02225 / 2,5 = 6,85 V = 1,71 % ✓.",
+      "calc": {
+        "verbraucher": { "phasen": 3, "mitN": true, "modus": "kw", "leistung": 11, "cosphi": 1 },
+        "schutz": { "art": "ls", "char": "B", "In": null, "icu": 6000 },
+        "leitung": { "typ": "NYM-J", "verlegeart": "C", "laenge": 28 },
+        "umgebung": { "temp": 35, "anzahl": 2, "anordnung": "gebuendelt", "daemmung": "keine" },
+        "netz": { "form": "TN", "kreis": "end", "rcd": true, "zv": null, "duVor": 0, "duGrenze": "ab-zaehler" }
+      },
+      "erwartet": {
+        "querschnitt": 2.5, "status": "bedingt", "bestimmend": ["belastbarkeit"], "In": 16,
+        "werte": [
+          { "S": 1.5, "nachweis": "belastbarkeit", "groesse": "iz", "wert": 13.16 },
+          { "S": 2.5, "nachweis": "belastbarkeit", "groesse": "iz", "wert": 18.048 },
+          { "S": 2.5, "nachweis": "spannungsfall", "groesse": "pct", "wert": 1.713 }
+        ]
+      }
+    },
+    {
+      "id": "uv-nyy-erde",
+      "titel": "UV-Zuleitung NYY-J 5×…, gG 63 A, in Erde (D), 20 °C, 35 m, Z_V 0,25 Ω",
+      "rechnung": "I2 = 1,6 · 63 = 100,8 A muss ≤ 1,45 · Iz sein → Iz ≥ 69,5 A. Iz(16; D; 3 Adern) = 67 A ✗ (obwohl ≥ In). Iz(25) = 86 A ✓. Z_L(25) = 2 · 35 · 0,022072 / 25 = 0,0618 Ω, Zs = 0,3118 Ω, Ik,min = 218,5 / 0,3118 = 700,8 A ≥ Ia(5 s) 320 A ✓. Thermisch: Ia(0,4 s) 550 ≤ 700,8 < Ia(0,1 s) 820 → t_b = 0,4 s, (115 · 25 / 700,8)² = 16,8 s ≥ 0,4 s ✓. ΔU = √3 · 35 · 63 · 0,02225 / 25 · 0,9 + x′-Anteil ≈ 0,80 %.",
+      "calc": {
+        "verbraucher": { "phasen": 3, "mitN": true, "modus": "a", "strom": 63, "cosphi": 0.9 },
+        "schutz": { "art": "gg", "In": 63 },
+        "leitung": { "typ": "NYY-J", "verlegeart": "D", "laenge": 35 },
+        "umgebung": { "temp": 20, "anzahl": 1, "anordnung": "erde", "daemmung": "keine" },
+        "netz": { "form": "TN", "kreis": "verteilung", "rcd": false, "zv": 0.25, "duVor": 0, "duGrenze": "ab-zaehler" }
+      },
+      "erwartet": {
+        "querschnitt": 25, "status": "ok", "bestimmend": ["belastbarkeit"],
+        "werte": [
+          { "S": 16, "nachweis": "belastbarkeit", "groesse": "iz", "wert": 67 },
+          { "S": 25, "nachweis": "abschaltung", "groesse": "ikMin", "wert": 700.8 },
+          { "S": 25, "nachweis": "kurzschluss", "groesse": "tb", "wert": 0.4 },
+          { "S": 25, "nachweis": "kurzschluss", "groesse": "tZul", "wert": 16.83 }
+        ]
+      }
+    },
+    {
+      "id": "langer-kreis-zv",
+      "titel": "Langer Kreis 1~, C16, NYM-J 3×…, 40 m, Z_V 0,8 Ω, Grenze 5 %",
+      "rechnung": "Zs,max = 0,95 · 230 / 160 = 1,366 Ω, Z_L darf höchstens 0,566 Ω sein → L_max = 0,566 · S / (2 · 0,022072) = 12,8 m je mm². Bei 2,5 mm²: L_max 32 m < 40 m ✗ (Spannungsfall 3,10 % ≤ 5 % ✓). Bei 4 mm²: Z_L = 0,441 Ω, Zs = 1,241 Ω, Ik,min = 176,0 A ≥ 160 A ✓.",
+      "calc": {
+        "verbraucher": { "phasen": 1, "modus": "a", "strom": 10, "cosphi": 1 },
+        "schutz": { "art": "ls", "char": "C", "In": 16, "icu": 6000 },
+        "leitung": { "typ": "NYM-J", "verlegeart": "C", "laenge": 40 },
+        "umgebung": { "temp": 30, "anzahl": 1, "anordnung": "gebuendelt", "daemmung": "keine" },
+        "netz": { "form": "TN", "kreis": "end", "rcd": false, "zv": 0.8, "duVor": 0, "duGrenze": "sonstige" }
+      },
+      "erwartet": {
+        "querschnitt": 4, "status": "ok", "bestimmend": ["abschaltung", "kurzschluss"],
+        "werte": [
+          { "S": 2.5, "nachweis": "spannungsfall", "groesse": "pct", "wert": 3.096 },
+          { "S": 2.5, "nachweis": "abschaltung", "groesse": "lMax", "wert": 32.03 },
+          { "S": 4, "nachweis": "abschaltung", "groesse": "ikMin", "wert": 176.0 }
+        ]
+      }
+    },
+    {
+      "id": "grenzfall-ohne-zv",
+      "titel": "Grenzfall ohne Vorimpedanz: 1~, C16, NYM-J 3×…, 70 m, 2 A",
+      "rechnung": "Zs,max = 1,366 Ω. Z_L(1,5) = 2 · 70 · 0,022072 / 1,5 = 2,060 Ω > Zs,max → schon die Leitung allein ist zu lang ✗. Z_L(2,5) = 1,236 Ω → erfüllt, wenn am Verteiler Zs ≤ 0,130 Ω.",
+      "calc": {
+        "verbraucher": { "phasen": 1, "modus": "a", "strom": 2, "cosphi": 1 },
+        "schutz": { "art": "ls", "char": "C", "In": 16, "icu": 6000 },
+        "leitung": { "typ": "NYM-J", "verlegeart": "C", "laenge": 70 },
+        "umgebung": { "temp": 30, "anzahl": 1, "anordnung": "gebuendelt", "daemmung": "keine" },
+        "netz": { "form": "TN", "kreis": "end", "rcd": false, "zv": null, "duVor": 0, "duGrenze": "sonstige" }
+      },
+      "erwartet": {
+        "querschnitt": 2.5, "status": "bedingt", "bestimmend": ["abschaltung"],
+        "werte": [
+          { "S": 1.5, "nachweis": "abschaltung", "groesse": "zl", "wert": 2.060 },
+          { "S": 2.5, "nachweis": "abschaltung", "groesse": "zvMax", "wert": 0.1296 }
+        ]
+      }
+    }
+  ]
+}
