@@ -535,9 +535,45 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Protokoll als A4-Bogen über den Druckdialog (auch „Als PDF speichern") | fertig |
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
+| Leitungsberechnung: Querschnitt vorschlagen, vier Nachweise, Nachweisblatt | fertig |
 | Offline-Betrieb inklusive aller Datenpakete | fertig |
 | Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
 | Mängelfotos im Protokoll | geplant |
+
+### Leitungsberechnung
+
+Eigener Reiter „Leitungen“: Verbraucher, Schutzorgan, Leitung, Umgebung und
+Netz eintragen — die App rechnet jeden Querschnitt der Reihe durch und
+schlägt den kleinsten vor, der alle vier Nachweise erfüllt:
+
+| Nachweis | Rechenweg |
+| --- | --- |
+| Belastbarkeit und Überlastschutz | Iz = Tabellenwert × Faktoren (Temperatur, Häufung, Dämmung, Oberschwingungen); Ib ≤ In ≤ Iz und I2 ≤ 1,45 · Iz |
+| Spannungsfall | ΔU = k · L · Ib · (ρ/S · cos φ + x′ · sin φ), plus Anteil bis zum Verteiler, gegen die gewählte Grenze |
+| Abschaltbedingung | Ik,min = c_min · U0 / (Z_V + Z_L) ≥ Ia bei der zulässigen Abschaltzeit; mit Z_V auch L_max |
+| Kurzschlussfestigkeit | Schaltvermögen ≥ Ik,max; thermisch (k · S / Ik)² ≥ t bzw. k² · S² ≥ Durchlass-I²t |
+
+* **Leitungen:** NYM-J/-O, NYY-J/-O, H07V-U/-R, NYIF — jeweils nur in den
+  Verlegearten, für die sie vorgesehen sind. **Schutzorgane:** LS B/C/D, gG.
+* **Ohne Vorimpedanz** nimmt die App keinen Wert an, sondern rechnet zurück:
+  „erfüllt, wenn am Verteiler Zs ≤ … Ω“. Das Ergebnis heißt dann „bedingt“.
+  Dazu steht der Sollwert für die spätere Messung am Leitungsende (2/3-Regel).
+* **Querschnittsleiter:** jeder Querschnitt mit ✓/◐/✗ und Grund; antippen
+  prüft genau diesen. „Bestimmend“ ist der Nachweis, an dem der nächstkleinere
+  Querschnitt scheitert.
+* **Nachweisblatt** über den Druckdialog: Eingaben, vier Nachweise mit Soll,
+  Ist und Formel mit eingesetzten Zahlen, Hinweise, Prüfstand, Bearbeiter.
+* **Vorlagen je Welt** (EFH: Steckdosen, Licht, Herd, Durchlauferhitzer,
+  Wallbox 11/22 kW, Wärmepumpe, UV-Zuleitung · Industrie: Motor, Maschine,
+  CEE 16/32 A, UV-Zuleitung gG, Baustromverteiler).
+
+Alle Zahlen stehen in `data/leitungen.json` (Belastbarkeit, Faktoren,
+Kennwerte der Schutzorgane, Konstanten, Vorlagen, Hinweise) und in
+`data/grenzwerte.json` (Spannungsfall-Grenzen, Abschaltzeiten). Jede Tabelle
+trägt `reviewed`; solange er leer ist, zeigt die App „Datenbasis ungeprüft“.
+Der Rechenkern `js/cable.js` hat kein DOM: `node werkzeuge/leitungen-check.js`
+rechnet die handgerechneten Beispiele aus `leitungen.json` nach, der
+Selbsttest der App ebenso.
 
 ### Normdaten pflegen
 
@@ -678,23 +714,26 @@ pruefung/
     data.js             lädt die Datenpakete, baut Indizes, Varianten, Welt-Terminologie
     limits.js           Grenzwerte auflösen, formatieren, bewerten
     intervals.js        Prüffristen: Richtwerte, Fälligkeitsdatum
+    cable.js            Leitungsberechnung: Rechenkern ohne DOM, vier Nachweise, Vorschlag
     wizard.js           Entscheidungsbaum: Fragen überspringen, antworten, Replay
     plan.js             Prüfplan bauen, topologisch ordnen, Bewertungen ableiten
-    store.js            Zustand, localStorage, Aufträge und Messergebnisse
+    store.js            Zustand, localStorage, Aufträge, Messergebnisse, Leitungsrechnungen
     ui.js               Bausteine: Messzeile, Bewertungsschalter, Grenzwerttabelle, Wiki-Blöcke
     view-auftraege.js   Aufträge, Normauswahl, Auftragsdaten
     view-wizard.js      Fragen, Hinweisknoten, Antwortübersicht
     view-plan.js        Prüfplan und Schritt-Detail mit Messwerterfassung
     view-wiki.js        Wissensdatenbank mit Suche und Filtern
     view-protokoll.js   Zusammenfassung und A4-Druckbogen
+    view-leitungen.js   Leitungsberechnung: Liste, Rechnung, Querschnittsleiter, Nachweisblatt
     app.js              Kopfzeile, Router, Service-Worker-Registrierung, Selbsttest
   data/
     index.json          Registry: Datenstand, Welten, Grenzwerte, Normen, Wiki
     welten.json         EFH und Industrie: Labels, Begriffe, Akzent, Schwerpunkte
     grenzwerte.json     alle Grenzwerttabellen und Formeln, per ID referenzierbar
     prueffristen.json   Richtwerte für Prüffristen, getrennt nach Anlage und Gerät
+    leitungen.json      Leitungsberechnung: Belastbarkeit, Faktoren, Schutzorgane, Vorlagen, Beispiele
     normen/
       anlagenpruefung.json   DIN VDE 0100-600 und 0105-100 als zwei Varianten
       geraetepruefung.json   DIN EN 50678 und 50699 als zwei Varianten
-    wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen
+    wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen, Leitungen
 ```

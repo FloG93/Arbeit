@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "collection": "leitungen",
+  "entries": [
+    {
+      "id": "leitung-verlegearten",
+      "title": "Verlegearten und Leitungstypen",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "verlegeart", "nym", "nyy"],
+      "summary": "Welche Referenz-Verlegeart gilt, und welcher Leitungstyp darf wo liegen.",
+      "search": "verlegeart a1 a2 b1 b2 c d e erde putz rohr kanal pritsche nym nyy h07v nyif stegleitung",
+      "body": [
+        { "type": "p", "text": "Die Belastbarkeit hängt davon ab, wie gut die Leitung ihre Wärme loswird. Die Referenz-Verlegearten fassen das in wenige Fälle: je dichter eingepackt, desto kleiner der zulässige Strom. Im Zweifel die ungünstigere Verlegeart wählen — maßgeblich ist der schlechteste Abschnitt der Strecke." },
+        { "type": "cable-table", "ref": "verlegearten" },
+        { "type": "cable-table", "ref": "typen" },
+        { "type": "note", "text": "A1/A2 enthalten die Wärmedämmung bereits. Den Dämmungsfaktor nur verwenden, wenn eine Leitung sonst frei liegt und nur auf einem Stück vollständig von Dämmung umschlossen ist." }
+      ],
+      "related": ["leitung-belastbarkeit", "leitung-nym"]
+    },
+    {
+      "id": "leitung-belastbarkeit",
+      "title": "Strombelastbarkeit Iz",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "belastbarkeit", "iz"],
+      "summary": "Tabellenwerte für Kupfer mit PVC-Isolierung, je Verlegeart und Zahl der belasteten Adern.",
+      "search": "belastbarkeit iz strombelastbarkeit tabelle querschnitt ampere 0298-4 belastete adern",
+      "body": [
+        { "type": "p", "text": "Belastet sind bei Wechselstrom zwei Adern (L und N), bei Drehstrom drei — der Neutralleiter trägt bei symmetrischer Last nichts und der Schutzleiter im Betrieb nie. Der Tabellenwert gilt bei der Bezugstemperatur und ohne Häufung." },
+        { "type": "cable-table", "ref": "belastbarkeit" }
+      ],
+      "related": ["leitung-faktoren", "leitung-ueberlast"]
+    },
+    {
+      "id": "leitung-faktoren",
+      "title": "Umrechnungsfaktoren",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "faktor", "haeufung", "temperatur"],
+      "summary": "Temperatur, Häufung, Wärmedämmung und Oberschwingungen verkleinern Iz — die Faktoren werden multipliziert.",
+      "search": "umrechnungsfaktor haeufung buendelung temperatur waermedaemmung oberschwingung neutralleiter",
+      "body": [
+        { "type": "p", "text": "Iz = Tabellenwert × f_Temperatur × f_Häufung × f_Dämmung × f_Oberschwingung. Die App nimmt bei Zwischenwerten immer die nächsthöhere Stufe und interpoliert nicht." },
+        { "type": "cable-table", "ref": "temperatur" },
+        { "type": "cable-table", "ref": "haeufung" },
+        { "type": "cable-table", "ref": "daemmung" },
+        { "type": "cable-table", "ref": "oberschwingungen" },
+        { "type": "warn", "text": "Häufung heißt: Stromkreise, die gleichzeitig nennenswert belastet sind und nebeneinander liegen. Fünf NYM im selben Leerrohr zur Unterverteilung sind fünf gehäufte Stromkreise, auch wenn sie in der Wohnung auseinanderlaufen." }
+      ],
+      "related": ["leitung-belastbarkeit"]
+    },
+    {
+      "id": "leitung-ueberlast",
+      "title": "Überlastschutz: Ib ≤ In ≤ Iz",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "ueberlast", "ls", "sicherung"],
+      "summary": "Warum eine gG-Sicherung bei gleichem Nennstrom einen größeren Querschnitt braucht als ein LS-Schalter.",
+      "search": "ueberlastschutz ib in iz i2 1,45 ls schalter sicherung gg nennstrom",
+      "body": [
+        { "type": "formula", "formulaRef": "leitung-ueberlast" },
+        { "type": "p", "text": "I2 ist der Strom, bei dem das Schutzorgan innerhalb der konventionellen Zeit sicher auslöst. Beim LS-Schalter ist I2 dasselbe Vielfache von In wie in der Überlastbedingung — sie ist damit schon mit In ≤ Iz erfüllt. Die gG-Sicherung schmilzt erst bei einem höheren Vielfachen sicher (Tabelle unten): dort muss Iz spürbar über In liegen." },
+        { "type": "cable-table", "ref": "ls" },
+        { "type": "cable-table", "ref": "gg" }
+      ],
+      "related": ["leitung-belastbarkeit", "leitung-kurzschluss"]
+    },
+    {
+      "id": "leitung-spannungsfall",
+      "title": "Spannungsfall berechnen",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "spannungsfall"],
+      "summary": "Rechenweg für Wechsel- und Drehstrom und die Grenzen ab Zähler.",
+      "search": "spannungsfall delta u prozent laenge querschnitt 3 prozent zaehler hauptleitung",
+      "body": [
+        { "type": "formula", "formulaRef": "leitung-spannungsfall" },
+        { "type": "limits", "limitRef": "spannungsfall" },
+        { "type": "note", "text": "Im Wohnbau zählt der Spannungsfall ab dem Zähler. Liegt schon ein Teil bis zur Unterverteilung, in der Rechnung unter „ΔU bis Verteiler“ eintragen." }
+      ],
+      "related": ["messverfahren-spannungsfall"]
+    },
+    {
+      "id": "leitung-abschaltung",
+      "title": "Abschaltbedingung und Leitungslänge",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "abschaltung", "zs", "leitungslaenge"],
+      "summary": "Wie lang eine Leitung höchstens sein darf, damit das Schutzorgan im Fehlerfall rechtzeitig abschaltet.",
+      "search": "abschaltbedingung maximale leitungslaenge zs ia vorimpedanz rueckrechnung 2/3 regel c_min",
+      "body": [
+        { "type": "formula", "formulaRef": "leitung-abschaltung" },
+        { "type": "p", "text": "Ohne gemessene Vorimpedanz rechnet die App rückwärts: wie groß darf die Schleifenimpedanz am Verteiler höchstens sein? Diesen Wert bei der Prüfung am Verteiler messen und vergleichen — dann ist die Bedingung erfüllt oder eben nicht." },
+        { "type": "limits", "limitRef": "abschaltzeit" },
+        { "type": "cable-table", "ref": "konstanten" },
+        { "type": "note", "text": "Gemessen wird kalt und bei Netzspannung, nicht bei 80 °C und c_min. Deshalb gilt für den Messwert am Leitungsende die schärfere 2/3-Regel." }
+      ],
+      "related": ["messverfahren-schleifenimpedanz", "grenzwerte-abschaltzeit"]
+    },
+    {
+      "id": "leitung-kurzschluss",
+      "title": "Kurzschlussfestigkeit",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "kurzschluss", "i2t"],
+      "summary": "Die Leitung muss die Energie aushalten, die das Schutzorgan bis zur Abschaltung durchlässt.",
+      "search": "kurzschlussfestigkeit k2s2 i2t durchlass energiebegrenzungsklasse 3 schaltvermoegen ik",
+      "body": [
+        { "type": "formula", "formulaRef": "leitung-kurzschluss" },
+        { "type": "p", "text": "Zwei Fragen: Kann das Schutzorgan den größten Kurzschlussstrom am Verteiler überhaupt schalten (Schaltvermögen)? Und hält die Leitung beim kleinsten Kurzschlussstrom am Ende die Wärme aus, bis abgeschaltet ist? Die App rechnet ohne Interpolation der Kennlinie: sie nimmt die langsamste Stützstelle, bei der das Schutzorgan sicher auslöst." },
+        { "type": "cable-table", "ref": "ls_durchlass" },
+        { "type": "warn", "text": "Bei hohem Kurzschlussstrom lässt ein B16 der Klasse 3 mehr Energie durch, als 1,5 mm² aushält (Tabelle oben gegen k² · S²). Nahe am Trafo ist 1,5 mm² hinter B16 deshalb nicht kurzschlussfest — ohne gemessene Vorimpedanz nennt die App die Bedingung." }
+      ],
+      "related": ["leitung-ueberlast", "leitung-abschaltung"]
+    },
+    {
+      "id": "leitung-nym",
+      "title": "NYM richtig einsetzen",
+      "kind": "leitungen",
+      "worlds": ["efh", "industrie"],
+      "tags": ["leitung", "nym"],
+      "summary": "Wo NYM liegen darf und wo NYY oder ein Rohr hingehört.",
+      "search": "nym nyy erde beton freien uv aussen putz",
+      "body": [
+        { "type": "bullets", "items": [
+          "Auf, im und unter Putz, in trockenen, feuchten und nassen Räumen: ja.",
+          "In Erde: nein — auch nicht im Leerrohr. Dafür NYY.",
+          "Direkt in Beton, der gerüttelt oder gestampft wird: nein, nur im Leerrohr.",
+          "Im Freien: nur geschützt vor direkter Sonne, der Mantel ist nicht UV-beständig.",
+          "NYM-O hat keine grün-gelbe Ader: nur, wo der Schutzleiter getrennt geführt wird."
+        ] }
+      ],
+      "related": ["leitung-verlegearten"]
+    }
+  ]
+}

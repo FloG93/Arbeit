@@ -11,7 +11,7 @@
 
   const L = {};
 
-  L.table = id => P.data.limitTableById.get(id) || null;
+  L.table = id => P.data.limitTableById.get(id) || (P.data.cableTableById && P.data.cableTableById.get(id)) || null;
 
   /* Prüfstand der Grenzwerte, die in diesem Auftrag tatsächlich verwendet
    * wurden — nicht der aller Tabellen: was nicht gemessen wurde, muss auch

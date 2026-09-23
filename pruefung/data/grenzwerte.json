@@ -200,25 +200,25 @@
       "id": "leitung-ueberlast",
       "label": "Überlastschutz einer Leitung",
       "expr": "Ib ≤ In ≤ Iz  und  I2 ≤ 1,45 · Iz",
-      "note": "Iz = Tabellenwert × Faktoren für Temperatur, Häufung, Dämmung und Oberschwingungen. I2 ist der Strom, bei dem das Schutzorgan sicher auslöst: 1,45 · In beim LS-Schalter, 1,6 · In bei gG ab 16 A — deshalb darf eine gG-Sicherung nur bis rund 0,9 · Iz gewählt werden."
+      "note": "Iz = Tabellenwert × Faktoren für Temperatur, Häufung, Dämmung und Oberschwingungen. I2 ist der Strom, bei dem das Schutzorgan sicher auslöst; die Vielfachen von In stehen in den Tabellen der Schutzorgane. Bei gG liegt I2 höher als beim LS-Schalter, deshalb braucht sie bei gleichem Nennstrom mehr Querschnitt."
     },
     {
       "id": "leitung-spannungsfall",
       "label": "Spannungsfall einer Leitung",
       "expr": "ΔU = k · L · Ib · (ρ / S · cos φ + x′ · sin φ),  k = 2 (1~, bezogen auf U0) bzw. √3 (3~, bezogen auf U)",
-      "note": "ρ bei Betriebstemperatur ≈ 1,25 · 0,0178 = 0,0223 Ω·mm²/m. Beispiel: 1~, 28 m, 16 A, 4 mm² → 2 · 28 · 16 · 0,0223 / 4 = 4,98 V = 2,2 % von 230 V."
+      "note": "ρ ist der spezifische Widerstand bei Betriebstemperatur, x′ der induktive Belag — beide in den Rechenkonstanten der Leitungsberechnung. Der Spannungsfall bis zum Verteiler kommt hinzu."
     },
     {
       "id": "leitung-abschaltung",
       "label": "Abschaltbedingung über die Leitungslänge",
       "expr": "Ik,min = c_min · U0 / (Z_V + 2 · L · ρ80 / S) ≥ Ia",
-      "note": "Z_V ist die Schleifenimpedanz am Verteiler, ρ80 ≈ 1,24 · 0,0178 = 0,0221 Ω·mm²/m, c_min = 0,95. Ohne Z_V gilt umgekehrt: erfüllt, wenn am Verteiler Zs ≤ c_min · U0 / Ia − Z_L."
+      "note": "Z_V ist die Schleifenimpedanz am Verteiler, ρ80 der spezifische Widerstand bei Fehlertemperatur, c_min der Spannungsfaktor — beide in den Rechenkonstanten. Ohne Z_V gilt umgekehrt: erfüllt, wenn am Verteiler Zs ≤ c_min · U0 / Ia − Z_L."
     },
     {
       "id": "leitung-kurzschluss",
       "label": "Kurzschlussfestigkeit einer Leitung",
       "expr": "t ≤ (k · S / Ik)²  bzw.  k² · S² ≥ I²t",
-      "note": "k = 115 für Kupfer mit PVC. Bei Abschaltzeiten unter 0,1 s zählt das Durchlass-I²t des Schutzorgans. Beispiel: 1,5 mm² hält k² · S² = 29 756 A²s aus."
+      "note": "k für Kupfer mit PVC steht in den Rechenkonstanten der Leitungsberechnung. Bei Abschaltzeiten unter 0,1 s zählt das Durchlass-I²t des Schutzorgans."
     }
   ]
 }

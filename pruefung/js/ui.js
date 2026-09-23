@@ -223,6 +223,96 @@
     ]);
   }
 
+  /* Tabellen der Leitungsberechnung, direkt aus data/leitungen.json — dieselbe
+   * Quelle, aus der P.cable rechnet, damit Wiki und Rechnung nie auseinanderlaufen. */
+  U.CABLE_TABLES = ['verlegearten', 'typen', 'belastbarkeit', 'temperatur', 'haeufung', 'daemmung', 'oberschwingungen', 'ls', 'ls_durchlass', 'gg', 'konstanten'];
+
+  U.cableTable = function cableTable(ref) {
+    const cb = P.data.cables;
+    if (!cb || !U.CABLE_TABLES.includes(ref)) return el('div', { class: 'empty-note' }, 'Leitungstabelle fehlt: ' + ref);
+    const f = cb.faktoren;
+    const so = cb.schutzorgane;
+    const n = v => (v == null ? '—' : num(v));
+    let meta;
+    let head;
+    let rows;
+    switch (ref) {
+      case 'verlegearten':
+        meta = cb.verlegearten;
+        head = ['Art', 'Beschreibung', 'Beispiel'];
+        rows = meta.arten.map(a => [a.id, a.kurz, a.beispiele]);
+        break;
+      case 'typen':
+        meta = cb.leitungstypen;
+        head = ['Typ', 'Adern', 'Querschnitte (mm²)', 'Verlegearten'];
+        rows = meta.typen.map(t => [t.label, t.adern, t.querschnitte.map(num).join(' · '), t.verlegearten.join(', ')]);
+        break;
+      case 'belastbarkeit': {
+        meta = cb.belastbarkeit;
+        const arten = Object.keys(meta.werte);
+        head = ['mm²'].concat(arten.flatMap(a => [a + ' · 2', a + ' · 3']));
+        rows = meta.querschnitte.map((q, i) => [num(q)].concat(arten.flatMap(a => [n(meta.werte[a]['2'][i]), n(meta.werte[a]['3'][i])])));
+        break;
+      }
+      case 'temperatur':
+        meta = f.temperatur;
+        head = ['bis °C', 'Luft (Bezug ' + meta.luft.bezug + ' °C)', 'Erde (Bezug ' + meta.erde.bezug + ' °C)'];
+        rows = Array.from(new Set(meta.luft.stufen.concat(meta.erde.stufen).map(s => s.bis))).sort((a, b) => a - b).map(t => {
+          const l = meta.luft.stufen.find(s => s.bis === t);
+          const e = meta.erde.stufen.find(s => s.bis === t);
+          return [num(t), l ? num(l.f) : '—', e ? num(e.f) : '—'];
+        });
+        break;
+      case 'haeufung':
+        meta = f.haeufung;
+        head = ['Anzahl'].concat(meta.anordnungen.map(a => a.label));
+        rows = Array.from(new Set(meta.anordnungen.flatMap(a => a.stufen.map(s => s.n)))).sort((a, b) => a - b).map(k =>
+          [String(k)].concat(meta.anordnungen.map(a => { const s = a.stufen.find(x => x.n === k); return s ? num(s.f) : '—'; })));
+        break;
+      case 'daemmung':
+        meta = f.daemmung;
+        head = ['Umschlossen', 'Faktor'];
+        rows = meta.stufen.map(s => [s.label, num(s.f)]);
+        break;
+      case 'oberschwingungen':
+        meta = f.oberschwingungen;
+        head = ['Anteil 3. OS', 'Faktor', 'bemessen nach'];
+        rows = meta.stufen.map(s => [s.label, num(s.f), s.basis === 'N' ? 'N-Strom' : 'Außenleiterstrom']);
+        break;
+      case 'ls':
+        meta = so.ls;
+        head = ['Charakteristik', 'Ia (≤ 0,1 s)', 'I2'];
+        rows = meta.charakteristiken.map(c => [c.label, num(c.ia_faktor) + ' × In', num(meta.i2_faktor) + ' × In'])
+          .concat([['Nennströme', meta.nennstroeme.join(' · ') + ' A', ''], ['Schaltvermögen', meta.schaltvermoegen.map(s => s.label).join(' · '), '']]);
+        break;
+      case 'ls_durchlass':
+        meta = so.ls_durchlass;
+        head = ['In bis', 'Char.'].concat(meta.stufen_ik.map(ik => num(ik) + ' A'));
+        rows = meta.bereiche.flatMap(b => ['B', 'C'].filter(c => b[c]).map(c => [b.in_max + ' A', c].concat(b[c].map(num))));
+        break;
+      case 'gg':
+        meta = so.gg;
+        head = ['In (A)'].concat(meta.zeiten.map(t => 'Ia ' + num(t) + ' s')).concat(['I²t (A²s)', 'I2']);
+        rows = meta.reihe.map(r => [String(r.in)].concat(meta.zeiten.map(t => n(r.ia[String(t)])), [num(r.i2t), num((meta.i2.find(x => x.in_max == null || r.in <= x.in_max) || {}).f) + ' × In']));
+        break;
+      case 'konstanten':
+        meta = cb.konstanten;
+        head = ['Größe', 'Wert'];
+        rows = Object.values(meta.werte).map(w => [w.label, (w.zaehler != null ? w.zaehler + '/' + w.nenner : num(w.wert)) + (w.einheit ? ' ' + w.einheit : '')]);
+        break;
+    }
+    return el('div', { class: 'w-table' }, [
+      el('div', { class: 'cap' }, meta.title),
+      U.reviewLine(meta.reviewed),
+      el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [
+        el('thead', {}, el('tr', {}, head.map(h => el('th', {}, h)))),
+        el('tbody', {}, rows.map(r => el('tr', {}, r.map((c, i) => el('td', { class: i > 0 && /^[\d,.· ×—AΩ/sV%²-]+$/.test(c) ? 'v' : null }, c))))),
+      ])]),
+      meta.source ? el('div', { class: 'src' }, 'Quelle: ' + meta.source) : null,
+      meta.note ? el('div', { class: 'src' }, meta.note) : null,
+    ]);
+  };
+
   /* Wiki-Körper sind Blocklisten, kein HTML: alles läuft über textContent,
    * damit Datenpakete keine Skripte einschleppen können. */
   U.blocks = function blocks(body, ctx) {
@@ -239,6 +329,7 @@
         case 'limits': return U.limitTable(block.limitRef, block.markRowKey);
         case 'table': return plainTable(block);
         case 'intervals': return intervalTable();
+        case 'cable-table': return U.cableTable(block.ref);
         case 'formula': {
           const f = P.limits.formula(block.formulaRef);
           if (!f) return el('div', { class: 'empty-note' }, 'Formel fehlt: ' + block.formulaRef);

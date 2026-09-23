@@ -15,6 +15,7 @@
     { id: 'fehler', label: 'Fehlerquellen' },
     { id: 'grenzwerte', label: 'Grenzwerte' },
     { id: 'begriff', label: 'Begriffe' },
+    { id: 'leitungen', label: 'Leitungen' },
   ];
 
   function highlighted(entry, world) {

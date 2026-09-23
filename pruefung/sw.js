@@ -5,7 +5,7 @@
 //
 // Bei jeder Änderung an Dateien oder Daten die CACHE-Version hochzählen:
 // install() lädt dann alles neu, activate() räumt die alte Fassung weg.
-const CACHE = 'pruefung-v6';
+const CACHE = 'pruefung-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -27,6 +27,7 @@ const ASSETS = [
   './js/view-plan.js',
   './js/view-wiki.js',
   './js/view-protokoll.js',
+  './js/view-leitungen.js',
   './js/app.js',
   './data/index.json',
   './data/welten.json',
@@ -40,6 +41,7 @@ const ASSETS = [
   './data/wiki/fehlerquellen.json',
   './data/wiki/geraete.json',
   './data/wiki/grundlagen.json',
+  './data/wiki/leitungen.json',
   './fonts/hanken-grotesk-latin.woff2',
   './fonts/space-grotesk-latin.woff2',
   './icons/icon-192.png',

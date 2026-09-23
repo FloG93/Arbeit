@@ -181,6 +181,69 @@ async function runWizard(page) {
   check(await page.locator('.w-warn', { hasText: 'Gerät' }).count() === 1, 'Pflichtangabe „Gerät“ angemahnt');
   await ctx.close();
 
+  console.log('Leitungsberechnung (360 px)');
+  {
+    const c3 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p3 = await c3.newPage();
+    p3.on('pageerror', e => errors.push(e.message));
+    p3.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+    await p3.goto(BASE, { waitUntil: 'networkidle' });
+    await p3.evaluate(() => { localStorage.clear(); localStorage.setItem('pruefung.v1', JSON.stringify({ schemaVersion: 1, world: 'efh', tab: 'auftraege', jobs: [], sticky: { pruefer: 'F. Prüfer' } })); });
+    await p3.reload({ waitUntil: 'networkidle' }); await p3.waitForTimeout(400);
+    const tabs = await p3.evaluate(() => Array.from(document.querySelectorAll('.tab-btn')).filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent));
+    check(!tabs.length && await p3.locator('.tab-btn').count() === 5, 'fünf Reiter ohne Überlauf' + (tabs.length ? ': ' + tabs.join(', ') : ''));
+    await p3.locator('.tab-btn', { hasText: 'Leitungen' }).click();
+    await p3.locator('.norm-card', { hasText: 'Wallbox 11' }).click(); await p3.waitForTimeout(100);
+    const typeInto = async (fkey, text) => {
+      await p3.locator('[data-fkey="' + fkey + '"]').click();
+      await p3.keyboard.press('Control+A'); await p3.keyboard.press('Backspace');
+      await p3.keyboard.type(text, { delay: 50 });
+      await p3.waitForTimeout(150);
+    };
+    await typeInto('calc-len', '28');
+    await p3.locator('.chip', { hasText: '35 °C' }).click();
+    await typeInto('calc-n', '2');
+    const head = await p3.locator('.calc-head').innerText();
+    check(/NYM-J 5×2,5 mm²/.test(head) && /Belastbarkeit/.test(head), 'Vorlage Wallbox → Vorschlag: ' + head.replace(/\s+/g, ' '));
+    await p3.locator('.calc-rung[data-querschnitt="1.5"]').click(); await p3.waitForTimeout(100);
+    const head15 = await p3.locator('.calc-head').innerText();
+    const rung15 = await p3.locator('.calc-rung[data-querschnitt="1.5"]').innerText();
+    check(/5×1,5/.test(head15) && /nicht erfüllt/.test(head15) && /Iz 13,2 A < In 16 A/.test(rung15), '1,5 antippen → ✗ mit Grund: ' + rung15.replace(/\s+/g, ' '));
+    await p3.locator('.calc-head .mini-btn', { hasText: 'Vorschlag' }).click(); await p3.waitForTimeout(100);
+    const proofAb = () => p3.locator('.calc-proof', { hasText: 'Abschaltbedingung' }).innerText();
+    check(/erfüllt, wenn am Verteiler Zs ≤ 2,24 Ω/.test(await proofAb()), 'ohne Z_V: Bedingung am Verteiler');
+    await typeInto('calc-zv', '0,8');
+    check(await p3.locator('[data-fkey="calc-zv"]').inputValue() === '0,8', 'Z_V getippt „0,8“ bleibt stehen');
+    const zv = await p3.evaluate(() => Pruefung.store.state.calcs[0].netz.zv);
+    const ab = await proofAb();
+    check(zv === 0.8 && /Ik,min = 0,95 · 230 V \/ \(0,8 \+ 0,494\) Ω/.test(ab) && !/erfüllt, wenn/.test(ab), 'mit Z_V 0,8 Ω: Zahl statt Bedingung (' + zv + ')');
+    await typeInto('calc-zv', '');
+    check(/erfüllt, wenn am Verteiler/.test(await proofAb()) && await p3.evaluate(() => Pruefung.store.state.calcs[0].netz.zv) == null, 'Z_V geleert → wieder Bedingung');
+    await p3.locator('[data-fkey="calc-name"]').click();
+    await p3.keyboard.press('Control+A'); await p3.keyboard.type('Wallbox Garage', { delay: 10 });
+    check(await p3.locator('.brand-name').textContent() === 'Wallbox Garage' && await p3.evaluate(() => document.activeElement.dataset.fkey) === 'calc-name', 'Name beim Tippen im Kopf, Fokus bleibt');
+    await p3.evaluate(() => { window.print = () => {}; });
+    await p3.locator('.bottom-bar .btn-primary', { hasText: 'Nachweis' }).click(); await p3.waitForTimeout(100);
+    const sheet = await p3.locator('#print-root').innerText();
+    check(/Leitungsnachweis/.test(sheet) && /Wallbox Garage/.test(sheet) && (sheet.match(/Belastbarkeit und Überlastschutz|Spannungsfall|Abschaltbedingung|Kurzschlussfestigkeit/g) || []).length >= 4 && /Bearbeiter: F\. Prüfer/.test(sheet) && /nicht vollständig gegengeprüft/.test(sheet), 'Nachweisblatt: Eingaben, vier Nachweise, Bearbeiter, Prüfstand');
+    await p3.goBack(); await p3.waitForTimeout(200);
+    check(await p3.locator('.job-card', { hasText: 'Wallbox Garage' }).count() === 1, 'Rechnung → Zurück landet in der Liste');
+    await p3.evaluate(() => Pruefung.openWiki('leitung-belastbarkeit')); await p3.waitForTimeout(100);
+    check(await p3.locator('.w-table .cap', { hasText: 'Strombelastbarkeit' }).count() === 1 && await p3.locator('.badge', { hasText: 'Datenbasis ungeprüft' }).count() >= 1, 'Wiki: Tabelle aus leitungen.json mit Prüfstand');
+    // Offline: Worker muss die Seite kontrollieren, dann Netz kappen.
+    await p3.reload({ waitUntil: 'networkidle' }); await p3.waitForTimeout(600);
+    await c3.setOffline(true);
+    await p3.reload({ waitUntil: 'domcontentloaded' }).catch(() => {}); await p3.waitForTimeout(800);
+    await p3.evaluate(() => Pruefung.store.set({ tab: 'leitungen' })).catch(() => {});
+    await p3.waitForTimeout(200);
+    const offCard = p3.locator('.job-card', { hasText: 'Wallbox Garage' });
+    let offOk = await offCard.count() === 1;
+    if (offOk) { await offCard.locator('.job-open').click(); await p3.waitForTimeout(150); offOk = /NYM-J 5×2,5/.test(await p3.locator('.calc-head').innerText()); }
+    check(offOk, 'offline: Leitungen-Tab und gespeicherte Rechnung öffnen' + (offOk ? '' : ' — ' + (await p3.evaluate(() => (window.Pruefung ? Pruefung.store.state.tab + ' ' + !!navigator.serviceWorker.controller + ' ' : 'keine App ') + document.querySelector('.content').innerText.replace(/\s+/g, ' ').slice(0, 300)).catch(e => e.message))));
+    await c3.setOffline(false);
+    await c3.close();
+  }
+
   console.log('Fix 4/5/6 — Kontrast und Tippziele (360 px, alle vier Modi)');
   for (const [world, hc] of [['efh', false], ['industrie', false], ['efh', true], ['industrie', true]]) {
     const c2 = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -203,6 +266,16 @@ async function runWizard(page) {
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.evaluate(() => Pruefung.openWiki('grenzwerte-iso')); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT));
+    await p2.evaluate(() => Pruefung.openWiki('leitung-faktoren')); await p2.waitForTimeout(100);
+    found.push(...await p2.evaluate(AUDIT));
+    await p2.evaluate(() => Pruefung.store.set({ tab: 'leitungen' })); await p2.waitForTimeout(100);
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    await p2.locator('.norm-card').first().click(); await p2.waitForTimeout(100);
+    await p2.locator('[data-fkey="calc-len"]').click(); await p2.keyboard.type('70');
+    await p2.waitForTimeout(100);
+    // Alle Karten einmal ins Bild holen: die mitlaufende Ergebniszeile deckt
+    // sonst beim Kontrast-Audit darunterliegende Texte ab.
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.evaluate(() => Pruefung.store.set({ tab: 'auftraege' })); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     const ow = await p2.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

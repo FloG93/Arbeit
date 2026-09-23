@@ -23,6 +23,7 @@
       sticky: {},
       activeJobId: null,
       jobs: [],
+      calcs: [],
     };
   }
 
@@ -44,6 +45,8 @@
     }
     if (!S.state.world || !P.data.worldById.has(S.state.world)) S.state.world = P.data.defaultWorld;
     for (const job of S.state.jobs) migrateJob(normalizeJob(job));
+    // Stände vor der Leitungsberechnung kennen calcs nicht.
+    if (!Array.isArray(S.state.calcs)) S.state.calcs = [];
     if (!S.state.jobs.some(j => j.id === S.state.activeJobId)) S.state.activeJobId = null;
     return S.state;
   };
@@ -89,10 +92,18 @@
   S.save = function save(immediate) {
     clearTimeout(saveTimer);
     const write = () => {
+      saveTimer = null;
       try { localStorage.setItem(KEY, JSON.stringify(S.state)); } catch { /* voll oder gesperrt */ }
     };
     if (immediate) write(); else saveTimer = setTimeout(write, 300);
   };
+
+  /* Das gebündelte Speichern wartet auf eine Tipp-Pause. Wird die App vorher
+   * geschlossen, neu geladen oder vom Handy in den Hintergrund geschickt, geht
+   * der letzte Stand sonst verloren — deshalb dann sofort schreiben. */
+  const flush = () => { if (saveTimer) S.save(true); };
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 
   /* Ein Weg für jede Änderung: patchen, speichern, neu zeichnen. */
   S.set = function set(patch, opts) {
@@ -210,6 +221,64 @@
       }
     }, { silent: true });
     S.save();
+  };
+
+  /* ─── Leitungsberechnungen ───
+   * Eine Rechnung hält die Eingaben vollständig, nicht nur die Abweichungen
+   * von der Vorbelegung: ein späterer Welt-Wechsel oder eine neue
+   * Vorbelegung darf eine gespeicherte Rechnung nicht still verändern. */
+  const clone = o => JSON.parse(JSON.stringify(o));
+
+  S.calc = id => (S.state.calcs || []).find(c => c.id === id) || null;
+
+  S.newCalc = function newCalc(vorlage, world) {
+    const cb = P.data.cables;
+    const w = world || S.state.world;
+    const base = P.cable.normalize(vorlage ? vorlage.calc : null, cb, w);
+    const calc = Object.assign(clone(base), {
+      id: nid(),
+      world: w,
+      vorlage: vorlage ? vorlage.id : null,
+      name: vorlage ? vorlage.label : '',
+      bearbeiter: (S.state.sticky || {}).pruefer || '',
+      querschnitt: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    S.state.calcs.unshift(calc);
+    S.save(true);
+    return calc;
+  };
+
+  S.patchCalc = function patchCalc(id, fn, opts) {
+    const calc = S.calc(id);
+    if (!calc) return null;
+    fn(calc);
+    calc.updatedAt = Date.now();
+    S.save(opts && opts.immediate);
+    if (!(opts && opts.silent)) notify();
+    return calc;
+  };
+
+  S.duplicateCalc = function duplicateCalc(id) {
+    const src = S.calc(id);
+    if (!src) return null;
+    const calc = Object.assign(clone(src), { id: nid(), name: (src.name || 'Berechnung') + ' (Kopie)', createdAt: Date.now(), updatedAt: Date.now() });
+    S.state.calcs.unshift(calc);
+    S.save(true);
+    return calc;
+  };
+
+  S.removeCalc = function removeCalc(id) {
+    S.state.calcs = S.state.calcs.filter(c => c.id !== id);
+    S.save(true);
+    notify();
+  };
+
+  /* Der Bearbeiter ist derselbe Mensch wie der Prüfer im Protokoll. */
+  S.setBearbeiter = function setBearbeiter(id, value) {
+    S.state.sticky = Object.assign({}, S.state.sticky, { pruefer: value });
+    S.patchCalc(id, c => { c.bearbeiter = value; }, { silent: true });
   };
 
   S.setResult = function setResult(jobId, stepId, patch, opts) {

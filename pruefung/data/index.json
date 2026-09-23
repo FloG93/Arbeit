@@ -15,6 +15,7 @@
     "wiki/netzformen.json",
     "wiki/fehlerquellen.json",
     "wiki/geraete.json",
-    "wiki/grundlagen.json"
+    "wiki/grundlagen.json",
+    "wiki/leitungen.json"
   ]
 }

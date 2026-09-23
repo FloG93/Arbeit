@@ -110,6 +110,9 @@
       D.formulaById = byId(limits.formulas || []);
       D.intervals = intervals;
       D.cables = cables;
+      // Die Tabellen der Leitungsdaten tragen denselben Prüfstand wie die
+      // Grenzwerte — über diesen Index findet P.limits sie für Badge und Satz.
+      D.cableTableById = byId(cables ? P.cable.reviewTables(cables) : []);
 
       D.packs = packs.map(normalizePack);
       D.packById = byId(D.packs);

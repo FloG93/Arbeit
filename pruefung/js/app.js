@@ -12,11 +12,12 @@
   const TABS = [
     { id: 'auftraege', label: 'Aufträge' },
     { id: 'wizard', label: 'Assistent' },
-    { id: 'plan', label: 'Prüfplan' },
+    { id: 'plan', label: 'Plan' },
+    { id: 'leitungen', label: 'Leitungen' },
     { id: 'wiki', label: 'Wiki' },
   ];
 
-  P.nav = { stepId: null, wikiId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
+  P.nav = { stepId: null, wikiId: null, calcId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
 
   let toast = null;
   let toastTimer = null;
@@ -87,13 +88,23 @@
     // Der Kopfbereich kostet Platz, den der Prüfplan besser gebrauchen kann:
     // Norm als Zeile darüber, Objekt als Titel — und die Kontextzeile nur,
     // wenn Auftrag und eingestellte Welt auseinanderlaufen.
-    const worldMismatch = job && job.world !== state.world;
+    const worldMismatch = job && job.world !== state.world && state.tab !== 'leitungen';
+    // Im Leitungen-Tab gehört der Kopf der Rechnung, nicht dem Prüfauftrag.
+    const calc = state.tab === 'leitungen' && P.nav.calcId ? P.store.calc(P.nav.calcId) : null;
+    const eyebrow = state.tab === 'leitungen' ? 'Leitungsberechnung' : variant ? variant.norm : 'Prüfassistent';
+    const title = state.tab === 'leitungen'
+      ? (calc ? P.views.calcTitle(calc) : 'Leitungen')
+      : job ? P.data.jobTitle(job) : 'VDE-Prüfungen';
 
     return el('div', { class: 'header' }, [
       el('div', { class: 'header-row' }, [
         el('div', { class: 'brand' }, [
-          el('div', { class: 'eyebrow' }, variant ? variant.norm : 'Prüfassistent'),
-          el('div', { class: 'brand-name', 'data-job-title': job ? job.id : null }, job ? P.data.jobTitle(job) : 'VDE-Prüfungen'),
+          el('div', { class: 'eyebrow' }, eyebrow),
+          el('div', {
+            class: 'brand-name',
+            'data-job-title': state.tab !== 'leitungen' && job ? job.id : null,
+            'data-calc-title': calc ? calc.id : null,
+          }, title),
         ]),
         el('div', { class: 'head-tools' }, [
           el('button', {
@@ -131,6 +142,7 @@
         onClick: () => {
           if (tab.id === 'plan') P.nav.stepId = null;
           if (tab.id === 'wiki') P.nav.wikiId = null;
+          if (tab.id === 'leitungen') P.nav.calcId = null;
           P.store.set({ tab: tab.id });
         },
       }, tab.label))),
@@ -144,6 +156,7 @@
     if (tab === 'plan') return views.plan();
     if (tab === 'protokoll') return views.protokoll();
     if (tab === 'wiki') return views.wiki();
+    if (tab === 'leitungen') return views.leitungen();
     return views.auftraege();
   }
 
@@ -188,9 +201,10 @@
       jobId: state.activeJobId,
       stepId: state.tab === 'plan' ? P.nav.stepId : null,
       wikiId: state.tab === 'wiki' ? P.nav.wikiId : null,
+      calcId: state.tab === 'leitungen' ? P.nav.calcId : null,
     };
   }
-  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId].join('|');
+  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId, st.calcId].join('|');
 
   function syncHistory() {
     if (restoring || !window.history || !history.replaceState) return;
@@ -207,6 +221,7 @@
     try {
       P.nav.stepId = st.stepId || null;
       P.nav.wikiId = st.wikiId || null;
+      P.nav.calcId = st.calcId && P.store.calc(st.calcId) ? st.calcId : null;
       const patch = { tab: st.tab || 'auftraege' };
       if (st.jobId && P.store.job(st.jobId)) patch.activeJobId = st.jobId;
       P.store.set(patch);
@@ -331,6 +346,7 @@
       checkWiki(entry.related && entry.related.filter(id => !isStepId(id)), 'wiki/' + entry.id + ' (related)');
       for (const block of entry.body || []) {
         if (block.type === 'limits' && !P.limits.table(block.limitRef)) note('Wiki', entry.id + ': limits → „' + block.limitRef + '“ existiert nicht');
+        if (block.type === 'cable-table' && !U.CABLE_TABLES.includes(block.ref)) note('Wiki', entry.id + ': cable-table → „' + block.ref + '“ existiert nicht');
         if (block.type === 'formula' && !P.limits.formula(block.formulaRef)) note('Wiki', entry.id + ': formula → „' + block.formulaRef + '“ existiert nicht');
         if (block.type === 'link') checkWiki([block.to].filter(id => !isStepId(id)), 'wiki/' + entry.id + ' (link)');
       }
