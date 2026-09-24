@@ -8,13 +8,15 @@ Login, jede läuft für sich.
 | [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
+| [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
 
 Live: https://flog93.github.io/Arbeit/ (Raumrechner),
 https://flog93.github.io/Arbeit/poster/ (Poster-Generator,
 freigegebene Fassung),
 https://flog93.github.io/Arbeit/poster/beta/ (derselbe
-Generator, aktueller Entwicklungsstand) und
-https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent).
+Generator, aktueller Entwicklungsstand),
+https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent) und
+https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter).
 
 ## Hosting
 
@@ -743,3 +745,33 @@ pruefung/
       geraetepruefung.json   DIN EN 50678 und 50699 als zwei Varianten
     wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen, Leitungen
 ```
+
+---
+
+## PPT-Konverter
+
+Wandelt alte PowerPoint-Dateien (`.ppt`, `.pps`, `.pot`) in `.pptx` um.
+Live: https://flog93.github.io/Arbeit/ppt/
+
+- Läuft komplett im Browser — die Dateien werden **nicht** hochgeladen.
+- Mehrere Dateien auf einmal per Drag & Drop oder Dateiauswahl; jede fertige
+  Datei wird sofort heruntergeladen.
+- Die Umwandlung übernimmt LibreOffice als WebAssembly
+  ([ZetaOffice](https://zetaoffice.net), per CDN geladen). Beim ersten Aufruf
+  sind das ca. 50 MB, danach kommt es aus dem Browser-Cache.
+
+### Wissenswertes zur Umsetzung
+
+- LibreOffice-WASM braucht Threads und damit `SharedArrayBuffer`, also die
+  Header COOP/COEP. GitHub Pages setzt sie nicht; das übernimmt
+  [`coi-serviceworker`](https://github.com/gzuidhof/coi-serviceworker) (MIT).
+  Beim allerersten Besuch lädt sich die Seite deshalb einmal kurz neu. Sein
+  Scope ist `/ppt/`, die anderen Apps bleiben unberührt.
+- Bewusst **kein Offline-Betrieb**: Die LibreOffice-Dateien kommen vom
+  ZetaOffice-CDN und wären für einen eigenen Cache zu groß.
+- `index.html` hält Oberfläche und Warteschlange, `office_thread.js` läuft im
+  LibreOffice-Worker, öffnet die Datei und speichert sie mit dem Filter
+  `Impress MS PowerPoint 2007 XML`. `vendor/zetajs/` ist
+  [zetajs](https://github.com/allotropia/zetajs) 1.2.0 (MIT), unverändert.
+- Lokal starten: `python3 -m http.server 8123 --bind 127.0.0.1` im
+  Repo-Wurzelordner, dann `http://localhost:8123/ppt/`.

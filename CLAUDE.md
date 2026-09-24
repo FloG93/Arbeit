@@ -3,8 +3,8 @@
 Drei eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
 (`.github/workflows/pages.yml`): Raumrechner (`app/`, Seitenwurzel),
 Musik-Poster-Generator (`poster/`, Kanäle `/poster/` und `/poster/beta/`),
-Prüfassistent für VDE-Prüfungen (`pruefung/`). Beschreibung aller drei in
-`README.md`.
+Prüfassistent für VDE-Prüfungen (`pruefung/`), dazu der PPT-Konverter
+(`ppt/`). Beschreibung aller Apps in `README.md`.
 
 **Nach einem Umzug oder Sitzungswechsel zuerst `UEBERGABE.md` lesen**, falls
 vorhanden — dort stehen Projektstand, getroffene Entscheidungen und die
@@ -17,7 +17,9 @@ nächste freigegebene Aufgabe.
   brauchen, außerhalb.
 - Jede App läuft offline über ihren eigenen Service Worker. Der Worker
   beantwortet nur die eigenen Pfade (`SHELL`), weil drei Apps auf derselben
-  Herkunft liegen. **Bei jeder Dateiänderung die `CACHE`-Version im `sw.js` der
+  Herkunft liegen. Ausnahme ist der PPT-Konverter: Sein Service Worker
+  (`coi-serviceworker`) setzt nur die COOP/COEP-Header, offline geht er nicht.
+  **Bei jeder Dateiänderung die `CACHE`-Version im `sw.js` der
   App hochzählen** und neue Dateien in `ASSETS` eintragen.
 - Zahlenfelder als `type="text" inputmode="decimal"` mit `parseNum`/`inputNum`
   (deutsches Komma). Beim Neuzeichnen den getippten Rohtext nicht durch den
