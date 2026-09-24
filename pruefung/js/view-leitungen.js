@@ -49,6 +49,21 @@
 
   P.views.calcTitle = calc => (calc.name && calc.name.trim()) || 'Berechnung ohne Namen';
 
+  /* Kurzfassung einer Rechnung für andere Ansichten — der Stromkreis zeigt
+   * seine verknüpfte Berechnung damit an, ohne den Rechenkern ein zweites Mal
+   * zu bedienen. */
+  P.views.calcSummary = function calcSummary(calc) {
+    const res = compute(calc);
+    return {
+      titel: P.views.calcTitle(calc),
+      meta: calcMeta(calc, res),
+      status: res.status,
+      badge: statusBadge(res.status),
+      querschnitt: res.gewaehlt,
+      In: res.In,
+    };
+  };
+
   function calcMeta(calc, res) {
     const parts = [adernText(calc, res.gewaehlt)];
     if (calc.leitung.laenge > 0) parts.push(z(calc.leitung.laenge, 1) + ' m');

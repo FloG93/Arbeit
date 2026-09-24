@@ -535,6 +535,50 @@
     return res;
   }
 
+  /* ─── Brücke zur Prüfung ───────────────────────────────────────────────
+   *
+   * Der Stromkreis eines Auftrags kennt sein Schutzorgan (Art, Charakteristik,
+   * In). Die Auslösekennlinie dazu steht hier. Daraus wird der Sollwert, den
+   * der Prüfer bisher von Hand aus der Kennlinie abgelesen hat.
+   *
+   * Die geforderte Abschaltzeit gibt der Aufrufer mit (opts.t): sie kommt aus
+   * der Grenzwerttabelle „abschaltzeit“, die der Prüfassistent über den Fakt
+   * `abschaltzeitFall` des Kreises auflöst. So steht die Netzform-Logik nicht
+   * ein zweites Mal in dieser Datei.
+   *
+   * Ein vorgeschalteter RCD bleibt hier bewusst außen vor. In der
+   * Leitungsrechnung darf er die Zeit auf die langsamste Stützstelle dehnen,
+   * weil dort der Fehlerschutz über ihn läuft; der Sollwert, den die Prüfung
+   * anbietet, soll der strengere sein — gemessen wird die Abschaltbedingung
+   * des Überstromorgans. */
+  C.zsSollwert = function zsSollwert(schutz, data, opts) {
+    const o = opts || {};
+    const In = schutz && schutz.in;
+    if (!(In > 0)) return null;
+    const x = ctxOf(data);
+    const org = schutzorgan({ art: schutz.art === 'gg' ? 'gg' : 'ls', char: schutz.char }, x.cb);
+    // Die gG-Reihe ist eine Tabelle: was nicht drinsteht, wird nicht geraten.
+    if (org.art === 'gg' && org.reihe.indexOf(In) < 0) return null;
+    // Ohne geforderte Zeit die langsamste Stützstelle — sie verlangt den
+    // kleinsten Strom und damit den größten Zs; das ist die Aussage „schaltet
+    // überhaupt ab“, nicht „schaltet rechtzeitig ab“.
+    const t = o.t != null ? o.t : Math.max.apply(null, org.zeiten);
+    const stuetz = org.zeiten.filter(s => s <= t + 1e-9);
+    const tS = stuetz.length ? Math.max.apply(null, stuetz) : Math.min.apply(null, org.zeiten);
+    const ia = org.ia(In, tS);
+    if (!(ia > 0)) return null;
+    return {
+      name: org.name(In), ia, t, tS,
+      u0: x.u0,
+      // Sollwert wie im Prüfschritt dokumentiert: Zs ≤ U0 / Ia.
+      zsMax: x.u0 / ia,
+      // Gemessen wird kalt und bei Netzspannung — dafür die schärfere Regel.
+      zsMess: x.zsMess * x.u0 / ia,
+      zsMessLabel: x.zsMessLabel,
+      quellen: [x.cb.konstanten.id].concat(org.tables),
+    };
+  };
+
   /* Alle Prüfstand-Tabellen der Leitungsdaten, für Badge, Selbsttest und
    * Prüfliste — dieselbe Form wie die Grenzwerttabellen (id, title, source,
    * reviewed). */

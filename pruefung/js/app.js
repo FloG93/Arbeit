@@ -328,6 +328,18 @@
           if (input.quickFromLimit && !P.limits.table(input.quickFromLimit)) {
             note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': quickFromLimit → „' + input.quickFromLimit + '“ existiert nicht');
           }
+          // Die Brücke zur Leitungsberechnung zieht ihre Zahlen aus dem
+          // Schutzorgan des Stromkreises. An einem Schritt der ganzen Anlage
+          // gibt es keines — dort bliebe die Karte für immer leer.
+          if ((input.vorschlagAus || input.vergleichAus) && step.scope !== 'stromkreis') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': Brücke zum Schutzorgan, aber der Schritt gilt nicht je Stromkreis');
+          }
+          if (input.vorschlagAus && input.vorschlagAus !== 'schutzorgan') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannte Quelle „' + input.vorschlagAus + '“');
+          }
+          if (input.vergleichAus && input.vergleichAus !== 'ia') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannter Vergleich „' + input.vergleichAus + '“');
+          }
         }
         // Messstellen: Was hier fehlt, fällt erst im Feld auf — und dann steht
         // der Prüfer vor einer Liste, die keinen Wert annimmt.

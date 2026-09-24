@@ -684,6 +684,97 @@ async function runWizard(page) {
     await c3.close();
   }
 
+  console.log('Brücke zur Leitungsberechnung');
+  {
+    const cb = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const pb = await cb.newPage();
+    pb.on('pageerror', e => errors.push(e.message));
+    pb.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+    await pb.goto(BASE, { waitUntil: 'networkidle' });
+    await pb.evaluate(() => localStorage.clear());
+    await pb.reload({ waitUntil: 'networkidle' }); await pb.waitForTimeout(500);
+    await pb.locator('.norm-card:not([disabled])').first().click();
+    await runWizard(pb);
+    await openKreis(pb);
+
+    const zsAuf = async () => {
+      await pb.evaluate(() => { Pruefung.nav.stepId = 's-schleifenimpedanz'; Pruefung.render(); });
+      await pb.waitForTimeout(150);
+    };
+    const karte = () => pb.locator('.card', { hasText: 'Sollwert aus dem Schutzorgan' });
+
+    // Ohne Schutzorgan darf die Karte nicht rechnen, sondern muss sagen,
+    // was fehlt — sonst steht dort eine Zahl ohne Grundlage.
+    await zsAuf();
+    const leer = (await karte().innerText()).replace(/\s+/g, ' ');
+    check(/Nennstrom des Schutzorgans/.test(leer) && await karte().locator('.quick-chip').count() === 0,
+      'ohne Schutzorgan: Hinweis statt Zahl');
+
+    // B16 in den Stammdaten → Ia = 80 A, Zs,max = 230/80 = 2,87 Ω.
+    await pb.evaluate(() => {
+      const S = Pruefung.store; const j = S.activeJob();
+      S.patchKreis(j.id, j.kreise[0].id, k => { k.schutz.art = 'ls'; k.schutz.char = 'B'; k.schutz.in = 16; });
+    });
+    await pb.waitForTimeout(150); await zsAuf();
+    const text = (await karte().innerText()).replace(/\s+/g, ' ');
+    check(/B16/.test(text) && /80 A/.test(text) && /2,87/.test(text), 'B16 → Ia 80 A, Zs,max 2,87 Ω: ' + text.slice(0, 90));
+    check(/0,4 s/.test(text), 'Abschaltzeit des Endstromkreises steht dabei');
+    check(/1,91/.test(text), '2/3-Regel als zweiter Vorschlag (1,91 Ω)');
+
+    // Antippen trägt den Sollwert wirklich ein — und Zs wird danach bewertet.
+    await karte().locator('.quick-chip').first().click(); await pb.waitForTimeout(200);
+    const soll = await pb.evaluate(() => Pruefung.store.resultOf(Pruefung.store.activeJob().kreise[0], 's-schleifenimpedanz').values.zs_soll);
+    check(soll === 2.87, 'Antippen trägt 2,87 in das Sollwertfeld ein (' + soll + ')');
+    await pb.locator('[data-fkey="m-s-schleifenimpedanz-zs"]').click();
+    await pb.keyboard.type('3,1', { delay: 50 }); await pb.waitForTimeout(250);
+    const kl = await pb.locator('.measure-row').first().locator('.limit-badge').first().getAttribute('class');
+    check(/mangel/.test(kl), 'Zs 3,1 Ω über dem übernommenen Sollwert ist ein Mangel');
+
+    // Ik wird nicht bewertet, aber gegen Ia eingeordnet.
+    await pb.locator('[data-fkey="m-s-schleifenimpedanz-ik"]').click();
+    await pb.keyboard.type('60', { delay: 50 }); await pb.waitForTimeout(250);
+    const ikText = (await karte().innerText()).replace(/\s+/g, ' ');
+    check(/unter Ia/.test(ikText), 'Ik 60 A unter Ia 80 A wird benannt');
+
+    // gG 35 A trifft eine Zeile der Sicherungsreihe, 17 A trifft keine.
+    const sollFuer = (art, char, In) => pb.evaluate(([a, c, i]) => {
+      const r = Pruefung.cable.zsSollwert({ art: a, char: c, in: i }, { cables: Pruefung.data.cables, limits: Pruefung.data.limits }, { t: 0.4 });
+      return r ? [r.name, r.ia, Math.round(r.zsMax * 100) / 100] : null;
+    }, [art, char, In]);
+    check(JSON.stringify(await sollFuer('gg', null, 35)) === JSON.stringify(['gG 35 A', 290, 0.79]), 'gG 35 A → Ia 290 A');
+    check(await sollFuer('gg', null, 17) === null, 'gG 17 A steht nicht in der Reihe und wird nicht geraten');
+
+    // Verknüpfung: Rechnung aus dem Stromkreis, Stammdaten zurück.
+    await pb.evaluate(() => { Pruefung.nav.stepId = null; Pruefung.render(); }); await pb.waitForTimeout(150);
+    await pb.locator('.card', { hasText: 'Leitungsberechnung' }).locator('button', { hasText: 'Berechnung aus diesem Stromkreis' }).click();
+    await pb.waitForTimeout(250);
+    const verknuepft = await pb.evaluate(() => {
+      const j = Pruefung.store.activeJob(); const c = Pruefung.store.calc(j.kreise[0].calcId);
+      return c && { tab: Pruefung.store.state.tab, name: c.name, art: c.schutz.art, char: c.schutz.char, In: c.schutz.In };
+    });
+    check(verknuepft && verknuepft.tab === 'leitungen' && verknuepft.In === 16 && verknuepft.char === 'B',
+      'neue Rechnung übernimmt das Schutzorgan des Kreises: ' + JSON.stringify(verknuepft));
+
+    // In der Rechnung eine Länge setzen, dann die Stammdaten zurückholen.
+    await pb.locator('[data-fkey="calc-len"]').click(); await pb.keyboard.type('25'); await pb.waitForTimeout(300);
+    await openKreis(pb);
+    const karteL = pb.locator('.card', { hasText: 'Leitungsberechnung' });
+    check(await karteL.locator('.job-card').count() === 1, 'der Stromkreis zeigt seine verknüpfte Rechnung');
+    await karteL.locator('button', { hasText: 'Stammdaten übernehmen' }).click(); await pb.waitForTimeout(250);
+    const stamm = await pb.evaluate(() => {
+      const k = Pruefung.store.activeJob().kreise[0];
+      return { typ: k.leitung.typ, adern: k.leitung.adern, q: k.leitung.querschnitt, art: k.schutz.art, char: k.schutz.char, in: k.schutz.in };
+    });
+    check(stamm.typ === 'NYM-J' && stamm.adern === 3 && stamm.q > 0 && stamm.in === 16,
+      'Stammdaten kommen aus der Rechnung zurück: ' + JSON.stringify(stamm));
+
+    await karteL.locator('button', { hasText: 'Verknüpfung lösen' }).click(); await pb.waitForTimeout(200);
+    const geloest = await pb.evaluate(() => Pruefung.store.activeJob().kreise[0].calcId);
+    check(geloest === null, 'Verknüpfung lässt sich lösen, die Rechnung bleibt bestehen');
+    await pb.screenshot({ path: path.join(OUT, 'bruecke-leitung.png') });
+    await cb.close();
+  }
+
   console.log('Fix 4/5/6 — Kontrast und Tippziele (360 px, alle vier Modi)');
   for (const [world, hc] of [['efh', false], ['industrie', false], ['efh', true], ['industrie', true]]) {
     const c2 = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -704,6 +795,17 @@ async function runWizard(page) {
     // Die Stromkreis-Ansicht mit Stammdaten und Abweichungen mitprüfen.
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click(); await p2.waitForTimeout(100);
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    // Die Brücke einmal mit Zahlen zeichnen lassen: Sollwert-Chips, Ia-Hinweis
+    // und die Karte der Leitungsberechnung gehören mit ins Audit.
+    await p2.evaluate(() => {
+      const S = Pruefung.store; const j = S.activeJob();
+      S.patchKreis(j.id, j.kreise[0].id, k => { k.schutz.art = 'ls'; k.schutz.char = 'B'; k.schutz.in = 16; });
+      S.setResult(j.id, 's-schleifenimpedanz', { values: { zs: 0.8, ik: 60 } }, { kreisId: j.kreise[0].id });
+      Pruefung.nav.stepId = 's-schleifenimpedanz';
+      Pruefung.render();
+    });
+    await p2.waitForTimeout(120);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     // Potentialausgleich: lange Checkliste, und alle vier Zustände einmal
     // gezeichnet — „n. a." muss im Kontrast-Audit vorkommen.

@@ -638,8 +638,9 @@
         "inputs": [
           { "id": "zs", "label": "Zs L–PE", "unit": "Ω", "limitFromInput": "zs_soll" },
           { "id": "zs_soll", "label": "Sollwert (aus Ia)", "unit": "Ω", "optional": true, "role": "reference",
+            "vorschlagAus": "schutzorgan",
             "hint": "Zs,max = U0 / Ia — Zs wird gegen diesen Wert bewertet" },
-          { "id": "ik", "label": "Ik", "unit": "A", "optional": true, "role": "doku",
+          { "id": "ik", "label": "Ik", "unit": "A", "optional": true, "role": "doku", "vergleichAus": "ia",
             "hint": "Kurzschlussstrom, den das Messgerät aus Zs errechnet — steht im Protokoll neben Zs" }
         ],
         "aggregate": "max"

@@ -1,5 +1,5 @@
 {
-  "version": "0.5.0",
+  "version": "0.6.0",
   "datenstand": "2026-09",
-  "note": "Ein Auftrag ist jetzt ein Verteiler mit beliebig vielen Stromkreisen: eigene Stammdaten, eigene Abweichungen, eigene Grenzwerte, eine Zeile je Kreis im Protokollbogen."
+  "note": "Brücke zur Leitungsberechnung: Der Stromkreis rechnet Ia und den Sollwert für Zs aus seinem Schutzorgan vor und lässt sich mit einer gespeicherten Leitungsberechnung verknüpfen."
 }

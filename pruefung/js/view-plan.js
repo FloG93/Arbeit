@@ -247,6 +247,8 @@
       ]),
     ]));
 
+    children.push(leitungsKarte(job, kreis));
+
     // Abweichende Fakten des Kreises — daran hängen seine Grenzwerte.
     children.push(kreisFakten(job, pack, kreis, facts));
 
@@ -329,6 +331,173 @@
         : el('div', { class: 'hint-text' }, 'Ohne Auswahl bleibt das Protokoll ohne Fälligkeitsdatum.'),
       el('div', { class: 'hint-text' }, 'Richtwerte aus der DGUV Vorschrift 3. Verbindlich ist die Festlegung des Betreibers aus der Gefährdungsbeurteilung.'),
     ]);
+  }
+
+  /* ─── Brücke zur Leitungsberechnung ────────────────────────────────────
+   *
+   * Der Sollwert für Zs steht in der Auslösekennlinie des Schutzorgans, und
+   * das kennt der Stromkreis seit Paket 3. Statt ihn aus einer Kennlinie
+   * ablesen zu lassen, rechnet die App ihn vor. Eingetragen wird er trotzdem
+   * per Tipp: es ist ein sicherheitsrelevanter Bezugswert, gegen den bewertet
+   * wird — der soll bewusst gesetzt werden und nicht stillschweigend
+   * erscheinen. */
+  const kvZeile = (k, v) => el('div', { class: 'row' }, [el('div', { class: 'k' }, k), el('div', { class: 'v' }, v)]);
+  // Ein Höchstwert wird abgeschnitten, nicht gerundet: 2,875 → 2,87 ist die
+  // schärfere Forderung, 2,88 wäre die laxere.
+  const abZwei = v => Math.floor(v * 100) / 100;
+
+  function zsBruecke(job, step, kreis, facts, result, wo) {
+    const ziel = (step.measure.inputs || []).find(i => i.vorschlagAus === 'schutzorgan');
+    if (!ziel || !kreis) return null;
+    const schutz = kreis.schutz || {};
+    const ohne = text => U.card('Sollwert aus dem Schutzorgan', [
+      el('div', { class: 'card-body' }, [
+        el('div', { class: 'hint-text' }, text),
+        el('button', {
+          class: 'btn btn-outline btn-block', type: 'button',
+          onClick: () => { P.nav.stepId = null; P.render(); },
+        }, 'Zu den Stammdaten des Stromkreises'),
+      ]),
+    ]);
+    if (!(schutz.in > 0)) {
+      return ohne('Sobald in den Stammdaten dieses Stromkreises Art, Charakteristik und Nennstrom des Schutzorgans stehen, rechnet die App Ia und den Sollwert für Zs daraus aus.');
+    }
+
+    const zeit = P.limits.resolve('abschaltzeit', facts, { keyFrom: 'abschaltzeitFall' });
+    const soll = P.cable.zsSollwert(schutz, { cables: P.data.cables, limits: P.data.limits }, { t: zeit ? zeit.max : null });
+    if (!soll) {
+      return ohne('Für ' + (schutz.art === 'gg' ? 'gG ' : (schutz.char || 'LS ')) + num(schutz.in) + ' A steht keine Auslösekennlinie in der Datenbasis. Den Sollwert von Hand eintragen.');
+    }
+
+    const setzen = v => P.store.setResult(job.id, step.id, {
+      values: Object.assign({}, result.values, { [ziel.id]: v }),
+      overrange: Object.assign({}, result.overrange, { [ziel.id]: false }),
+    }, wo);
+    const chip = (label, wert) => el('button', {
+      class: 'quick-chip', type: 'button', onClick: () => setzen(wert),
+    }, label);
+
+    const kinder = [el('div', { class: 'w-kv' }, [
+      kvZeile('Schutzorgan', soll.name),
+      kvZeile('Abschaltzeit', num(soll.t) + ' s' + (zeit && zeit.label ? ' · ' + zeit.label : '')
+        + (soll.tS !== soll.t ? ' · Kennlinie bei ' + num(soll.tS) + ' s' : '')),
+      kvZeile('Auslösestrom Ia', num(soll.ia) + ' A'),
+      kvZeile('Sollwert Zs,max', num(abZwei(soll.zsMax)) + ' Ω'),
+    ])];
+    kinder.push(el('div', { class: 'chips' }, [
+      chip(num(abZwei(soll.zsMax)) + ' Ω übernehmen', abZwei(soll.zsMax)),
+      chip(soll.zsMessLabel + '-Regel: ' + num(abZwei(soll.zsMess)) + ' Ω', abZwei(soll.zsMess)),
+    ]));
+    kinder.push(el('div', { class: 'hint-text' }, 'Zs,max = ' + num(soll.u0) + ' V / ' + num(soll.ia)
+      + ' A. Gemessen wird kalt und bei Netzspannung, nicht bei 80 °C und c_min — wer den Abstand dazu mitnehmen will, nimmt den '
+      + soll.zsMessLabel + '-Wert. Ein vorgeschalteter RCD weicht diese Bedingung nicht auf: hier steht die Abschaltung über das Überstromorgan.'));
+
+    // Ik ist ein Dokuwert und wird nicht bewertet. Was er bedeutet, steht
+    // trotzdem hier — Ia ist die Schwelle, an der er zu messen ist.
+    const ikFeld = (step.measure.inputs || []).find(i => i.vergleichAus === 'ia');
+    if (ikFeld) {
+      const ik = result.values ? result.values[ikFeld.id] : null;
+      kinder.push(el('div', { class: 'w-note' }, [
+        el('span', { class: 'sym' }, ik == null ? 'i' : (ik >= soll.ia ? '✓' : '✗')),
+        el('div', { class: 't' }, ik == null
+          ? 'Der Kurzschlussstrom Ik muss mindestens Ia = ' + num(soll.ia) + ' A erreichen, sonst schaltet das Schutzorgan nicht in der geforderten Zeit ab.'
+          : (ik >= soll.ia
+              ? 'Ik ' + num(ik) + ' A erreicht Ia = ' + num(soll.ia) + ' A — die Abschaltbedingung ist erfüllt.'
+              : 'Ik ' + num(ik) + ' A bleibt unter Ia = ' + num(soll.ia) + ' A — das Schutzorgan schaltet nicht in der geforderten Zeit ab.')),
+      ]));
+    }
+
+    // Prüfstand der Tabellen, aus denen dieser Sollwert stammt — ein Wert aus
+    // ungeprüfter Datenbasis sagt das hier, nicht erst im Protokoll.
+    const rev = P.limits.reviewStatus(soll.quellen.concat(zeit ? [zeit.tableId] : []));
+    if (rev.offen) {
+      kinder.push(el('div', { class: 'limit-badge grenzwertig' }, '⚠ Datenbasis ungeprüft (' + rev.offen + ' von ' + rev.gesamt + ' Tabellen)'));
+    }
+    return U.card('Sollwert aus dem Schutzorgan', [el('div', { class: 'card-body' }, kinder.filter(Boolean))]);
+  }
+
+  /* Stromkreis und Leitungsberechnung beschreiben dieselbe Leitung. Verknüpft
+   * man beide, wird sie einmal gepflegt statt zweimal: die Rechnung liefert
+   * Querschnitt und Schutzorgan, die Prüfung den gemessenen Zs dazu. */
+  function leitungsKarte(job, kreis) {
+    const calc = kreis.calcId ? P.store.calc(kreis.calcId) : null;
+    const kinder = [];
+
+    if (calc) {
+      const sum = P.views.calcSummary(calc);
+      kinder.push(el('div', { class: 'job-card' }, [
+        el('button', {
+          class: 'job-open', type: 'button',
+          onClick: () => { P.nav.calcId = calc.id; P.store.set({ tab: 'leitungen' }); },
+        }, [
+          el('div', { class: 'info' }, [
+            el('div', { class: 'name' }, sum.titel),
+            el('div', { class: 'meta' }, sum.meta),
+          ]),
+          sum.badge,
+          el('div', { class: 'chevron' }, '›'),
+        ]),
+        el('div', { class: 'job-actions' }, [
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            onClick: () => { P.nav.calcId = calc.id; P.store.set({ tab: 'leitungen' }); },
+          }, 'Öffnen'),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            onClick: () => uebernehmen(job, kreis, calc, sum),
+          }, 'Stammdaten übernehmen'),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            onClick: () => P.store.patchKreis(job.id, kreis.id, k => { k.calcId = null; }),
+          }, 'Verknüpfung lösen'),
+        ]),
+      ]));
+      kinder.push(el('div', { class: 'hint-text' }, '„Stammdaten übernehmen" holt Leitungstyp, Querschnitt und Schutzorgan aus der Rechnung hierher. Die Messwerte dieses Stromkreises bleiben unberührt.'));
+    } else {
+      kinder.push(el('button', {
+        class: 'btn btn-outline btn-block', type: 'button',
+        onClick: () => {
+          const neu = P.store.newCalc(null, job.world);
+          P.store.patchCalc(neu.id, c => {
+            c.name = kreisName(kreis);
+            if (kreis.leitung.typ) c.leitung.typ = kreis.leitung.typ;
+            if (kreis.schutz.art) c.schutz.art = kreis.schutz.art;
+            if (kreis.schutz.char) c.schutz.char = kreis.schutz.char;
+            if (kreis.schutz.in > 0) c.schutz.In = kreis.schutz.in;
+          }, { silent: true });
+          P.store.patchKreis(job.id, kreis.id, k => { k.calcId = neu.id; }, { silent: true });
+          P.nav.calcId = neu.id;
+          P.store.set({ tab: 'leitungen' });
+        },
+      }, '+  Berechnung aus diesem Stromkreis anlegen'));
+
+      const frei = (P.store.state.calcs || []).filter(c => !(job.kreise || []).some(k => k.calcId === c.id));
+      if (frei.length) {
+        kinder.push(el('div', { class: 'field-group' }, 'oder eine vorhandene Rechnung verknüpfen'));
+        kinder.push(el('div', { class: 'chips' }, frei.slice(0, 12).map(c => el('button', {
+          class: 'chip', type: 'button',
+          onClick: () => P.store.patchKreis(job.id, kreis.id, k => { k.calcId = c.id; }),
+        }, P.views.calcTitle(c)))));
+      }
+      kinder.push(el('div', { class: 'hint-text' }, 'Mit einer verknüpften Rechnung kennt der Stromkreis Querschnitt und Schutzorgan aus derselben Quelle — die Zahl steht dann einmal statt zweimal.'));
+    }
+
+    return U.card('Leitungsberechnung', [el('div', { class: 'card-body' }, kinder)]);
+  }
+
+  /* Rechnung → Stromkreis. Nur setzen, was die Rechnung wirklich ergibt: ein
+   * noch nicht gewählter Querschnitt überschreibt keinen eingetragenen. */
+  function uebernehmen(job, kreis, calc, sum) {
+    const v = calc.verbraucher;
+    const adern = v.phasen === 3 ? (v.mitN ? 5 : 4) : 3;
+    P.store.patchKreis(job.id, kreis.id, k => {
+      if (calc.leitung.typ) k.leitung.typ = calc.leitung.typ;
+      k.leitung.adern = adern;
+      if (sum.querschnitt != null) k.leitung.querschnitt = sum.querschnitt;
+      k.schutz.art = calc.schutz.art;
+      k.schutz.char = calc.schutz.art === 'ls' ? calc.schutz.char : null;
+      if (sum.In != null) k.schutz.in = sum.In;
+    });
   }
 
   function stepDetail(job, pack, entries, entry, kreis) {
@@ -436,6 +605,8 @@
           onRemove: punktId => P.store.removePunkt(job.id, step.id, punktId, wo),
         }));
       }
+      const bruecke = zsBruecke(job, step, kreis, facts, result, wo);
+      if (bruecke) children.push(bruecke);
       if (entry.limit && entry.limit.tableId) {
         children.push(el('div', { class: 'wiki-body' }, [U.limitTable(entry.limit.tableId, entry.limit.rowKey)]));
       }

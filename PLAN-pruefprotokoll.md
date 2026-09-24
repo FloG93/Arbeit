@@ -640,7 +640,7 @@ Je Paket ergänzen:
 | 5 | Paket 3: Datenmodell, Migration, Store | Stromkreise im Speicher |
 | 6 | Paket 3: Plan-Ansicht | Stromkreise bedienbar |
 | 7 | Paket 3: Protokoll und Druckbogen mehrzeilig | |
-| 8 | Brücke zur Leitungsberechnung (Zs-Sollwert und Ia aus `P.cable`) | |
+| 8 | Brücke zur Leitungsberechnung (Zs-Sollwert und Ia aus `P.cable`) | **Erledigt**, siehe unten |
 | 9 | Auslieferung 0.5.0, Prüfliste neu veröffentlichen | |
 
 Schritt 3 vor Paket 3 zu ziehen, hat einen Grund: Der Bogen bekommt seine
@@ -700,3 +700,48 @@ ersten Entwurf:
 
 > Widerspruch zu O4–O7 jederzeit möglich — sie sind im Plan als Annahme
 > gekennzeichnet, nicht als Beschluss.
+
+---
+
+## Schritt 8 — Brücke zur Leitungsberechnung (erledigt)
+
+Gebaut in `0.6.0`, Cache `pruefung-v16`.
+
+**Rechenseite.** `P.cable.zsSollwert(schutz, data, {t})` in `js/cable.js`:
+aus Art, Charakteristik und Nennstrom des Stromkreises die Auslösekennlinie
+holen, daraus Ia, daraus `Zs,max = U0 / Ia` und den Wert nach der 2/3-Regel.
+Die geforderte Abschaltzeit gibt der Aufrufer mit — sie kommt über den Fakt
+`abschaltzeitFall` aus der Grenzwerttabelle `abschaltzeit`, damit die
+Netzform-Logik nicht ein zweites Mal im Rechenkern steht.
+
+**Anzeige.** Karte „Sollwert aus dem Schutzorgan" im Schritt Zs, mit
+Schutzorgan, Abschaltzeit, Ia, Sollwert, zwei Schnellwerten zum Übernehmen
+und dem Prüfstand der beteiligten Tabellen. Ohne Schutzorgan steht dort der
+Hinweis und der Weg zu den Stammdaten, keine Zahl.
+
+**Verknüpfung.** Karte „Leitungsberechnung" im Stromkreis: eine Rechnung aus
+dem Kreis anlegen (sie erbt sein Schutzorgan), eine vorhandene verknüpfen,
+Stammdaten aus der Rechnung zurückholen, Verknüpfung lösen. `kreis.calcId`
+war seit Paket 3 vorgesehen und ist jetzt belegt.
+
+### Abweichungen vom Plan
+
+1. **Der Sollwert wird nicht automatisch eingetragen.** Der Plan las sich so,
+   als solle `zs_soll` einfach gefüllt werden. Gegen diesen Wert wird Zs
+   bewertet — ein sicherheitsrelevanter Bezugswert, der stillschweigend
+   erscheint, wird nicht mehr geprüft. Er steht jetzt als Schnellwert da und
+   braucht einen Tipp.
+2. **Ein vorgeschalteter RCD weicht den Sollwert nicht auf.** In der
+   Leitungsrechnung darf er die Abschaltzeit auf die langsamste Stützstelle
+   dehnen, weil der Fehlerschutz dort über ihn läuft. Für die Messung ist das
+   die laxere Zahl; angeboten wird die strengere, also die Abschaltbedingung
+   des Überstromorgans.
+3. **Ik bekommt keine automatische Bewertung.** Der Plan schrieb „Ik wird
+   gegen Ia bewertet". Ik ist ein Dokuwert aus dem Messgerät, und ein fehlender
+   Wert dürfte keinen Mangel erzeugen. Die Karte ordnet ihn jetzt ein („Ik 60 A
+   bleibt unter Ia = 80 A"), der Befund des Schritts bleibt am gemessenen Zs.
+4. **Höchstwerte werden abgeschnitten, nicht gerundet.** 2,875 Ω wird zu
+   2,87 Ω. Gerundet wären es 2,88 Ω — die laxere Forderung.
+5. **Zwei neue Selbsttest-Regeln.** Eine Brücke zum Schutzorgan an einem
+   Schritt ohne `scope: "stromkreis"` bliebe für immer leer; das fällt jetzt
+   im Selbsttest auf, nicht im Keller.
