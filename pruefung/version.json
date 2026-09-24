@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0",
+  "version": "0.7.0",
   "datenstand": "2026-09",
-  "note": "Brücke zur Leitungsberechnung: Der Stromkreis rechnet Ia und den Sollwert für Zs aus seinem Schutzorgan vor und lässt sich mit einer gespeicherten Leitungsberechnung verknüpfen."
+  "note": "Dynamische Darstellung: breitere Spalte und zweispaltige Felder auf dem Tablet, Liste und Detail nebeneinander auf Laptop und querliegendem Tablet."
 }

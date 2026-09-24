@@ -775,6 +775,114 @@ async function runWizard(page) {
     await cb.close();
   }
 
+  console.log('Breite Bildschirme: Tablet und Laptop');
+  {
+    const anlegen = async (pw, ph) => {
+      const cw = await browser.newContext({ viewport: { width: pw, height: ph } });
+      const pg = await cw.newPage();
+      pg.on('pageerror', e => errors.push(e.message));
+      pg.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+      await pg.goto(BASE, { waitUntil: 'networkidle' });
+      await pg.evaluate(() => localStorage.clear());
+      await pg.reload({ waitUntil: 'networkidle' }); await pg.waitForTimeout(500);
+      await pg.locator('.norm-card:not([disabled])').first().click();
+      await runWizard(pg);
+      return { cw, pg };
+    };
+
+    // ─── Laptop: Liste und Detail nebeneinander ───
+    const { cw: cl, pg: pl } = await anlegen(1440, 900);
+    await openKreis(pl);
+    check(await pl.locator('.panes').count() === 0, 'Liste allein: noch keine zwei Bereiche');
+    await pl.locator('.step-card', { hasText: 'Schleifenimpedanz' }).first().click();
+    await pl.waitForTimeout(200);
+    check(await pl.locator('.panes').count() === 1, 'Schritt geöffnet: zwei Bereiche');
+    const aside = pl.locator('.pane-aside');
+    check(await aside.locator('.step-card').count() >= 5, 'der Prüfplan steht im Seitenbereich');
+    const markiert = aside.locator('.step-card[aria-current="true"]');
+    check(await markiert.count() === 1 && /Schleifenimpedanz/.test(await markiert.innerText()),
+      'der offene Schritt ist im Seitenbereich gekennzeichnet');
+
+    // Die Aktionsleiste gehört zum Detail, nicht zum Fenster: sie muss im
+    // rechten Bereich liegen und links mit ihm bündig sein.
+    const bündig = await pl.evaluate(() => {
+      const bar = document.querySelector('.panes > .content > .bottom-bar');
+      const det = document.querySelector('.panes > .content');
+      if (!bar || !det) return null;
+      return Math.abs(bar.getBoundingClientRect().left - det.getBoundingClientRect().left) < 2;
+    });
+    check(bündig === true, 'die Aktionsleiste steht im Detailbereich und ist mit ihm bündig');
+
+    // Echtes Tippen: Fokus bleibt im Feld, obwohl der Seitenbereich mitgezeichnet wird.
+    const feld = pl.locator('[data-fkey="m-s-schleifenimpedanz-zs_soll"]');
+    await feld.click();
+    await pl.keyboard.type('2,87', { delay: 60 });
+    await pl.waitForTimeout(250);
+    const fokusOk = await pl.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-fkey'));
+    check(await feld.inputValue() === '2,87' && fokusOk === 'm-s-schleifenimpedanz-zs_soll',
+      'getippt „2,87" — Wert steht, Fokus bleibt trotz Seitenbereich');
+
+    // Der Seitenbereich ist nicht eingefroren: ein Messwert über dem Sollwert
+    // muss dort als Mangel auftauchen, ohne dass man zurückgeht.
+    await pl.locator('[data-fkey="m-s-schleifenimpedanz-zs"]').click();
+    await pl.keyboard.type('3,1', { delay: 60 });
+    await pl.waitForTimeout(300);
+    const zsKarte = pl.locator('.pane-aside .step-card', { hasText: 'Schleifenimpedanz' }).first();
+    const klasse = await zsKarte.getAttribute('class');
+    check(/bad/.test(klasse) && /3,1/.test(await zsKarte.innerText()),
+      'der Seitenbereich führt Messwert und Befund nach (' + klasse + ')');
+
+    // Aus dem Seitenbereich heraus umschalten — ohne den Seitenbereich zu verlieren.
+    await aside.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click();
+    await pl.waitForTimeout(200);
+    const titel = await pl.locator('.panes > .content .q-title').first().innerText();
+    check(/Isolationswiderstand/.test(titel) && await pl.locator('.pane-aside').count() === 1,
+      'ein Klick im Seitenbereich wechselt das Detail: ' + titel.replace(/\s+/g, ' '));
+
+    // Leitungen und Wiki haben dieselbe Form.
+    await pl.evaluate(() => Pruefung.store.set({ tab: 'leitungen' })); await pl.waitForTimeout(150);
+    await pl.locator('.norm-card').first().click(); await pl.waitForTimeout(250);
+    check(await pl.locator('.pane-aside .job-card').count() >= 1, 'Leitungen: die Rechnungen stehen neben der Rechnung');
+    await pl.evaluate(() => Pruefung.openWiki('leitung-abschaltung')); await pl.waitForTimeout(250);
+    check(await pl.locator('.pane-aside [data-fkey="wiki-q"]').count() === 1, 'Wiki: Suche und Treffer stehen neben dem Artikel');
+    // Genau einmal im Baum — zwei gleiche data-fkey schicken die
+    // Fokuswiederherstellung auf das falsche Feld.
+    check(await pl.locator('[data-fkey="wiki-q"]').count() === 1, 'das Suchfeld steht genau einmal im Baum');
+
+    // Schmaler ziehen: der Seitenbereich verschwindet, ohne dass etwas hängt.
+    await pl.setViewportSize({ width: 390, height: 844 }); await pl.waitForTimeout(400);
+    check(await pl.locator('.panes').count() === 0, 'schmal gezogen: wieder eine Spalte');
+    check(await pl.locator('.wiki-body').count() === 1, 'der Artikel steht weiter da');
+    await pl.setViewportSize({ width: 1440, height: 900 }); await pl.waitForTimeout(400);
+    check(await pl.locator('.pane-aside').count() === 1, 'wieder breit: der Seitenbereich kommt zurück');
+    await cl.close();
+
+    // ─── Tablet im Hochformat: eine Spalte, aber Felder nebeneinander ───
+    const { cw: ct, pg: pt } = await anlegen(820, 1180);
+    check(await pt.locator('.panes').count() === 0, 'Tablet hochkant: eine Spalte, keine zwei Bereiche');
+    await pt.evaluate(() => Pruefung.store.set({ tab: 'auftraege' })); await pt.waitForTimeout(250);
+    const nebeneinander = await pt.evaluate(() => {
+      const felder = document.querySelectorAll('.card-body.grid-fields > .field');
+      if (felder.length < 2) return null;
+      const a = felder[0].getBoundingClientRect(), b = felder[1].getBoundingClientRect();
+      return Math.abs(a.top - b.top) < 2 && b.left > a.right;
+    });
+    check(nebeneinander === true, 'Kopfdaten stehen zweispaltig');
+    const messfeld = await pt.evaluate(() => {
+      Pruefung.nav.kreisId = Pruefung.store.activeJob().kreise[0].id;
+      Pruefung.nav.stepId = 's-schleifenimpedanz';
+      Pruefung.store.set({ tab: 'plan' });
+      return null;
+    });
+    await pt.waitForTimeout(250);
+    const breite = await pt.evaluate(() => {
+      const i = document.querySelector('[data-fkey="m-s-schleifenimpedanz-zs"]');
+      return i ? Math.round(i.getBoundingClientRect().width) : null;
+    });
+    check(breite !== null && breite <= 200, 'das Messfeld wächst nicht über die Zeile mit (' + breite + ' px)');
+    await ct.close();
+  }
+
   console.log('Fix 4/5/6 — Kontrast und Tippziele (360 px, alle vier Modi)');
   for (const [world, hc] of [['efh', false], ['industrie', false], ['efh', true], ['industrie', true]]) {
     const c2 = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -845,6 +953,40 @@ async function runWizard(page) {
     check(ow <= 0, label + ': kein Querüberlauf (' + ow + ' px)');
     if (hc && world === 'industrie') await p2.screenshot({ path: path.join(OUT, 'f4-tageslicht-industrie.png') });
     await c2.close();
+  }
+
+  console.log('Kontrast und Tippziele auf breiten Bildschirmen');
+  for (const [label, w, h, hc] of [['Tablet 820', 820, 1180, false], ['Laptop 1440', 1440, 900, false], ['Laptop 1440 + Tageslicht', 1440, 900, true]]) {
+    const cx = await browser.newContext({ viewport: { width: w, height: h } });
+    const px = await cx.newPage();
+    await px.goto(BASE, { waitUntil: 'networkidle' });
+    await px.evaluate(hcOn => localStorage.setItem('pruefung.v1', JSON.stringify({ schemaVersion: 1, world: 'efh', hc: hcOn, tab: 'auftraege', jobs: [] })), hc);
+    await px.reload({ waitUntil: 'networkidle' }); await px.waitForTimeout(400);
+    const found = []; const taps = [];
+    await px.locator('.norm-card:not([disabled])').first().click(); await px.waitForTimeout(100);
+    await runWizard(px);
+    // Kopfdaten zweispaltig
+    await px.evaluate(() => Pruefung.store.set({ tab: 'auftraege' })); await px.waitForTimeout(150);
+    found.push(...await px.evaluate(AUDIT)); taps.push(...await px.evaluate(TAPS));
+    // Stromkreis mit Stammdaten und verknüpfbarer Rechnung
+    await openKreis(px);
+    found.push(...await px.evaluate(AUDIT)); taps.push(...await px.evaluate(TAPS));
+    // Schritt-Detail — am Laptop mit Seitenbereich, am Tablet ohne
+    await px.evaluate(() => { Pruefung.nav.stepId = 's-schleifenimpedanz'; Pruefung.render(); }); await px.waitForTimeout(150);
+    found.push(...await px.evaluate(AUDIT)); taps.push(...await px.evaluate(TAPS));
+    // Wiki: Seitenbereich mit Suchfeld und Filterreihen
+    await px.evaluate(() => Pruefung.openWiki('leitung-abschaltung')); await px.waitForTimeout(150);
+    found.push(...await px.evaluate(AUDIT)); taps.push(...await px.evaluate(TAPS));
+    // Leitungen: Liste neben der Rechnung
+    await px.evaluate(() => Pruefung.store.set({ tab: 'leitungen' })); await px.waitForTimeout(150);
+    await px.locator('.norm-card').first().click(); await px.waitForTimeout(200);
+    found.push(...await px.evaluate(AUDIT)); taps.push(...await px.evaluate(TAPS));
+    const ow = await px.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(!found.length, label + ': Kontrast' + (found.length ? '\n      ' + Array.from(new Set(found)).join('\n      ') : ' ok'));
+    check(!taps.length, label + ': Tippziele ≥ 48 px' + (taps.length ? '\n      ' + Array.from(new Set(taps)).join('\n      ') : ''));
+    check(ow <= 0, label + ': kein Querüberlauf (' + ow + ' px)');
+    if (w === 1440 && !hc) await px.screenshot({ path: path.join(OUT, 'laptop-zwei-bereiche.png') });
+    await cx.close();
   }
 
   console.log(errors.length ? 'Konsole:\n  ' + errors.join('\n  ') : 'Konsole sauber');

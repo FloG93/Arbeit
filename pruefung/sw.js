@@ -5,7 +5,7 @@
 //
 // Bei jeder Änderung an Dateien oder Daten die CACHE-Version hochzählen:
 // install() lädt dann alles neu, activate() räumt die alte Fassung weg.
-const CACHE = 'pruefung-v16';
+const CACHE = 'pruefung-v17';
 const ASSETS = [
   './',
   './index.html',

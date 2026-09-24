@@ -34,7 +34,11 @@
     const entries = P.plan.ensure(job, pack, kreis);
     if (P.nav.stepId) {
       const entry = entries.find(e => e.step.id === P.nav.stepId);
-      if (entry) return stepDetail(job, pack, entries, entry, kreis);
+      if (entry) {
+        const detail = stepDetail(job, pack, entries, entry, kreis);
+        if (P.layout.wide) detail.aside = planAside(job, pack, entries, kreis);
+        return detail;
+      }
       P.nav.stepId = null;
     }
     return kreis ? kreisAnsicht(job, pack, kreis, entries) : anlagenAnsicht(job, pack, entries);
@@ -69,9 +73,13 @@
         : blocked
           ? 'Erst „' + (pack.stepById.get(entry.blockedBy[0]) || {}).title + '“ — ' + (step.requiresReason || 'Vorbedingung offen')
           : subtitleFor(entry, result, verdict);
+      const offen = step.id === P.nav.stepId;
       children.push(el('button', {
-        class: 'step-card' + (verdict === 'ok' ? ' done' : '') + (verdict === 'mangel' ? ' bad' : '') + (blocked ? ' blocked' : ''),
+        class: 'step-card' + (verdict === 'ok' ? ' done' : '') + (verdict === 'mangel' ? ' bad' : '') + (blocked ? ' blocked' : '') + (offen ? ' current' : ''),
         type: 'button',
+        // Nicht nur ein Rahmen: Wer die Liste vorgelesen bekommt, soll auch
+        // hören, welcher Schritt gerade offen ist.
+        'aria-current': offen ? 'true' : null,
         onClick: () => { P.nav.stepId = step.id; P.render(); },
       }, [
         el('span', { class: 'mark' }, verdict ? U.verdictSym(verdict) : String(nr)),
@@ -118,7 +126,7 @@
     children.push(U.sectionHead('Stromkreise', kreise.length
       ? kreise.length + (kreise.length === 1 ? ' Stromkreis' : ' Stromkreise')
       : 'noch keiner angelegt'));
-    children.push(el('div', { class: 'step-list' }, kreise.map((kreis, i) => {
+    children.push(el('div', { class: 'step-list grid-cards' }, kreise.map((kreis, i) => {
       const kEntries = P.plan.ensure(job, pack, kreis);
       const kSum = P.plan.summary(pack, job.session, kEntries, kreis.results, P.plan.facts(job, kreis));
       const oeffnen = () => { P.nav.kreisId = kreis.id; P.nav.stepId = null; P.render(); };
@@ -201,7 +209,7 @@
           nachfuehren();
         }, { placeholder: 'z. B. Steckdosen Küche' }),
       ]),
-      el('div', { class: 'field' }, [
+      el('div', { class: 'field full' }, [
         el('label', { class: 'field-label' }, 'Leitung'),
         el('div', { class: 'calc-inline' }, [
           U.textInput('kreis-typ-' + kreis.id, kreis.leitung.typ || '',
@@ -223,7 +231,7 @@
           ]),
         ]),
       ]),
-      el('div', { class: 'field' }, [
+      el('div', { class: 'field full' }, [
         el('label', { class: 'field-label' }, 'Schutzorgan'),
         el('div', { class: 'chips' }, [
           { id: 'ls', label: 'LS' }, { id: 'gg', label: 'gG' },
@@ -245,7 +253,7 @@
           el('div', { class: 'unit' }, 'A'),
         ]),
       ]),
-    ]));
+    ], { bodyClass: 'grid-fields' }));
 
     children.push(leitungsKarte(job, kreis));
 
@@ -498,6 +506,24 @@
       k.schutz.char = calc.schutz.art === 'ls' ? calc.schutz.char : null;
       if (sum.In != null) k.schutz.in = sum.In;
     });
+  }
+
+  /* Seitenbereich am breiten Bildschirm: der Prüfplan neben dem offenen
+   * Schritt. Bewusst ohne Eingabefelder — die Stammdaten eines Stromkreises
+   * stehen in seiner eigenen Ansicht. Zweimal dasselbe `data-fkey` im Baum
+   * schickt die Fokuswiederherstellung sonst auf das falsche Feld. */
+  function planAside(job, pack, entries, kreis) {
+    const facts = P.plan.facts(job, kreis);
+    const sum = P.plan.summary(pack, job.session, entries, (kreis || job).results, facts);
+    return el('div', { class: 'view' }, [
+      el('button', {
+        class: 'btn btn-ghost btn-block aside-up', type: 'button',
+        onClick: () => { P.nav.stepId = null; P.render(); },
+      }, kreis ? '↑  ' + kreisName(kreis) : '↑  Prüfplan der Anlage'),
+      U.progress(sum.done, sum.total, sum.done + ' von ' + sum.total + ' bewertet'
+        + (sum.mangel ? ' · ' + plural(sum.mangel, 'Mangel', 'Mängel') : '')),
+      schrittListe(job, pack, entries, kreis),
+    ]);
   }
 
   function stepDetail(job, pack, entries, entry, kreis) {

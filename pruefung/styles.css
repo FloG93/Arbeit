@@ -321,6 +321,10 @@ textarea.input{padding:.75rem .875rem;min-height:4.5rem;font:400 .938rem/1.5 var
 .step-card .t{font:600 1rem/1.25 var(--font-ui);color:var(--text-primary)}
 .step-card .s{font:400 .75rem/1.4 var(--font-ui);color:var(--text-tertiary)}
 .step-card .s.blocked-why{color:var(--status-grenzwertig)}
+/* Der gerade offene Schritt, wenn die Liste neben ihm steht. Nicht nur Farbe:
+   Balken an der Kante, kräftigerer Titel, dazu aria-current. */
+.step-card.current{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.step-card.current .t{font-weight:700}
 
 .verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:.375rem}
 .verdict-btn{min-height:var(--tap-primary);border-radius:var(--radius-control-lg);cursor:pointer;
@@ -460,9 +464,74 @@ html.hc .calc-head{box-shadow:0 4px 12px rgba(0,0,0,.12)}
   .seg-btn.active .s{display:block}
   .tab-btn{font-size:.813rem;letter-spacing:0}
 }
+
+/* ─── Breitere Bildschirme ───────────────────────────────────────────────
+   Das Grundmaß bleibt die Spalte. Ein Messwert wird gelesen, nicht
+   überflogen, und eine Zeile über die halbe Tischbreite liest sich
+   schlechter als eine über vierzig Zeichen. Zusätzliche Breite geht deshalb
+   in dieser Reihenfolge: erst Luft, dann zwei Spalten in den Listen, und
+   erst am Laptop zwei Bereiche nebeneinander.
+
+   Die Tippziele wachsen dabei nicht und schrumpfen nicht: Ein Tablet wird
+   auch im Querformat mit dem Finger bedient, oft mit Handschuh. */
 @media (min-width:560px){
   #app{align-items:center}
-  .header,.content,.bottom-bar{width:100%;max-width:34rem}
+  .header,.content,.bottom-bar,.panes{width:100%;max-width:34rem}
+}
+
+/* Tablet im Hochformat */
+@media (min-width:700px){
+  .header,.content,.bottom-bar,.panes{max-width:44rem}
+  .seg-btn .s{display:block}
+  /* Ein Messwert hat vier Zeichen. Ein Feld, das über die halbe Tischbreite
+     läuft, sieht aus, als gehörte da ein Satz hinein — und das Auge muss vom
+     Namen bis zur Zahl über zwanzig Zentimeter wandern. Die Zahl rückt
+     deshalb an den Namen heran, statt mitzuwachsen. */
+  .measure-line .input{flex:0 1 12rem;margin-left:auto}
+  /* Karten, die man überfliegt — Aufträge, Rechnungen, Wiki-Treffer —
+     stehen nebeneinander. Prüfschritte nicht: deren Zeile trägt Grenzwert
+     und Befund und braucht die Breite. */
+  .grid-cards{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;align-items:start}
+  .grid-fields{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+  /* Was eine ganze Zeile braucht, behält sie auch im Raster. */
+  .grid-fields>.field-group,.grid-fields>.hint-text,.grid-fields>.w-note,.grid-fields>.full{grid-column:1/-1}
+  /* Auf einer Leiste von 44 rem sehen zwei gleich breite Hälften aus wie ein
+     Formularfuß: Primäraktion rechts, Rückweg links. */
+  .bottom-bar{justify-content:flex-end}
+  .bottom-bar .btn{flex:0 0 auto;min-width:11rem}
+  .bottom-bar .btn.back{flex:0 0 auto;min-width:9rem;margin-right:auto}
+}
+
+/* Laptop und querliegendes Tablet: Liste links, Detail rechts. Beide Bereiche
+   scrollen für sich — sonst schiebt eine lange Schrittliste den geöffneten
+   Schritt aus dem Bild. */
+@media (min-width:1040px){
+  .panes,#app.has-panes .header{max-width:68rem}
+  /* Welt- und Reiterleiste wachsen nicht mit: fünf Schaltflächen über
+     einen Meter verteilt trifft man schlechter als fünf nebeneinander. */
+  .seg,.tabbar{max-width:44rem}
+  .panes{
+    flex:1;min-height:0;display:grid;
+    grid-template-columns:22rem minmax(0,1fr);
+    gap:1rem;padding:0 1rem;
+  }
+  .pane-aside{
+    min-width:0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:1rem 0 calc(env(safe-area-inset-bottom,0px) + 1.75rem);
+  }
+  .panes>.content{min-width:0;min-height:0;max-width:none;padding-left:0;padding-right:0}
+  /* Die Aktionsleiste gehört zum Detail, nicht zum ganzen Fenster: sonst
+     steht „Weiter" einen halben Meter von dem entfernt, was es weiterführt.
+     Sie klebt deshalb unten im rechten Bereich und wird dort mitgescrollt. */
+  .panes>.content{padding-bottom:0}
+  .panes>.content>.bottom-bar{
+    position:sticky;bottom:0;margin-top:auto;width:auto;max-width:none;
+    padding-left:0;padding-right:0;
+  }
+  /* Der Seitenbereich ist die Nebensache — eine Spalte, auch wenn daneben
+     zwei passen würden. */
+  .pane-aside .grid-cards{grid-template-columns:1fr}
+  .pane-aside .grid-fields{grid-template-columns:1fr}
 }
 
 /* ─── Druckbogen (Protokoll als PDF über den Druckdialog) ─── */

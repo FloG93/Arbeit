@@ -213,9 +213,12 @@
     hint ? el('div', { class: 'hint' }, hint) : null,
   ]);
 
-  U.card = (title, children) => el('div', { class: 'card' }, [
+  /* opts.bodyClass hängt eine Klasse an den Karteninhalt — gedacht für
+     `grid-fields`, das reine Feldlisten am breiten Bildschirm zweispaltig
+     stellt. Ohne opts bleibt alles wie bisher. */
+  U.card = (title, children, opts) => el('div', { class: 'card' }, [
     title ? el('div', { class: 'card-title', style: { marginBottom: '.75rem' } }, title) : null,
-    el('div', { class: 'card-body' }, children),
+    el('div', { class: 'card-body' + (opts && opts.bodyClass ? ' ' + opts.bodyClass : '') }, children),
   ]);
 
   U.bottomBar = children => el('div', { class: 'bottom-bar' }, children);

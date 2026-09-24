@@ -81,7 +81,7 @@
 
     if (calcs.length) {
       children.push(U.sectionHead('Berechnungen', calcs.length + (calcs.length === 1 ? ' Rechnung' : ' Rechnungen')));
-      children.push(el('div', { class: 'step-list' }, calcs.map(calc => {
+      children.push(el('div', { class: 'step-list grid-cards' }, calcs.map(calc => {
         const res = compute(calc);
         const open = () => { P.nav.calcId = calc.id; P.render(); };
         return el('div', { class: 'job-card' }, [
@@ -115,7 +115,7 @@
     };
     children.push(U.sectionHead('Neue Berechnung', world ? world.label : ''));
     const vorlagen = P.data.cables.vorlagen.filter(v => v.welt === state.world);
-    children.push(el('div', { class: 'step-list' }, vorlagen.map(v => el('button', {
+    children.push(el('div', { class: 'step-list grid-cards' }, vorlagen.map(v => el('button', {
       class: 'norm-card', type: 'button', onClick: () => neu(v),
     }, [
       el('div', { class: 'info' }, [el('div', { class: 'norm' }, v.label), el('div', { class: 'sub' }, v.sub)]),
@@ -401,7 +401,15 @@
     if (!P.data.cables) return { view: el('div', { class: 'view' }, [U.card('Keine Leitungsdaten', el('p', { class: 'w-p' }, 'data/leitungen.json ist nicht geladen.'))]) };
     if (P.nav.calcId) {
       const calc = P.store.calc(P.nav.calcId);
-      if (calc) return rechnung(calc);
+      if (calc) {
+        const detail = rechnung(calc);
+        // Am breiten Bildschirm steht die Liste daneben: Wer zwei Varianten
+        // derselben Leitung vergleicht, springt sonst über die Zurück-Taste.
+        // Die Liste trägt keine Eingabefelder, sie darf deshalb neben der
+        // Rechnung stehen, ohne deren `data-fkey` zu doppeln.
+        if (P.layout.wide) detail.aside = liste().view;
+        return detail;
+      }
       P.nav.calcId = null;
     }
     return liste();

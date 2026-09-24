@@ -19,6 +19,26 @@
 
   P.nav = { stepId: null, wikiId: null, calcId: null, kreisId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
 
+  /* ─── Breite ───
+   * Am Laptop und am querliegenden Tablet ist Platz für Liste und Detail
+   * nebeneinander: Wer einen Messwert einträgt, sieht den Prüfplan daneben
+   * stehen, statt zwischen beiden hin- und herzuspringen.
+   *
+   * Ob das zweite Stück (`aside`) überhaupt gebaut wird, entscheidet diese
+   * Abfrage — nicht das Stylesheet. Eine per CSS versteckte zweite
+   * Schrittliste kostet bei jedem Neuzeichnen Aufbau, und ihre `data-fkey`
+   * wären doppelt vergeben: die Fokuswiederherstellung träfe dann das falsche
+   * Feld.
+   *
+   * 1040 px, weil darunter kein Bereich mehr übrig bleibt, in dem ein
+   * Messfeld samt Grenzwertband lesbar ist — ein Tablet im Hochformat bekommt
+   * deshalb die breitere Spalte, nicht zwei Bereiche. */
+  const WIDE = window.matchMedia('(min-width: 1040px)');
+  P.layout = { get wide() { return WIDE.matches; } };
+  const onWide = () => { if (P.data && P.data.ready) P.render(); };
+  if (WIDE.addEventListener) WIDE.addEventListener('change', onWide);
+  else if (WIDE.addListener) WIDE.addListener(onWide); // ältere Safari-Fassungen
+
   let toast = null;
   let toastTimer = null;
   let toastHost = null;
@@ -179,8 +199,24 @@
       console.error('[Prüfassistent] Ansicht fehlgeschlagen', err);
       result = { view: el('div', { class: 'view' }, [U.card('Fehler', el('p', { class: 'w-p' }, 'Diese Ansicht konnte nicht gezeichnet werden: ' + err.message))]) };
     }
-    app.appendChild(el('div', { class: 'content' }, [result.view]));
-    if (result.bottom) app.appendChild(result.bottom);
+    // Mit einem zweiten Stück stehen Liste und Detail nebeneinander; ohne
+    // bleibt es bei der einen Spalte — auch auf einem breiten Bildschirm.
+    // Mit zwei Bereichen gehört die Aktionsleiste in den rechten: „Weiter"
+    // soll neben dem stehen, was es weiterführt, nicht am Fensterrand.
+    const content = el('div', { class: 'content' }, [result.view, result.aside && result.bottom]);
+    // Der Kopfbereich richtet sich nach dem, was darunter steht: mit zwei
+    // Bereichen über die ganze Breite, ohne sie über die eine Spalte. Sonst
+    // beginnt die Überschrift an einer anderen Kante als der Inhalt.
+    app.classList.toggle('has-panes', !!result.aside);
+    if (result.aside) {
+      app.appendChild(el('div', { class: 'panes' }, [
+        el('div', { class: 'pane-aside' }, [result.aside]),
+        content,
+      ]));
+    } else {
+      app.appendChild(content);
+      if (result.bottom) app.appendChild(result.bottom);
+    }
     restoreFocus(mark);
     renderToast();
     syncHistory();

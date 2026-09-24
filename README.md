@@ -559,12 +559,37 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
 | Protokoll als A4-Bogen im Aufbau des IHK-Prüfprotokolls, über den Druckdialog (auch „Als PDF speichern") | fertig |
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
+| Mitwachsendes Layout: Spalte am Handy, zweispaltige Felder am Tablet, Liste und Detail nebeneinander am Laptop | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
 | Leitungsberechnung: Querschnitt vorschlagen, vier Nachweise, Nachweisblatt | fertig |
 | Sollwert für Zs aus dem Schutzorgan des Stromkreises, Stromkreis mit einer Leitungsrechnung verknüpfbar | fertig |
 | Offline-Betrieb inklusive aller Datenpakete | fertig |
 | Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
 | Mängelfotos im Protokoll | geplant |
+
+### Auf welchem Gerät
+
+Gebaut ist die App für das Handy in der Hosentasche — daran ändert sich nichts,
+wenn der Bildschirm größer wird. Zusätzliche Breite geht der Reihe nach in
+Luft, in zwei Spalten und erst zuletzt in zwei Bereiche:
+
+| Breite | Darstellung |
+| --- | --- |
+| bis 560 px | eine Spalte, wie bisher |
+| ab 560 px | zentrierte Spalte |
+| ab 700 px (Tablet hochkant) | breitere Spalte; Aufträge, Rechnungen und Wiki-Treffer zweispaltig, ebenso reine Feldlisten wie die Kopfdaten; die Aktionsleiste wird zum Formularfuß mit Rückweg links und Primäraktion rechts |
+| ab 1040 px (Laptop, Tablet quer) | Liste links, Detail rechts — Prüfplan neben dem offenen Schritt, Rechnungen neben der Rechnung, Wiki-Suche neben dem Artikel. Beide Bereiche scrollen für sich, die Aktionsleiste gehört zum Detail |
+
+Die Tippziele wachsen dabei nicht und schrumpfen nicht: Ein Tablet wird auch im
+Querformat mit dem Finger bedient, oft mit Handschuh. Messfelder wachsen
+ebenfalls nicht mit — eine Zahl mit vier Zeichen braucht kein Feld über die
+halbe Tischbreite, und das Auge soll nicht vom Namen bis zur Zahl wandern
+müssen.
+
+Der Seitenbereich entsteht nur, wenn er auch gezeigt wird. Er wird nicht per
+CSS versteckt: Eine unsichtbare zweite Schrittliste kostet bei jedem
+Neuzeichnen Aufbau, und ihre `data-fkey` wären doppelt vergeben — die
+Fokuswiederherstellung träfe dann das falsche Feld.
 
 Bekannte Grenze: Bemerkungsfelder und die Wiki-Suche zeichnen bei jedem
 Tastendruck neu. Auf Android-Tastaturen mit Wortvorschlägen kann das die

@@ -110,7 +110,7 @@
       field.hint ? el('div', { class: 'hint-text' }, field.hint) : null,
     ]);
 
-    if (!groups.length) return U.card(null, fields.map(oneField));
+    if (!groups.length) return U.card(null, fields.map(oneField), { bodyClass: 'grid-fields' });
 
     /* Sechzehn Felder am Stück sind eine Wand. Die Gruppen des Datenpakets
      * teilen sie in Auftrag, Anlage, Netz und Prüfung — gezeichnet wird nur,
@@ -122,7 +122,7 @@
       children.push(el('div', { class: 'field-group' }, group.label));
       children.push(mine.map(oneField));
     }
-    return U.card(null, children);
+    return U.card(null, children, { bodyClass: 'grid-fields' });
   };
 
   P.views.auftraege = function auftraege() {
@@ -133,7 +133,7 @@
     const jobs = state.jobs;
     if (jobs.length) {
       children.push(U.sectionHead('Prüfungen', jobs.length + (jobs.length === 1 ? ' Auftrag' : ' Aufträge')));
-      children.push(el('div', { class: 'step-list' }, jobs.map(job => el('div', {
+      children.push(el('div', { class: 'step-list grid-cards' }, jobs.map(job => el('div', {
         class: 'job-card' + (job.id === state.activeJobId ? ' active' : ''),
       }, [
         el('button', { class: 'job-open', type: 'button', onClick: () => P.store.openJob(job.id) }, [
@@ -176,7 +176,7 @@
     // Eine Karte je Norm, nicht je Datei: 0100-600 und 0105-100 teilen sich ein
     // Paket, treten hier aber als zwei Normen auf.
     children.push(U.sectionHead('Neue Prüfung', world ? world.label : ''));
-    children.push(el('div', { class: 'step-list' }, P.data.variants().map(({ variant, pack }) => {
+    children.push(el('div', { class: 'step-list grid-cards' }, P.data.variants().map(({ variant, pack }) => {
       const planned = variant.status !== 'aktiv';
       const fitsWorld = !variant.worlds || variant.worlds.includes(state.world);
       return el('button', {

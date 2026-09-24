@@ -83,3 +83,8 @@ nächste freigegebene Aufgabe.
 - Bedienung im Feld: Ziele, die beim Messen getroffen werden, ≥ 56 px, sonst
   ≥ 48 px; Kontrast ≥ 4,5:1 in allen vier Farbmodi (dunkel/Tageslicht ×
   EFH/Industrie); Zustände nie nur über Farbe.
+- Mitwachsendes Layout: Eine Ansicht darf neben `view` ein zweites Stück
+  `aside` liefern; ab 1040 px stehen beide nebeneinander. Gebaut wird es nur,
+  wenn `P.layout.wide` gilt — nie bauen und per CSS verstecken: Zweimal
+  dasselbe `data-fkey` im Baum schickt die Fokuswiederherstellung auf das
+  falsche Feld. Tippziele und Messfelder wachsen mit der Breite nicht mit.

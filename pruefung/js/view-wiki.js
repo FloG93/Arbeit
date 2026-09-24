@@ -50,10 +50,22 @@
   P.views.wiki = function wikiView() {
     if (P.nav.wikiId) {
       const entry = P.data.wikiById.get(P.nav.wikiId);
-      if (entry) return detail(entry);
+      if (entry) {
+        const artikel = detail(entry);
+        // Suchfeld und Treffer bleiben am breiten Bildschirm stehen: Wer einen
+        // Begriff nachschlägt, liest meist zwei Artikel hintereinander.
+        if (P.layout.wide) artikel.aside = liste().view;
+        return artikel;
+      }
       P.nav.wikiId = null;
     }
 
+    return liste();
+  };
+
+  /* Suche, Filter und Treffer — eigene Funktion, damit sie am breiten
+   * Bildschirm als Seitenbereich neben dem Artikel stehen kann. */
+  function liste() {
     const state = P.store.state;
     const world = P.data.world(state.world);
     const results = P.wiki.search(P.nav.query, { world: state.world, kind: P.nav.kind, allWorlds: P.nav.allWorlds });
@@ -89,7 +101,7 @@
       children.push(el('div', { class: 'empty-note' }, 'Nichts gefunden. Andere Schreibweise probieren oder den Filter „Alle Bereiche“ einschalten.'));
     }
 
-    children.push(el('div', { class: 'step-list' }, results.map(entry => el('button', {
+    children.push(el('div', { class: 'step-list grid-cards' }, results.map(entry => el('button', {
       class: 'wiki-card', type: 'button', onClick: () => { P.nav.wikiId = entry.id; P.render(); },
     }, [
       el('div', { class: 't' }, [
@@ -100,7 +112,7 @@
     ]))));
 
     return { view: el('div', { class: 'view' }, children) };
-  };
+  }
 
   function detail(entry) {
     const kind = KINDS.find(k => k.id === entry.kind);
