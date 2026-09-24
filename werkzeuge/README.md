@@ -86,3 +86,11 @@ Neue Tabellen bekommen einen leeren `reviewed`-Block und werden in die
 Prüfliste aufgenommen: `build-review-items.py` erweitern (neue Gruppen hinten
 anhängen), unter derselben URL neu veröffentlichen, bestehende Item-IDs nicht
 ändern.
+
+Vor dem Neuveröffentlichen nachsehen, ob sich überhaupt etwas geändert hat:
+die Liste neu erzeugen, den `<script id="data">`-Block der erzeugten Seite und
+der veröffentlichten Fassung als JSON laden und Gruppen und Items vergleichen.
+Sind sie gleich, nicht veröffentlichen — eine Version ohne Inhalt bringt
+nichts und jedes Anfassen der Item-IDs gefährdet die Eintragungen. Stand
+0.6.0: 126 Items in 9 Gruppen, unverändert gegenüber der veröffentlichten
+Fassung.

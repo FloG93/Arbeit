@@ -561,6 +561,7 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
 | Leitungsberechnung: Querschnitt vorschlagen, vier Nachweise, Nachweisblatt | fertig |
+| Sollwert für Zs aus dem Schutzorgan des Stromkreises, Stromkreis mit einer Leitungsrechnung verknüpfbar | fertig |
 | Offline-Betrieb inklusive aller Datenpakete | fertig |
 | Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
 | Mängelfotos im Protokoll | geplant |
@@ -597,6 +598,18 @@ schlägt den kleinsten vor, der alle vier Nachweise erfüllt:
 * **Vorlagen je Welt** (EFH: Steckdosen, Licht, Herd, Durchlauferhitzer,
   Wallbox 11/22 kW, Wärmepumpe, UV-Zuleitung · Industrie: Motor, Maschine,
   CEE 16/32 A, UV-Zuleitung gG, Baustromverteiler).
+
+**Brücke zur Prüfung.** Ein Stromkreis kennt sein Schutzorgan, und dort liegt
+die Auslösekennlinie: Im Schritt „Schleifenimpedanz“ rechnet die App daraus
+Ia und den Sollwert `Zs,max = U0 / Ia` vor — mit Abschaltzeit, Formel und
+Prüfstand der beteiligten Tabellen, zum Übernehmen per Tipp. Eingetragen wird
+er nicht von allein: Zs wird gegen ihn bewertet, und ein Bezugswert, der
+stillschweigend erscheint, wird nicht mehr geprüft. Ein vorgeschalteter RCD
+weicht ihn nicht auf; angeboten wird die Abschaltbedingung des
+Überstromorgans, dazu der strengere Wert nach der 2/3-Regel. Umgekehrt lässt
+sich an jeden Stromkreis eine Leitungsrechnung hängen — aus dem Kreis heraus
+angelegt oder eine vorhandene verknüpft —, und Leitungstyp, Querschnitt und
+Schutzorgan kommen von dort zurück, statt zweimal gepflegt zu werden.
 
 Alle Zahlen stehen in `data/leitungen.json` (Belastbarkeit, Faktoren,
 Kennwerte der Schutzorgane, Konstanten, Vorlagen, Hinweise) und in

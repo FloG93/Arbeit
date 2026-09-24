@@ -641,7 +641,7 @@ Je Paket ergänzen:
 | 6 | Paket 3: Plan-Ansicht | Stromkreise bedienbar |
 | 7 | Paket 3: Protokoll und Druckbogen mehrzeilig | |
 | 8 | Brücke zur Leitungsberechnung (Zs-Sollwert und Ia aus `P.cable`) | **Erledigt**, siehe unten |
-| 9 | Auslieferung 0.5.0, Prüfliste neu veröffentlichen | |
+| 9 | Auslieferung 0.6.0, Prüfliste prüfen | **Erledigt**, siehe unten |
 
 Schritt 3 vor Paket 3 zu ziehen, hat einen Grund: Der Bogen bekommt seine
 endgültige Gliederung, solange er noch einfach ist. Paket 3 fügt dann nur
@@ -745,3 +745,33 @@ war seit Paket 3 vorgesehen und ist jetzt belegt.
 5. **Zwei neue Selbsttest-Regeln.** Eine Brücke zum Schutzorgan an einem
    Schritt ohne `scope: "stromkreis"` bliebe für immer leer; das fällt jetzt
    im Selbsttest auf, nicht im Keller.
+
+---
+
+## Schritt 9 — Auslieferung (erledigt)
+
+Ausgeliefert als `0.6.0`, Cache `pruefung-v16`, Datenstand `2026-09`
+unverändert.
+
+**Prüfliste: nichts neu zu veröffentlichen.** Die Liste wurde aus den
+aktuellen Datendateien neu erzeugt und gegen die veröffentlichte Fassung
+gehalten: dieselben 9 Normgruppen, dieselben 126 Items, keines hinzugekommen,
+keines entfallen, keines inhaltlich geändert. Die Pakete 1–3 haben Prüfschritte,
+Protokollfelder und Stromkreis-Fakten gebracht, aber keine neue
+Grenzwerttabelle; die Brücke rechnet aus Tabellen, die längst in der Liste
+stehen (`leitung-ls`, `leitung-gg`, `abschaltzeit`, die Rechenkonstanten mit
+der 2/3-Regel, Formel `zs-max`). Ein Neuveröffentlichen wäre eine neue Version
+ohne Inhalt gewesen — und jedes Anfassen der Item-IDs gefährdet die
+Eintragungen der Betatester. Die Artifact-URL bleibt
+<https://claude.ai/artifact/XxiXZMkffCHxmabQFVSgsM>.
+
+**Wieder zu veröffentlichen ist sie**, sobald eine neue Grenzwerttabelle oder
+eine neue Rechenkonstante dazukommt — dann `build-review-items.py` erweitern
+(neue Gruppen hinten anhängen), unter derselben URL neu veröffentlichen,
+bestehende Item-IDs nicht ändern. Den Abgleich „erzeugt gegen veröffentlicht“
+macht man am schnellsten über den `<script id="data">`-Block beider Fassungen.
+
+**Damit ist der Plan abgearbeitet.** Alle neun Schritte sind erledigt; was
+offen bleibt, sind die Einträge der Betatester in der Prüfliste — die pflegt
+nicht der Assistent ein, sondern sie, und der Weg dahin steht in
+`werkzeuge/README.md`.
