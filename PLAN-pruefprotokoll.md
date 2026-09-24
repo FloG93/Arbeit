@@ -1,6 +1,7 @@
 # Plan: Prüfassistent an das IHK-Prüfprotokoll angleichen
 
-Stand 24.09.2026. **Noch nicht freigegeben, noch nichts gebaut.** Grundlage ist
+Stand 24.09.2026. **Entscheidungen getroffen (siehe „Getroffene
+Entscheidungen" am Ende), noch nichts gebaut.** Grundlage ist
 der Abgleich des Prüfassistenten mit dem Prüf- und Messprotokoll „Erst- und
 Wiederholungsprüfung el. Anlagen" der IHK-Abschlussprüfung Winter 2023/24
 (Industrieelektriker/-in Betriebstechnik, Formular W23 1086 B1).
@@ -12,7 +13,7 @@ so — sie ist ein Assistent, kein Formularvordruck.
 
 ---
 
-## 1. Leitentscheidungen
+## Leitentscheidungen
 
 Diese sechs Punkte bestimmen alles Weitere. Sie stehen hier vorn, damit sie
 einmal entschieden und nicht in jedem Unterpunkt neu verhandelt werden.
@@ -74,9 +75,22 @@ Paket 1 und 2 sind additiv und berühren den Druckbogen nur an seinen Rändern.
 Paket 3 schreibt den Bogen ohnehin neu. Zwei Auslieferungen statt drei sparen
 einen kompletten Durchgang durch Druckbogen, Tests und Prüfliste.
 
+### L7 — Messstellen sind wiederholbar, nicht abgezählt
+
+Ein Stromkreis hat so viele Messpunkte, wie er Steckdosen und berührbare
+Teile hat — das weiß keine Datendatei im Voraus. Neben den festen
+Eingabefeldern eines Schrittes kann es deshalb **benannte Messstellen** geben,
+die im Feld per „+" entstehen: Bezeichnung plus Wert, beliebig viele. Der
+maßgebliche Wert (größter bzw. kleinster) wandert automatisch in die
+Protokollspalte, die Einzelwerte in einen Anhang.
+
+Betrifft zunächst Schutzleiterwiderstand und Isolationswiderstand
+(Abschnitt 2.4). Der Mechanismus wird allgemein gebaut, damit später jeder
+Schritt ihn nutzen kann.
+
 ---
 
-## 2. Paket 1 — Kopfdaten, Anlass, Erder, Sichtprüfung
+## Paket 1 — Kopfdaten, Anlass, Erder, Sichtprüfung
 
 Additiv, keine Strukturänderung. Alles davon ist auch ohne Paket 3 sinnvoll.
 
@@ -159,13 +173,17 @@ Hauptwasserleitung · Hauptschutzleiter · Gasinnenleitung · Heizungsanlage ·
 Klimaanlage · Aufzugsanlage · EDV-Anlage · Telefonanlage · Blitzschutzanlage ·
 Antennenanlage/BK · Gebäudekonstruktion
 
-**Das braucht einen vierten Zustand in der Checkliste.** `U.checkRow` kennt
-heute offen → OK → Mangel. „Gasinnenleitung nicht vorhanden" ist aber der
-Normalfall in vielen Objekten und darf im Protokoll nicht wie ein übersehener
-Punkt aussehen. Vorschlag: offen → vorhanden/OK → Mangel → **n. a.**, mit
-eigenem Symbol (`–`) und eigenem Text. Betrifft `js/ui.js` (eine Funktion) und
-alle Checklisten — die drei bestehenden Zustände bleiben unverändert, der
-vierte kommt nur dazu.
+**Das braucht einen vierten Zustand in der Checkliste — entschieden (O2).**
+`U.checkRow` kennt heute offen → OK → Mangel. „Gasinnenleitung nicht
+vorhanden" ist aber der Normalfall in vielen Objekten und darf im Protokoll
+nicht wie ein übersehener Punkt aussehen. Künftig: offen → OK → Mangel →
+**n. a.**, mit eigenem Symbol (`–`) und eigenem Text. Betrifft `js/ui.js`
+(eine Funktion) und alle Checklisten — die drei bestehenden Zustände bleiben
+unverändert, der vierte kommt nur dazu.
+
+`checklistVerdict()` in `js/plan.js` muss mitziehen: `n. a.` zählt wie
+beantwortet, aber nicht als Mangel. Ein Schritt, dessen Punkte alle `n. a.`
+sind, gilt als bewertet, nicht als offen.
 
 Der Messwert `r_pa` wandert aus `s-durchgang-schutzleiter` hierher, denn er
 gehört fachlich zum Potenzialausgleich, nicht zum Schutzleiter des
@@ -189,7 +207,7 @@ Der Fakt für das `when` existiert bereits: die Mehrfachauswahl
 
 ---
 
-## 3. Paket 2 — Fehlende Messgrößen
+## Paket 2 — Fehlende Messgrößen
 
 ### 2.1 Kurzschlussstrom Ik
 
@@ -235,18 +253,115 @@ Badge „Datenbasis ungeprüft" auch hier steht, und Aufnahme in die Prüfliste.
 
 Das Formular hat je Stromkreis zwei Zeilen: `1` ohne, `2` mit Verbraucher.
 
-Sechs Eingabefelder (L–PE, N–PE, L–N je zweimal) wären im Feld unbedienbar.
-Vorschlag: die drei bestehenden Felder gelten als „ohne Verbraucher", dazu
-**ein** neues Feld `riso_mit_verbraucher` („Gesamtwert mit Verbrauchern",
-optional). Das trifft die Absicht des Formulars — zeigen, ob ein angeschlossener
-Verbraucher den Wert drückt — ohne die Eingabemaske zu verdreifachen.
+**Entschieden (O3): sechs feste Felder**, dazu Messstellen per „+"
+(Abschnitt 2.4).
 
-Der Druckbogen füllt damit beide Zeilen: Zeile 1 aus dem kleinsten der drei
-Einzelwerte, Zeile 2 aus dem neuen Feld.
+| Feld | Label |
+| --- | --- |
+| `riso_l_pe` | L–PE ohne Verbraucher |
+| `riso_n_pe` | N–PE ohne Verbraucher |
+| `riso_l_n` | L–N ohne Verbraucher |
+| `riso_l_pe_mit` | L–PE mit Verbraucher |
+| `riso_n_pe_mit` | N–PE mit Verbraucher |
+| `riso_l_n_mit` | L–N mit Verbraucher |
+
+Die drei „mit"-Felder sind `optional: true` — nicht jede Prüfung misst beide
+Zustände, und ein leeres optionales Feld hält die Bewertung nicht auf.
+
+Sechs Felder sind viel für einen Daumen im Keller. Die Messzeilen werden
+deshalb in zwei beschriftete Gruppen geteilt („ohne Verbraucher" / „mit
+Verbraucher"), damit der Block lesbar bleibt. Das ist neu für `view-plan.js`:
+bisher steht eine flache Liste von Messzeilen unter der Überschrift
+„Messwerte". Nötig ist ein optionales `gruppe`-Feld an der Eingabe und eine
+Zwischenüberschrift beim Zeichnen.
+
+Der Druckbogen füllt damit beide Zeilen des Formulars: Zeile 1 aus dem
+kleinsten der drei „ohne"-Werte, Zeile 2 aus dem kleinsten der drei
+„mit"-Werte.
+
+### 2.4 Messstellen per „+" (neuer Mechanismus, L7)
+
+Feste Felder decken das Übliche ab. Ein Stromkreis mit acht Steckdosen hat
+aber acht Schutzleiter-Messpunkte, und bei der Isolationsmessung kann es
+mehrere Teilstränge geben. Beides wird künftig als **benannte Messstelle**
+erfasst.
+
+**Datenbasis**, neuer Block `measure.messstellen`:
+
+```json
+"messstellen": {
+  "label": "Messstelle",
+  "addLabel": "Messstelle hinzufügen",
+  "unit": "Ω",
+  "aggregate": "max",
+  "limitKey": "richtwert",
+  "felder": [
+    { "id": "ort", "label": "Bezeichnung", "kind": "text",
+      "placeholder": "z. B. Steckdose Küche links" }
+  ]
+}
+```
+
+Beim Isolationswiderstand trägt eine Messstelle mehr als nur eine
+Bezeichnung, deshalb ist `felder` eine Liste:
+
+```json
+"messstellen": {
+  "label": "Messstelle", "unit": "MΩ", "aggregate": "min",
+  "felder": [
+    { "id": "ort",  "label": "Bezeichnung", "kind": "text" },
+    { "id": "paar", "label": "Aderpaar",    "kind": "auswahl",
+      "optionen": ["L–PE", "N–PE", "L–N"] },
+    { "id": "last", "label": "Verbraucher", "kind": "auswahl",
+      "optionen": ["ohne", "mit"] }
+  ]
+}
+```
+
+**Im Ergebnis** kommt eine Liste neben die festen Werte:
+
+```js
+result = {
+  values:  { riso_l_pe: 120, … },        // feste Felder, unverändert
+  punkte:  [ { id, ort: "Steckdose Küche links", wert: 0.23, overrange: false },
+             { id, ort: "Abgang B",  paar: "L–PE", last: "ohne", wert: 87 } ],
+  checks: {}, verdict, note
+}
+```
+
+**Nötige Code-Änderungen:**
+
+| Stelle | Was |
+| --- | --- |
+| `js/ui.js` | neue Komponente `U.messstellenListe`: Zeilen mit Bezeichnung, Wert, Löschen; darunter eine „+"-Schaltfläche ≥ 56 px |
+| `js/plan.js` → `keyValue()` | bezieht die Punkte in die Aggregation ein, damit der maßgebliche Wert stimmt |
+| `js/plan.js` → `measureVerdict()` | bewertet jeden Punkt gegen denselben Grenzwert; ein einziger Ausreißer ist ein Mangel |
+| `js/store.js` | `addPunkt`, `patchPunkt`, `removePunkt` (analog zu den Stromkreisen) |
+| `js/view-plan.js` | Liste unter den festen Messzeilen zeichnen |
+| `js/view-protokoll.js` | Spalte zeigt den maßgeblichen Wert; die Einzelwerte in den Anhang (Abschnitt 3.6) |
+| `js/app.js` | Selbsttest: `messstellen.felder` vollständig, `aggregate` gesetzt, `limitKey` auflösbar |
+
+**Der maßgebliche Wert steht nie doppelt.** Im Protokoll erscheint je
+Stromkreis eine Zahl — der größte RPE, der kleinste Riso. Die Einzelwerte
+stehen im Anhang, nicht in der Hauptzeile. Sonst wäre die Tabelle je nach
+Objekt unterschiedlich breit.
+
+### 2.5 Schutzleiterwiderstand als Messstellen-Liste
+
+`s-durchgang-schutzleiter` (nach dem Herauslösen von `r_pa` in Paket 1)
+bekommt:
+
+- das bestehende Feld `r_pe_max` als „größter Messwert" — bleibt für die
+  schnelle Erfassung ohne Einzelpunkte,
+- dazu die Messstellen-Liste aus 2.4 mit `aggregate: "max"`.
+
+Sind Punkte erfasst, füllt ihr größter Wert `r_pe_max` selbsttätig und das
+Feld wird zur Anzeige. Wer keine Punkte anlegt, tippt wie bisher nur den
+größten Wert ein. Beide Wege führen zu demselben Protokolleintrag.
 
 ---
 
-## 4. Paket 3 — Stromkreise
+## Paket 3 — Stromkreise
 
 Der große Umbau. Berührt Datenmodell, Assistent, Plan, Protokoll, Druckbogen,
 Speicher und Tests.
@@ -332,8 +447,14 @@ Schutzorgan) — abtippen wäre im Keller die sichere Quelle für Zahlendreher.
   in derselben Darstellung wie heute.
 - `P.nav.kreisId` kommt zu `P.nav` und in `navState()`, damit die Zurück-Taste
   Stromkreis → Liste → Plan führt.
-- Aktionen je Stromkreis: hinzufügen, duplizieren (für gleichartige Kreise),
-  löschen, Reihenfolge ändern.
+- Aktionen je Stromkreis: **hinzufügen über eine „+"-Schaltfläche am Ende der
+  Liste** (entschieden, O1), duplizieren für gleichartige Kreise, löschen,
+  Reihenfolge ändern. Die „+"-Fläche ist ≥ 56 px hoch und trägt Text, nicht
+  nur das Zeichen — ein nacktes „+" ist mit Handschuhen und in der Sonne zu
+  wenig.
+- Ein neuer Stromkreis erbt die Vorbelegung aus den Antworten des Assistenten
+  und bekommt die nächste freie Nummer. Er ist sofort bedienbar, ohne dass
+  zuerst Stammdaten ausgefüllt werden müssen.
 
 ### 3.5 Betroffene Funktionen im Code
 
@@ -373,16 +494,14 @@ Aufbau in der Reihenfolge des Formulars:
 6. **Verwendete Messgeräte** — drei Felder.
 7. **Prüfergebnis** — keine Mängel / Mängel, Prüfplakette ja/nein, nächster
    Prüftermin Monat/Jahr.
-8. **Mängel/Bemerkungen** samt dem Satz des Formulars: „Die elektrische Anlage
-   entspricht den anerkannten Regeln der Elektrotechnik. Ein sicherer Gebrauch
-   bei bestimmungsgemäßer Anwendung ist gewährleistet." mit ja/nein. Dieser
-   Satz ist eine **Erklärung des Prüfers**, keine Rechenfolge der App: Er wird
-   aus dem Ergebnis vorbelegt, bleibt aber von Hand änderbar, und das Protokoll
-   vermerkt, wenn er vom Messergebnis abweicht — dieselbe Regel wie bei einer
-   von Hand überstimmten Bewertung.
+8. **Mängel/Bemerkungen** samt dem Leitsatz des Formulars (siehe 3.8).
 9. **Unterschriften** — Auftraggeber und Prüfer, je mit Ort, Datum,
    Unterschrift (heute fehlen Ort und Datum).
 10. Prüfstand-Satz der Grenzwerte und Haftungshinweis wie bisher.
+
+11. **Anhang Messstellen** — nur wenn welche erfasst sind: je Stromkreis die
+    Einzelwerte aus 2.4 mit Bezeichnung. Damit bleibt die Haupttabelle
+    schmal und die Einzelwerte gehen trotzdem nicht verloren.
 
 Mehrseitigkeit: „Blatt 1 von n" im Kopf, Seitenumbruch zwischen den Blöcken
 über `break-inside: avoid`. Ab etwa 12 Stromkreisen bricht die Messtabelle auf
@@ -400,9 +519,31 @@ Auftrag muss neu angelegt werden.
 Dazu ein Selbsttest-Fall, der genau diesen alten Auftragsstand aufbaut,
 migriert und prüft, dass jeder Messwert wieder an seinem Platz steht.
 
+### 3.8 Der Leitsatz wird abgehakt
+
+Der Satz des Formulars — „Die elektrische Anlage entspricht den anerkannten
+Regeln der Elektrotechnik. Ein sicherer Gebrauch bei bestimmungsgemäßer
+Anwendung ist gewährleistet." — ist eine **Erklärung des Prüfers**, keine
+Rechenfolge der App. Er wird deshalb ausdrücklich abgehakt (entschieden).
+
+- Neues Protokollfeld `konformitaet` mit neuem `kind: "janein"`. Das ist eine
+  kleine Erweiterung von `P.views.protocolFields` und des Druckbogens; alle
+  bestehenden Feldarten bleiben unberührt.
+- Dargestellt als eigene Karte **am Ende der Protokoll-Ansicht**, direkt über
+  der Druck-Schaltfläche: der vollständige Satz, darunter zwei gleich große
+  Flächen „ja" und „nein" (≥ 56 px, wie der Bewertungsschalter).
+- **Pflichtangabe.** Ohne Auswahl warnt das Protokoll wie bei fehlendem
+  Prüfer — ein Bogen ohne diese Erklärung ist kein Nachweis. Aufnahme in
+  `D.missingFields`.
+- **Nie selbsttätig auf „ja".** Steht „ja", obwohl Mängel erfasst sind, zeigt
+  die Ansicht einen deutlichen Hinweis und der Druckbogen vermerkt es —
+  dieselbe Regel wie bei einer von Hand überstimmten Bewertung. Verboten wird
+  nichts: Es kann fachlich richtig sein, etwa bei einem Mangel ohne
+  Sicherheitsrelevanz. Aber still passieren darf es nicht.
+
 ---
 
-## 5. Querschnittsarbeiten (für jedes Paket)
+## Querschnittsarbeiten (für jedes Paket)
 
 ### Grenzwerte und Prüfliste
 
@@ -431,12 +572,19 @@ Je Paket ergänzen:
   Checklisten-Zustand „n. a." schaltet durch und steht im Bogen.
 - **P2:** Berührungsspannung gegen die eingetragene Grenze bewertet (Soll/Ist
   wie bei Zs, inklusive Mangel bei Überschreitung); Ik erfasst und im Bogen;
-  Riso mit Verbraucher als zweite Zeile.
-- **P3:** zwei Stromkreise anlegen, in beiden messen, unterschiedliche Fakten
-  je Kreis (RCD 30 mA gegen 300 mA) und prüfen, dass **jeder Kreis gegen
-  seinen eigenen Grenzwert** bewertet wird; Zurück-Taste Kreis → Liste → Plan;
-  Druckbogen enthält beide Zeilen; Migration eines Alt-Auftrags; alles bei
-  360 px, Kontrast und Tippziele in allen vier Farbmodi.
+  alle sechs Riso-Felder, zweite Zeile im Bogen aus den „mit"-Werten;
+  **Messstellen:** drei Punkte per „+" anlegen, benennen, einen davon über den
+  Grenzwert setzen und prüfen, dass der Schritt zum Mangel wird und der
+  maßgebliche Wert in der Protokollspalte steht; einen Punkt löschen und
+  prüfen, dass der maßgebliche Wert nachzieht; Einzelwerte stehen im Anhang
+  des Druckbogens.
+- **P3:** zwei Stromkreise über „+" anlegen, in beiden messen,
+  unterschiedliche Fakten je Kreis (RCD 30 mA gegen 300 mA) und prüfen, dass
+  **jeder Kreis gegen seinen eigenen Grenzwert** bewertet wird; Zurück-Taste
+  Kreis → Liste → Plan; Druckbogen enthält beide Zeilen; Migration eines
+  Alt-Auftrags; Leitsatz: ohne Auswahl warnt das Protokoll, „ja" trotz Mangel
+  erzeugt den Hinweis und den Vermerk im Bogen; alles bei 360 px, Kontrast und
+  Tippziele in allen vier Farbmodi.
 
 ### Pflichtprogramm nach jeder Änderung
 
@@ -446,12 +594,13 @@ Je Paket ergänzen:
 
 ---
 
-## 6. Reihenfolge
+## Reihenfolge
 
 | Schritt | Inhalt | Ergebnis |
 | --- | --- | --- |
 | 1 | Paket 1 (1.1–1.5) | Kopfdaten und Sichtprüfung vollständig, RE überall |
 | 2 | Paket 2 (2.1–2.3) | alle Messgrößen des Formulars erfasst |
+| 2b | Paket 2 (2.4–2.5): Messstellen-Mechanismus | RPE und Riso mit „+" je Messpunkt |
 | 3 | Druckbogen auf Formularaufbau umstellen, noch ein Stromkreis | Bogen sieht aus wie das Formular |
 | 4 | Auslieferung 0.4.0 | |
 | 5 | Paket 3: Datenmodell, Migration, Store | Stromkreise im Speicher |
@@ -466,7 +615,7 @@ Zeilen hinzu, statt die Gliederung gleichzeitig umzubauen.
 
 ---
 
-## 7. Fallen, die beim Bauen warten
+## Fallen, die beim Bauen warten
 
 1. **`SCHEMA`-Erhöhung löscht alle Daten** (L5). Nicht anfassen; stattdessen
    `migrateJob`.
@@ -482,19 +631,38 @@ Zeilen hinzu, statt die Gliederung gleichzeitig umzubauen.
    Hinzufügen im Druckbild nachmessen.
 5. **Tippziele im Feld.** Die Stromkreisliste wird im Keller mit Handschuhen
    bedient: Karten ≥ 56 px, nicht ≥ 48 px.
-6. **Der Konformitätssatz** (3.6, Punkt 8) ist eine Erklärung, keine Rechnung.
-   Er darf nie automatisch auf „ja" stehen, wenn ein Mangel erfasst ist.
+6. **Der Leitsatz** (3.8) ist eine Erklärung, keine Rechnung. Er darf nie
+   selbsttätig auf „ja" stehen, wenn ein Mangel erfasst ist.
+7. **Messstellen und Aggregation.** `keyValue()` und `measureVerdict()` sind
+   heute blind für alles außerhalb von `measure.inputs`. Wer die Punkte dort
+   vergisst, bekommt ein Protokoll, das einen Mangel nicht zeigt, obwohl er
+   erfasst ist — der gefährlichste Fehler in dieser ganzen Liste. Deshalb der
+   ausdrückliche Testfall in P2.
+8. **Vier Zustände in der Checkliste** heißt auch: `checklistVerdict()`
+   anpassen. Bleibt es bei drei, gilt ein Schritt mit lauter `n. a.` für immer
+   als offen und das Protokoll wird nie vollständig.
 
 ---
 
-## 8. Offene Entscheidungen
+## Getroffene Entscheidungen
 
-| Nr. | Frage | Empfehlung |
+| Nr. | Frage | Entscheidung |
 | --- | --- | --- |
-| **O1** | Stromkreise überhaupt — oder bleibt die App bewusst ein Ein-Kreis-Werkzeug? | Bauen. Ohne sie bleibt jedes Protokoll einer Unterverteilung eine Sammlung von Einzelbögen. |
-| **O2** | Vierter Checklisten-Zustand „n. a." | Ja. Ohne ihn sieht „Gasinnenleitung nicht vorhanden" im Protokoll aus wie ein übersehener Punkt. |
-| **O3** | Riso mit Verbraucher: ein zusätzliches Feld statt sechs | Ein Feld. Sechs Felder sind im Feld unbedienbar. |
-| **O4** | Berührungsspannung AC/DC: eigene Wizard-Frage oder Checklistenzeile im Schritt? | Checklistenzeile. Eine Frage im Assistenten für eine Angabe, die nur ein Feld des Protokolls füllt, verlängert den Einstieg für alle. |
-| **O5** | Verknüpfung Stromkreis ↔ Leitungsberechnung (`calcId`) in Paket 3 oder später? | Später (Schritt 8). Sie ist der Lohn der Arbeit, aber kein Teil davon — Paket 3 steht auch ohne sie. |
-| **O6** | `load()` migrationsfähig machen (Nebenbefund aus L5) | Ja, als eigener kleiner Schritt vor Paket 3. |
-| **O7** | Gerätepaket (`geraetepruefung.json`) — bleibt es unberührt? | Ja. Das IHK-Formular betrifft Anlagen; Geräte haben ihre eigene Norm und ihr eigenes Protokoll. |
+| **O1** | Stromkreise überhaupt? | **Ja**, mit „+" zum Hinzufügen (3.4). |
+| **O2** | Vierter Checklisten-Zustand „n. a." | **Ja** (1.4). |
+| **O3** | Riso: ein zusätzliches Feld oder sechs? | **Sechs feste Felder**, dazu Messstellen per „+" (2.3, 2.4). |
+| **neu** | Schutzleiterwiderstand RPE low | **Liste mit „+" je Messstelle**, mit Bezeichnung; der größte Wert geht ins Protokoll (2.5). |
+| **neu** | Leitsatz „entspricht den anerkannten Regeln …" | **Am Ende abhaken**, Pflichtangabe, nie selbsttätig „ja" (3.8). |
+
+Ohne ausdrückliche Gegenrede gelten für den Rest die Empfehlungen aus dem
+ersten Entwurf:
+
+| Nr. | Frage | Angenommen |
+| --- | --- | --- |
+| **O4** | Berührungsspannung AC/DC: Wizard-Frage oder Checklistenzeile? | Checklistenzeile im Schritt — eine Frage im Assistenten für ein einzelnes Protokollfeld verlängert den Einstieg für alle. |
+| **O5** | Stromkreis ↔ Leitungsberechnung (`calcId`) | Später, Schritt 8 der Reihenfolge. Paket 3 steht auch ohne sie. |
+| **O6** | `load()` migrationsfähig machen | Ja, eigener kleiner Schritt vor Paket 3. |
+| **O7** | Gerätepaket bleibt unberührt | Ja. Das IHK-Formular betrifft Anlagen. |
+
+> Widerspruch zu O4–O7 jederzeit möglich — sie sind im Plan als Annahme
+> gekennzeichnet, nicht als Beschluss.
