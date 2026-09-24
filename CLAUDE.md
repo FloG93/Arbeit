@@ -47,6 +47,28 @@ nächste freigegebene Aufgabe.
   Prüfschritt heißt: je Kreis einmal, mit dessen Fakten und Messwerten. Die
   Grenzwerte hängen an den zusammengeführten Fakten (`P.plan.facts`) — ein
   Kreis mit 300-mA-RCD wird anders bewertet als der mit 30 mA daneben.
+- Nichts Erfasstes darf unterwegs verloren gehen — der gefährlichste Fehler
+  hier. Ein Messwert wandert über `P.plan.keyValue`/`measureVerdict` in
+  Bewertung und Protokoll: beide müssen `result.punkte` einrechnen und Felder
+  mit `role` (Bezugs- und Dokuwerte) auslassen. Was im Druckbogen keine Spalte
+  hat, gehört in den Anhang, statt still zu verschwinden. Ein Protokoll, das
+  einen erfassten Mangel nicht zeigt, ist schlimmer als gar keines.
+- Neben den festen Feldern eines Schrittes kann es `measure.messstellen`
+  geben: benannte Punkte, die im Feld per „+" entstehen. Ein Stromkreis hat so
+  viele davon, wie er Steckdosen hat — das weiß keine Datendatei im Voraus.
+  Der maßgebliche Wert (größter bzw. kleinster) steht im Protokoll, die
+  Einzelwerte im Anhang.
+- Erklärungen werden nie gerechnet. Der Leitsatz und die Konformitätsangabe
+  sind Aussagen des Prüfers: nie selbsttätig auf „ja", schon gar nicht bei
+  erfasstem Mangel. Dasselbe gilt für sicherheitsrelevante Bezugswerte wie den
+  Zs-Sollwert — die App rechnet ihn vor und legt den Rechenweg offen,
+  übernehmen muss ihn der Prüfer. Was stillschweigend erscheint, wird nicht
+  mehr geprüft.
+- Höchstwerte abschneiden, nicht runden: 2,875 Ω wird zu 2,87 Ω, weil 2,88 die
+  laxere Forderung wäre.
+- Der Druckbogen bildet die Spalten des IHK-Formulars nach, Hochformat A4.
+  18 schmale Spalten tragen; jede weitere bringt die Tabelle zum Kippen — vor
+  dem Hinzufügen im Druckbild nachmessen.
 - `SCHEMA` in `store.js` **nicht** hochzählen, um Daten zu ändern: `load()`
   migriert, `migrateJob()` ist die Stelle dafür. Ein Stand aus einer neueren
   Fassung wird übernommen, nicht verworfen.
