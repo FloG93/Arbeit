@@ -96,7 +96,15 @@
     const limitLine = U.limitText(limit, opts.hint);
     const shown = overrange ? '> ' + num(value) : null;
 
-    const quick = (input.quickValues || []).map(q => el('button', {
+    // Schnellwerte stehen entweder am Feld oder — wenn es Normwerte sind —
+    // in der Grenzwerttabelle. Dann werden sie von dort geholt, damit die
+    // Zahl nicht ein zweites Mal im Repo steht und der Prüfstand für sie gilt.
+    const quellwerte = input.quickFromLimit
+      ? ((P.limits.table(input.quickFromLimit) || {}).rows || [])
+          .filter(row => row.max != null)
+          .map(row => ({ label: num(row.max), value: row.max }))
+      : (input.quickValues || []);
+    const quick = quellwerte.map(q => el('button', {
       class: 'quick-chip', type: 'button',
       onClick: () => (q.overrange ? onOverrange(q.value) : onValue(q.value)),
     }, q.label));
@@ -117,18 +125,85 @@
     ]);
   };
 
-  /* Dreizustands-Zeile: unbeantwortet → in Ordnung → Mangel → unbeantwortet.
-   * Ein Tippziel statt zwei, weil eine Hand oft schon das Messgerät hält. */
+  /* Frei angelegte Messstellen: eine Zeile je gemessenem Punkt, per „+"
+   * hinzugefügt. Ein Stromkreis hat so viele Messpunkte, wie er Steckdosen
+   * hat — das weiß keine Datendatei im Voraus.
+   *
+   * Der maßgebliche Wert (größter bzw. kleinster) landet über P.plan.keyValue
+   * im Protokoll; hier stehen die Einzelwerte mit ihrer Bezeichnung. */
+  U.messstellenListe = function messstellenListe(opts) {
+    const { stepId, messstellen, punkte, limit, onAdd, onPatch, onRemove } = opts;
+    const felder = messstellen.felder || [];
+    const einheit = messstellen.unit || '';
+
+    const zeile = (punkt, i) => {
+      const nr = i + 1;
+      const verdict = P.limits.evaluate(punkt.wert, limit, { overrange: !!punkt.overrange });
+      const fkey = f => 'pkt-' + stepId + '-' + punkt.id + '-' + f;
+      return el('div', { class: 'measure-row punkt-row', 'data-punkt': String(punkt.id) }, [
+        el('div', { class: 'punkt-kopf' }, [
+          el('span', { class: 'punkt-nr' }, (messstellen.label || 'Messstelle') + ' ' + nr),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            'aria-label': (messstellen.label || 'Messstelle') + ' ' + nr + ' löschen',
+            onClick: () => onRemove(punkt.id),
+          }, 'Löschen'),
+        ]),
+        felder.filter(f => f.kind === 'text').map(f => U.textInput(fkey(f.id), punkt[f.id] || '',
+          v => onPatch(punkt.id, { [f.id]: v }),
+          { placeholder: f.placeholder || f.label, 'aria-label': f.label })),
+        felder.filter(f => f.kind === 'auswahl').map(f => el('div', { class: 'chips' },
+          (f.optionen || []).map(option => el('button', {
+            class: 'chip' + (punkt[f.id] === option ? ' active' : ''), type: 'button',
+            'aria-pressed': punkt[f.id] === option ? 'true' : 'false',
+            onClick: () => onPatch(punkt.id, { [f.id]: punkt[f.id] === option ? null : option }),
+          }, option)))),
+        el('div', { class: 'measure-line' }, [
+          el('div', { class: 'lbl' }, 'Wert'),
+          U.numInput(fkey('wert'), punkt.wert, einheit, v => onPatch(punkt.id, { wert: v, overrange: false }),
+            { 'aria-label': 'Messwert' + (einheit ? ' in ' + einheit : '') }),
+          el('div', { class: 'unit' }, einheit),
+        ]),
+        limit
+          ? el('div', { class: 'limit-badge' + (verdict && verdict !== 'unbekannt' ? ' ' + verdict : '') }, U.limitText(limit))
+          : null,
+      ]);
+    };
+
+    return el('div', { class: 'step-list' }, [
+      (punkte || []).map(zeile),
+      el('button', { class: 'btn btn-outline btn-block punkt-add', type: 'button', onClick: onAdd },
+        '+  ' + (messstellen.addLabel || 'Messstelle hinzufügen')),
+    ]);
+  };
+
+  /* Vierzustands-Zeile: offen → in Ordnung → Mangel → nicht zutreffend →
+   * offen. Ein Tippziel statt vier, weil eine Hand oft schon das Messgerät
+   * hält.
+   *
+   * „n. a." ist kein Schönheitszustand: In der Liste des Potentialausgleichs
+   * ist „Gasinnenleitung nicht vorhanden" der Normalfall, und ohne eigenen
+   * Zustand sähe er im Protokoll aus wie ein übersehener Punkt. */
+  const CHECK_STATES = [
+    { value: null, cls: '', sym: '', label: 'offen' },
+    { value: true, cls: ' ok', sym: '✓', label: 'in Ordnung' },
+    { value: false, cls: ' mangel', sym: '!', label: 'Mangel' },
+    { value: 'na', cls: ' na', sym: '–', label: 'nicht zutreffend' },
+  ];
+  const checkState = value => CHECK_STATES.find(s => s.value === value) || CHECK_STATES[0];
+
+  U.checkStateLabel = value => checkState(value).label;
+  U.checkStateSym = value => checkState(value).sym;
+
   U.checkRow = function checkRow(item, state, onToggle) {
-    const cls = state === true ? ' ok' : state === false ? ' mangel' : '';
-    const next = state === true ? false : state === false ? null : true;
-    const sym = state === true ? '✓' : state === false ? '!' : '';
+    const current = checkState(state);
+    const next = CHECK_STATES[(CHECK_STATES.indexOf(current) + 1) % CHECK_STATES.length].value;
     return el('button', {
-      class: 'check-row' + cls, type: 'button',
-      'aria-label': item.label + ' — ' + (state === true ? 'in Ordnung' : state === false ? 'Mangel' : 'offen'),
+      class: 'check-row' + current.cls, type: 'button',
+      'aria-label': item.label + ' — ' + current.label,
       onClick: () => onToggle(next),
     }, [
-      el('span', { class: 'box' }, sym),
+      el('span', { class: 'box' }, current.sym),
       el('span', { class: 't' }, item.label),
     ]);
   };
@@ -223,6 +298,96 @@
     ]);
   }
 
+  /* Tabellen der Leitungsberechnung, direkt aus data/leitungen.json — dieselbe
+   * Quelle, aus der P.cable rechnet, damit Wiki und Rechnung nie auseinanderlaufen. */
+  U.CABLE_TABLES = ['verlegearten', 'typen', 'belastbarkeit', 'temperatur', 'haeufung', 'daemmung', 'oberschwingungen', 'ls', 'ls_durchlass', 'gg', 'konstanten'];
+
+  U.cableTable = function cableTable(ref) {
+    const cb = P.data.cables;
+    if (!cb || !U.CABLE_TABLES.includes(ref)) return el('div', { class: 'empty-note' }, 'Leitungstabelle fehlt: ' + ref);
+    const f = cb.faktoren;
+    const so = cb.schutzorgane;
+    const n = v => (v == null ? '—' : num(v));
+    let meta;
+    let head;
+    let rows;
+    switch (ref) {
+      case 'verlegearten':
+        meta = cb.verlegearten;
+        head = ['Art', 'Beschreibung', 'Beispiel'];
+        rows = meta.arten.map(a => [a.id, a.kurz, a.beispiele]);
+        break;
+      case 'typen':
+        meta = cb.leitungstypen;
+        head = ['Typ', 'Adern', 'Querschnitte (mm²)', 'Verlegearten'];
+        rows = meta.typen.map(t => [t.label, t.adern, t.querschnitte.map(num).join(' · '), t.verlegearten.join(', ')]);
+        break;
+      case 'belastbarkeit': {
+        meta = cb.belastbarkeit;
+        const arten = Object.keys(meta.werte);
+        head = ['mm²'].concat(arten.flatMap(a => [a + ' · 2', a + ' · 3']));
+        rows = meta.querschnitte.map((q, i) => [num(q)].concat(arten.flatMap(a => [n(meta.werte[a]['2'][i]), n(meta.werte[a]['3'][i])])));
+        break;
+      }
+      case 'temperatur':
+        meta = f.temperatur;
+        head = ['bis °C', 'Luft (Bezug ' + meta.luft.bezug + ' °C)', 'Erde (Bezug ' + meta.erde.bezug + ' °C)'];
+        rows = Array.from(new Set(meta.luft.stufen.concat(meta.erde.stufen).map(s => s.bis))).sort((a, b) => a - b).map(t => {
+          const l = meta.luft.stufen.find(s => s.bis === t);
+          const e = meta.erde.stufen.find(s => s.bis === t);
+          return [num(t), l ? num(l.f) : '—', e ? num(e.f) : '—'];
+        });
+        break;
+      case 'haeufung':
+        meta = f.haeufung;
+        head = ['Anzahl'].concat(meta.anordnungen.map(a => a.label));
+        rows = Array.from(new Set(meta.anordnungen.flatMap(a => a.stufen.map(s => s.n)))).sort((a, b) => a - b).map(k =>
+          [String(k)].concat(meta.anordnungen.map(a => { const s = a.stufen.find(x => x.n === k); return s ? num(s.f) : '—'; })));
+        break;
+      case 'daemmung':
+        meta = f.daemmung;
+        head = ['Umschlossen', 'Faktor'];
+        rows = meta.stufen.map(s => [s.label, num(s.f)]);
+        break;
+      case 'oberschwingungen':
+        meta = f.oberschwingungen;
+        head = ['Anteil 3. OS', 'Faktor', 'bemessen nach'];
+        rows = meta.stufen.map(s => [s.label, num(s.f), s.basis === 'N' ? 'N-Strom' : 'Außenleiterstrom']);
+        break;
+      case 'ls':
+        meta = so.ls;
+        head = ['Charakteristik', 'Ia (≤ 0,1 s)', 'I2'];
+        rows = meta.charakteristiken.map(c => [c.label, num(c.ia_faktor) + ' × In', num(meta.i2_faktor) + ' × In'])
+          .concat([['Nennströme', meta.nennstroeme.join(' · ') + ' A', ''], ['Schaltvermögen', meta.schaltvermoegen.map(s => s.label).join(' · '), '']]);
+        break;
+      case 'ls_durchlass':
+        meta = so.ls_durchlass;
+        head = ['In bis', 'Char.'].concat(meta.stufen_ik.map(ik => num(ik) + ' A'));
+        rows = meta.bereiche.flatMap(b => ['B', 'C'].filter(c => b[c]).map(c => [b.in_max + ' A', c].concat(b[c].map(num))));
+        break;
+      case 'gg':
+        meta = so.gg;
+        head = ['In (A)'].concat(meta.zeiten.map(t => 'Ia ' + num(t) + ' s')).concat(['I²t (A²s)', 'I2']);
+        rows = meta.reihe.map(r => [String(r.in)].concat(meta.zeiten.map(t => n(r.ia[String(t)])), [num(r.i2t), num((meta.i2.find(x => x.in_max == null || r.in <= x.in_max) || {}).f) + ' × In']));
+        break;
+      case 'konstanten':
+        meta = cb.konstanten;
+        head = ['Größe', 'Wert'];
+        rows = Object.values(meta.werte).map(w => [w.label, (w.zaehler != null ? w.zaehler + '/' + w.nenner : num(w.wert)) + (w.einheit ? ' ' + w.einheit : '')]);
+        break;
+    }
+    return el('div', { class: 'w-table' }, [
+      el('div', { class: 'cap' }, meta.title),
+      U.reviewLine(meta.reviewed),
+      el('div', { class: 'table-scroll' }, [el('table', { class: 'grid' }, [
+        el('thead', {}, el('tr', {}, head.map(h => el('th', {}, h)))),
+        el('tbody', {}, rows.map(r => el('tr', {}, r.map((c, i) => el('td', { class: i > 0 && /^[\d,.· ×—AΩ/sV%²-]+$/.test(c) ? 'v' : null }, c))))),
+      ])]),
+      meta.source ? el('div', { class: 'src' }, 'Quelle: ' + meta.source) : null,
+      meta.note ? el('div', { class: 'src' }, meta.note) : null,
+    ]);
+  };
+
   /* Wiki-Körper sind Blocklisten, kein HTML: alles läuft über textContent,
    * damit Datenpakete keine Skripte einschleppen können. */
   U.blocks = function blocks(body, ctx) {
@@ -239,6 +404,7 @@
         case 'limits': return U.limitTable(block.limitRef, block.markRowKey);
         case 'table': return plainTable(block);
         case 'intervals': return intervalTable();
+        case 'cable-table': return U.cableTable(block.ref);
         case 'formula': {
           const f = P.limits.formula(block.formulaRef);
           if (!f) return el('div', { class: 'empty-note' }, 'Formel fehlt: ' + block.formulaRef);

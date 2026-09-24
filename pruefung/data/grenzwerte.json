@@ -71,6 +71,17 @@
       ]
     },
     {
+      "id": "beruehrungsspannung",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Zulässige Berührungsspannung UL",
+      "source": "DIN VDE 0100-410",
+      "keyLabel": "Fall",
+      "rows": [
+        { "key": "standard", "label": "Allgemein, Wechselspannung", "max": 50, "unit": "V", "default": true },
+        { "key": "erhoeht", "label": "Erhöhte Gefährdung (z. B. landwirtschaftliche Betriebsstätten)", "max": 25, "unit": "V", "note": "Gilt auch dort, wo Körperwiderstand und Standortverhältnisse herabgesetzt sind." }
+      ]
+    },
+    {
       "id": "schutzleiter-durchgang",
       "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Schutzleiter- und Verbindungswiderstand (Niederohmmessung)",
@@ -102,7 +113,9 @@
       "keyLabel": "Art des Stromkreises",
       "rows": [
         { "key": "beleuchtung", "label": "Beleuchtungsstromkreise", "max": 3, "unit": "%" },
-        { "key": "sonstige", "label": "Übrige Verbrauchsmittel", "max": 5, "unit": "%", "default": true }
+        { "key": "sonstige", "label": "Übrige Verbrauchsmittel", "max": 5, "unit": "%", "default": true },
+        { "key": "ab-zaehler", "label": "Wohngebäude, ab Zähler bis Verbrauchsmittel", "max": 3, "unit": "%", "source": "DIN 18015-1" },
+        { "key": "hauptleitung", "label": "Hauptleitung bis Zähler (bis 100 kVA)", "max": 0.5, "unit": "%", "source": "TAR Niederspannung (VDE-AR-N 4100)" }
       ]
     },
     {
@@ -193,6 +206,30 @@
       "label": "Erwarteter Leiterwiderstand",
       "expr": "R = ρ · l / A",
       "note": "Für Kupfer ρ ≈ 0,0178 Ω·mm²/m. Beispiel: 25 m mit 2,5 mm² ergibt rund 0,18 Ω — deshalb ist der 1-Ω-Richtwert bei kurzen Leitungen kein Freibrief."
+    },
+    {
+      "id": "leitung-ueberlast",
+      "label": "Überlastschutz einer Leitung",
+      "expr": "Ib ≤ In ≤ Iz  und  I2 ≤ 1,45 · Iz",
+      "note": "Iz = Tabellenwert × Faktoren für Temperatur, Häufung, Dämmung und Oberschwingungen. I2 ist der Strom, bei dem das Schutzorgan sicher auslöst; die Vielfachen von In stehen in den Tabellen der Schutzorgane. Bei gG liegt I2 höher als beim LS-Schalter, deshalb braucht sie bei gleichem Nennstrom mehr Querschnitt."
+    },
+    {
+      "id": "leitung-spannungsfall",
+      "label": "Spannungsfall einer Leitung",
+      "expr": "ΔU = k · L · Ib · (ρ / S · cos φ + x′ · sin φ),  k = 2 (1~, bezogen auf U0) bzw. √3 (3~, bezogen auf U)",
+      "note": "ρ ist der spezifische Widerstand bei Betriebstemperatur, x′ der induktive Belag — beide in den Rechenkonstanten der Leitungsberechnung. Der Spannungsfall bis zum Verteiler kommt hinzu."
+    },
+    {
+      "id": "leitung-abschaltung",
+      "label": "Abschaltbedingung über die Leitungslänge",
+      "expr": "Ik,min = c_min · U0 / (Z_V + 2 · L · ρ80 / S) ≥ Ia",
+      "note": "Z_V ist die Schleifenimpedanz am Verteiler, ρ80 der spezifische Widerstand bei Fehlertemperatur, c_min der Spannungsfaktor — beide in den Rechenkonstanten. Ohne Z_V gilt umgekehrt: erfüllt, wenn am Verteiler Zs ≤ c_min · U0 / Ia − Z_L."
+    },
+    {
+      "id": "leitung-kurzschluss",
+      "label": "Kurzschlussfestigkeit einer Leitung",
+      "expr": "t ≤ (k · S / Ik)²  bzw.  k² · S² ≥ I²t",
+      "note": "k für Kupfer mit PVC steht in den Rechenkonstanten der Leitungsberechnung. Bei Abschaltzeiten unter 0,1 s zählt das Durchlass-I²t des Schutzorgans."
     }
   ]
 }

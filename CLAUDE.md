@@ -1,10 +1,12 @@
 # CLAUDE.md
 
-Drei eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
-(`.github/workflows/pages.yml`): Raumrechner (`app/`, Seitenwurzel),
-Musik-Poster-Generator (`poster/`, Kanäle `/poster/` und `/poster/beta/`),
-Prüfassistent für VDE-Prüfungen (`pruefung/`), dazu der PPT-Konverter
-(`ppt/`). Beschreibung aller Apps in `README.md`.
+Vier eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
+(`.github/workflows/pages.yml`): Übersicht (`start/`, Seitenwurzel) mit
+Kacheln zu Raumrechner (`app/` → `/raum/`), Musik-Poster-Generator
+(`poster/`, Kanäle `/poster/` und `/poster/beta/`), Prüfassistent für
+VDE-Prüfungen (`pruefung/`) und PPT-Konverter (`ppt/`). Beschreibung aller
+Apps in `README.md`. Quellordner und veröffentlichter Pfad sind nicht
+überall gleich — maßgeblich ist der Schritt „Assemble site" im Workflow.
 
 **Nach einem Umzug oder Sitzungswechsel zuerst `UEBERGABE.md` lesen**, falls
 vorhanden — dort stehen Projektstand, getroffene Entscheidungen und die
@@ -16,8 +18,10 @@ nächste freigegebene Aufgabe.
   im Repo**. Hilfsskripte liegen in `werkzeuge/` und installieren, was sie
   brauchen, außerhalb.
 - Jede App läuft offline über ihren eigenen Service Worker. Der Worker
-  beantwortet nur die eigenen Pfade (`SHELL`), weil drei Apps auf derselben
-  Herkunft liegen. Ausnahme ist der PPT-Konverter: Sein Service Worker
+  beantwortet nur die eigenen Pfade (`SHELL`) und löscht beim Aktivieren nur
+  Caches mit dem eigenen Namenspräfix, weil alle Apps auf derselben Herkunft
+  liegen — ein „alles außer meinem Cache" nimmt den anderen den
+  Offline-Betrieb. Ausnahme ist der PPT-Konverter: Sein Service Worker
   (`coi-serviceworker`) setzt nur die COOP/COEP-Header, offline geht er nicht.
   **Bei jeder Dateiänderung die `CACHE`-Version im `sw.js` der
   App hochzählen** und neue Dateien in `ASSETS` eintragen.
@@ -39,6 +43,35 @@ nächste freigegebene Aufgabe.
 - Ein Bedingungsmechanismus für alles: `when: {fakt: wert | [werte]}`.
   Reihenfolge der Prüfschritte über `requires` (topologisch erzwungen), nicht
   über `order` allein.
+- Ein Auftrag ist ein Verteiler mit n Stromkreisen. `scope: "stromkreis"` am
+  Prüfschritt heißt: je Kreis einmal, mit dessen Fakten und Messwerten. Die
+  Grenzwerte hängen an den zusammengeführten Fakten (`P.plan.facts`) — ein
+  Kreis mit 300-mA-RCD wird anders bewertet als der mit 30 mA daneben.
+- Nichts Erfasstes darf unterwegs verloren gehen — der gefährlichste Fehler
+  hier. Ein Messwert wandert über `P.plan.keyValue`/`measureVerdict` in
+  Bewertung und Protokoll: beide müssen `result.punkte` einrechnen und Felder
+  mit `role` (Bezugs- und Dokuwerte) auslassen. Was im Druckbogen keine Spalte
+  hat, gehört in den Anhang, statt still zu verschwinden. Ein Protokoll, das
+  einen erfassten Mangel nicht zeigt, ist schlimmer als gar keines.
+- Neben den festen Feldern eines Schrittes kann es `measure.messstellen`
+  geben: benannte Punkte, die im Feld per „+" entstehen. Ein Stromkreis hat so
+  viele davon, wie er Steckdosen hat — das weiß keine Datendatei im Voraus.
+  Der maßgebliche Wert (größter bzw. kleinster) steht im Protokoll, die
+  Einzelwerte im Anhang.
+- Erklärungen werden nie gerechnet. Der Leitsatz und die Konformitätsangabe
+  sind Aussagen des Prüfers: nie selbsttätig auf „ja", schon gar nicht bei
+  erfasstem Mangel. Dasselbe gilt für sicherheitsrelevante Bezugswerte wie den
+  Zs-Sollwert — die App rechnet ihn vor und legt den Rechenweg offen,
+  übernehmen muss ihn der Prüfer. Was stillschweigend erscheint, wird nicht
+  mehr geprüft.
+- Höchstwerte abschneiden, nicht runden: 2,875 Ω wird zu 2,87 Ω, weil 2,88 die
+  laxere Forderung wäre.
+- Der Druckbogen bildet die Spalten des IHK-Formulars nach, Hochformat A4.
+  18 schmale Spalten tragen; jede weitere bringt die Tabelle zum Kippen — vor
+  dem Hinzufügen im Druckbild nachmessen.
+- `SCHEMA` in `store.js` **nicht** hochzählen, um Daten zu ändern: `load()`
+  migriert, `migrateJob()` ist die Stelle dafür. Ein Stand aus einer neueren
+  Fassung wird übernommen, nicht verworfen.
 - Jede Grenzwerttabelle trägt `reviewed`; leer heißt „Datenbasis ungeprüft"
   (Badge in der App). Werte prüfen die Betatester über die Prüfliste, siehe
   `werkzeuge/README.md`.

@@ -5,7 +5,7 @@
 //
 // Bei jeder Änderung an Dateien oder Daten die CACHE-Version hochzählen:
 // install() lädt dann alles neu, activate() räumt die alte Fassung weg.
-const CACHE = 'pruefung-v4';
+const CACHE = 'pruefung-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   './js/data.js',
   './js/limits.js',
   './js/intervals.js',
+  './js/cable.js',
   './js/wizard.js',
   './js/plan.js',
   './js/store.js',
@@ -26,11 +27,13 @@ const ASSETS = [
   './js/view-plan.js',
   './js/view-wiki.js',
   './js/view-protokoll.js',
+  './js/view-leitungen.js',
   './js/app.js',
   './data/index.json',
   './data/welten.json',
   './data/grenzwerte.json',
   './data/prueffristen.json',
+  './data/leitungen.json',
   './data/normen/anlagenpruefung.json',
   './data/normen/geraetepruefung.json',
   './data/wiki/messverfahren.json',
@@ -38,6 +41,7 @@ const ASSETS = [
   './data/wiki/fehlerquellen.json',
   './data/wiki/geraete.json',
   './data/wiki/grundlagen.json',
+  './data/wiki/leitungen.json',
   './fonts/hanken-grotesk-latin.woff2',
   './fonts/space-grotesk-latin.woff2',
   './icons/icon-192.png',
@@ -60,7 +64,10 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      // Nur eigene Altstände: „alles außer meinem Cache" hat bisher auch die
+      // Caches der anderen Apps auf dieser Herkunft gelöscht und ihnen bei
+      // jeder Aktualisierung dieser App den Offline-Betrieb genommen.
+      .then(keys => Promise.all(keys.filter(k => k.indexOf('pruefung-') === 0 && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

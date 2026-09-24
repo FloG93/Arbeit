@@ -85,9 +85,13 @@
   };
 
   P.views.protocolFields = function protocolFields(job, pack) {
-    const fields = (pack.protocol && pack.protocol.fields) || [];
+    // Felder mit place gehören woanders hin: die Messgeräte und die Erklärung
+    // des Prüfers stehen im Bogen am Ende, nicht bei den Kopfdaten.
+    const fields = ((pack.protocol && pack.protocol.fields) || []).filter(f => !f.place || f.place === 'messgeraete');
+    const groups = (pack.protocol && pack.protocol.groups) || [];
     const missing = new Set(P.data.missingFields(job, pack).map(f => f.id));
-    return U.card(null, fields.map(field => el('div', { class: 'field' }, [
+
+    const oneField = field => el('div', { class: 'field' }, [
       el('label', { class: 'field-label' + (missing.has(field.id) ? ' missing' : ''), 'data-missing-for': field.id },
         P.data.term(field.termKey, job.world, field.label) + (field.required ? ' *' : '')),
       // Aus dem Assistenten übernommen — nicht zweimal abfragen.
@@ -103,7 +107,22 @@
           : U.textInput('prot-' + field.id, job.protocol[field.id] || '',
               v => { P.store.setProtocolField(job.id, pack, field.id, v); P.views.refreshJobMeta(job, pack); },
               { placeholder: field.sticky ? 'wird für weitere Prüfungen gemerkt' : '' }),
-    ])));
+      field.hint ? el('div', { class: 'hint-text' }, field.hint) : null,
+    ]);
+
+    if (!groups.length) return U.card(null, fields.map(oneField));
+
+    /* Sechzehn Felder am Stück sind eine Wand. Die Gruppen des Datenpakets
+     * teilen sie in Auftrag, Anlage, Netz und Prüfung — gezeichnet wird nur,
+     * was auch Felder hat. */
+    const children = fields.filter(f => !f.gruppe).map(oneField);
+    for (const group of groups) {
+      const mine = fields.filter(f => f.gruppe === group.id);
+      if (!mine.length) continue;
+      children.push(el('div', { class: 'field-group' }, group.label));
+      children.push(mine.map(oneField));
+    }
+    return U.card(null, children);
   };
 
   P.views.auftraege = function auftraege() {

@@ -1,4 +1,5 @@
-# Publishes app/ (Raumrechner, at the site root), den Poster-Generator in zwei
+# Publishes start/ (Übersicht, an der Seitenwurzel), app/ (Raumrechner) unter
+# /raum/, den Poster-Generator in zwei
 # Kanälen und den Prüfassistenten unter /pruefung/: /poster/ ist die
 # freigegebene Fassung, ausgepackt aus dem in poster/release.json eingetragenen
 # Commit, und /poster/beta/ der aktuelle Stand des Branches. Freigeben heißt
@@ -17,7 +18,6 @@ on:
   push:
     branches:
       - main
-      - claude/inspiring-ritchie-kaz8vn
     # Ohne paths-Filter: eine Freigabe ändert nur poster/release.json, und der
     # Lauf dauert keine halbe Minute — die Ersparnis wäre den Fallstrick nicht wert.
   workflow_dispatch:
@@ -61,7 +61,12 @@ jobs:
           }
 
           mkdir -p dist
-          cp -r app/. dist/
+          # Übersicht an der Wurzel, Raumrechner darunter. Der Worker der
+          # Übersicht landet damit auf /sw.js — dieselbe Stelle, an der früher
+          # der des Raumrechners lag, und löst ihn genau deshalb ab.
+          cp -r start/. dist/
+          mkdir -p dist/raum
+          cp -r app/. dist/raum/
 
           # Release: der Commit aus poster/release.json. Ein Tag wäre der übliche
           # Weg, lässt sich aus der Entwicklungsumgebung aber nicht pushen — ein

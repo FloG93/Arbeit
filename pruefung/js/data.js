@@ -16,6 +16,7 @@
     worlds: [],
     worldById: new Map(),
     limits: null,
+    cables: null,
     intervals: null,
     packs: [],
     packById: new Map(),
@@ -89,6 +90,7 @@
         json('data/' + registry.worlds),
         json('data/' + registry.limits),
         registry.intervals ? json('data/' + registry.intervals) : Promise.resolve(null),
+        registry.cables ? json('data/' + registry.cables) : Promise.resolve(null),
         Promise.all((registry.norms || []).map(entry =>
           json('data/' + entry.file).then(pack => {
             if (entry.status && !pack.status) pack.status = entry.status;
@@ -98,7 +100,7 @@
         Promise.all((registry.wiki || []).map(file => json('data/' + file))),
       ];
       return Promise.all(jobs);
-    }).then(([worlds, limits, intervals, packs, wikiFiles]) => {
+    }).then(([worlds, limits, intervals, cables, packs, wikiFiles]) => {
       D.worlds = worlds.worlds || [];
       D.defaultWorld = worlds.default || (D.worlds[0] && D.worlds[0].id);
       D.worldById = byId(D.worlds);
@@ -107,6 +109,10 @@
       D.limitTableById = byId(limits.tables || []);
       D.formulaById = byId(limits.formulas || []);
       D.intervals = intervals;
+      D.cables = cables;
+      // Die Tabellen der Leitungsdaten tragen denselben Prüfstand wie die
+      // Grenzwerte — über diesen Index findet P.limits sie für Badge und Satz.
+      D.cableTableById = byId(cables ? P.cable.reviewTables(cables) : []);
 
       D.packs = packs.map(normalizePack);
       D.packById = byId(D.packs);

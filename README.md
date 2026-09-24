@@ -1,27 +1,31 @@
-# Jungfernstieg
+# Arbeit
 
 Kleine, eigenständige Web-Apps in einem Repo — kein Build-Schritt, kein
 Login, jede läuft für sich.
 
 | App | Pfad | Kurzbeschreibung |
 | --- | --- | --- |
-| [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
+| [Übersicht](#übersicht) | `/` | Kacheln zu allen Apps, Einstieg der Seite |
+| [Raumrechner](#raumrechner) | `/raum/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 | [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
 
-Live: https://flogramsch-blip.github.io/Jungfernstieg/ (Raumrechner),
-https://flogramsch-blip.github.io/Jungfernstieg/poster/ (Poster-Generator,
+Live: https://flog93.github.io/Arbeit/ (Übersicht),
+https://flog93.github.io/Arbeit/raum/ (Raumrechner),
+https://flog93.github.io/Arbeit/poster/ (Poster-Generator,
 freigegebene Fassung),
-https://flogramsch-blip.github.io/Jungfernstieg/poster/beta/ (derselbe
-Generator, aktueller Entwicklungsstand) und
-https://flogramsch-blip.github.io/Jungfernstieg/pruefung/ (Prüfassistent).
+https://flog93.github.io/Arbeit/poster/beta/ (derselbe
+Generator, aktueller Entwicklungsstand),
+https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent) und
+https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter).
 
 ## Hosting
 
 `.github/workflows/pages.yml` veröffentlicht bei jedem Push auf GitHub Pages:
-`app/` an die Wurzel, den Poster-Generator in zwei Kanälen (siehe
-[Kanäle und Freigabe](#kanäle-und-freigabe)) und `pruefung/` nach `/pruefung/`.
+`start/` an die Wurzel, `app/` nach `/raum/`, den Poster-Generator in zwei
+Kanälen (siehe [Kanäle und Freigabe](#kanäle-und-freigabe)), `pruefung/` nach
+`/pruefung/` und `ppt/` nach `/ppt/`.
 Ohne Build-Schritt — die Ordner werden nebeneinander in ein Artefakt kopiert;
 erzeugt wird nur je Poster-Kanal eine `build.js` mit Version, Commit und Datum.
 
@@ -39,6 +43,21 @@ aktiv wird. Ohne echtes Hosting gibt es dort weder Offline-Betrieb noch
 Installation auf dem Startbildschirm.
 
 ---
+
+## Übersicht
+
+Die Startseite an der Wurzel: eine Kachel je App, mit Symbol, einem Satz zur
+Funktion und dem Pfad. Mehr macht sie nicht — sie wird angetippt und wieder
+verlassen. Quelle ist `start/`, veröffentlicht an der Seitenwurzel.
+
+- Folgt der Hell-/Dunkel-Einstellung des Geräts, ohne eigenen Umschalter.
+- Offline wie die Apps, über einen eigenen Service Worker.
+- Dieser Worker liegt nach dem Deploy unter `/sw.js` — genau dort, wo vorher
+  der des Raumrechners lag. Das ist Absicht: So löst er die alte Registrierung
+  ab. Ohne diese Ablösung bekämen Besucher an der Wurzel weiter die
+  zwischengespeicherte Fassung des Raumrechners.
+- Kein eigenes Manifest: Wer eine App auf den Startbildschirm legt, tut das
+  aus der App heraus.
 
 ## Raumrechner
 
@@ -528,23 +547,117 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Geräteprüfung nach DIN EN 50678 / 50699, Schutzklasse I, II und III | fertig |
 | Zwei-Welten-Modus EFH / Industrie: Fragen, Schritte, Wiki und Begriffe | fertig |
 | Prüfplan mit verbindlicher Reihenfolge (`requires`) und Sperrhinweis | fertig |
+| Verteiler mit beliebig vielen Stromkreisen, jeder mit eigenen Stammdaten und eigenen Grenzwerten | fertig |
 | Messwerte mit Live-Bewertung gegen den passenden Grenzwert | fertig |
-| Checklisten mit drei Zuständen, Bewertung je Schritt überschreibbar | fertig |
+| Checklisten mit vier Zuständen (offen / OK / Mangel / n. a.), Bewertung je Schritt überschreibbar | fertig |
+| Kopfdaten im Aufbau des IHK-Prüfprotokolls, nach Auftrag, Anlage, Netz und Prüfung gruppiert | fertig |
+| Durchgängigkeit des Potentialausgleichs mit den 14 Zielen des Protokolls | fertig |
+| Messstellen je Schritt frei anlegen („+"), der maßgebliche Wert zählt | fertig |
+| Berührungsspannung, Kurzschlussstrom Ik, Isolationswiderstand mit und ohne Verbraucher | fertig |
 | Prüffristen: Richtwert wählen, Fälligkeit im Auftrag und im Protokoll | fertig |
 | Serienprüfung: „Nächstes Gerät" übernimmt die Kopfdaten | fertig |
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
-| Protokoll als A4-Bogen über den Druckdialog (auch „Als PDF speichern") | fertig |
+| Protokoll als A4-Bogen im Aufbau des IHK-Prüfprotokolls, über den Druckdialog (auch „Als PDF speichern") | fertig |
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
+| Leitungsberechnung: Querschnitt vorschlagen, vier Nachweise, Nachweisblatt | fertig |
+| Sollwert für Zs aus dem Schutzorgan des Stromkreises, Stromkreis mit einer Leitungsrechnung verknüpfbar | fertig |
 | Offline-Betrieb inklusive aller Datenpakete | fertig |
 | Erinnerung an fällige Prüfungen (Kalender-Export) | geplant |
 | Mängelfotos im Protokoll | geplant |
+
+Bekannte Grenze: Bemerkungsfelder und die Wiki-Suche zeichnen bei jedem
+Tastendruck neu. Auf Android-Tastaturen mit Wortvorschlägen kann das die
+Eingabe stören (ungetestet, kein Gerät). Falls gemeldet: wie bei den
+Kopfdaten und dem Namen einer Leitungsrechnung gezielt nachführen statt neu
+zeichnen.
+
+### Leitungsberechnung
+
+Eigener Reiter „Leitungen“: Verbraucher, Schutzorgan, Leitung, Umgebung und
+Netz eintragen — die App rechnet jeden Querschnitt der Reihe durch und
+schlägt den kleinsten vor, der alle vier Nachweise erfüllt:
+
+| Nachweis | Rechenweg |
+| --- | --- |
+| Belastbarkeit und Überlastschutz | Iz = Tabellenwert × Faktoren (Temperatur, Häufung, Dämmung, Oberschwingungen); Ib ≤ In ≤ Iz und I2 ≤ 1,45 · Iz |
+| Spannungsfall | ΔU = k · L · Ib · (ρ/S · cos φ + x′ · sin φ), plus Anteil bis zum Verteiler, gegen die gewählte Grenze |
+| Abschaltbedingung | Ik,min = c_min · U0 / (Z_V + Z_L) ≥ Ia bei der zulässigen Abschaltzeit; mit Z_V auch L_max |
+| Kurzschlussfestigkeit | Schaltvermögen ≥ Ik,max; thermisch (k · S / Ik)² ≥ t bzw. k² · S² ≥ Durchlass-I²t |
+
+* **Leitungen:** NYM-J/-O, NYY-J/-O, H07V-U/-R, NYIF — jeweils nur in den
+  Verlegearten, für die sie vorgesehen sind. **Schutzorgane:** LS B/C/D, gG.
+* **Ohne Vorimpedanz** nimmt die App keinen Wert an, sondern rechnet zurück:
+  „erfüllt, wenn am Verteiler Zs ≤ … Ω“. Das Ergebnis heißt dann „bedingt“.
+  Dazu steht der Sollwert für die spätere Messung am Leitungsende (2/3-Regel).
+* **Querschnittsleiter:** jeder Querschnitt mit ✓/◐/✗ und Grund; antippen
+  prüft genau diesen. „Bestimmend“ ist der Nachweis, an dem der nächstkleinere
+  Querschnitt scheitert.
+* **Nachweisblatt** über den Druckdialog: Eingaben, vier Nachweise mit Soll,
+  Ist und Formel mit eingesetzten Zahlen, Hinweise, Prüfstand, Bearbeiter.
+* **Vorlagen je Welt** (EFH: Steckdosen, Licht, Herd, Durchlauferhitzer,
+  Wallbox 11/22 kW, Wärmepumpe, UV-Zuleitung · Industrie: Motor, Maschine,
+  CEE 16/32 A, UV-Zuleitung gG, Baustromverteiler).
+
+**Brücke zur Prüfung.** Ein Stromkreis kennt sein Schutzorgan, und dort liegt
+die Auslösekennlinie: Im Schritt „Schleifenimpedanz“ rechnet die App daraus
+Ia und den Sollwert `Zs,max = U0 / Ia` vor — mit Abschaltzeit, Formel und
+Prüfstand der beteiligten Tabellen, zum Übernehmen per Tipp. Eingetragen wird
+er nicht von allein: Zs wird gegen ihn bewertet, und ein Bezugswert, der
+stillschweigend erscheint, wird nicht mehr geprüft. Ein vorgeschalteter RCD
+weicht ihn nicht auf; angeboten wird die Abschaltbedingung des
+Überstromorgans, dazu der strengere Wert nach der 2/3-Regel. Umgekehrt lässt
+sich an jeden Stromkreis eine Leitungsrechnung hängen — aus dem Kreis heraus
+angelegt oder eine vorhandene verknüpft —, und Leitungstyp, Querschnitt und
+Schutzorgan kommen von dort zurück, statt zweimal gepflegt zu werden.
+
+Alle Zahlen stehen in `data/leitungen.json` (Belastbarkeit, Faktoren,
+Kennwerte der Schutzorgane, Konstanten, Vorlagen, Hinweise) und in
+`data/grenzwerte.json` (Spannungsfall-Grenzen, Abschaltzeiten). Jede Tabelle
+trägt `reviewed`; solange er leer ist, zeigt die App „Datenbasis ungeprüft“.
+Der Rechenkern `js/cable.js` hat kein DOM: `node werkzeuge/leitungen-check.js`
+rechnet die handgerechneten Beispiele aus `leitungen.json` nach, der
+Selbsttest der App ebenso.
 
 ### Normdaten pflegen
 
 Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
 
+* **Geltungsbereich eines Prüfschrittes** — `"scope": "stromkreis"` heißt: je
+  Stromkreis einmal, mit den Fakten und Messwerten dieses Kreises. Ohne
+  `scope` gilt der Schritt einmal für die Anlage. Ein Stromkreis-Schritt darf
+  einen Anlagen-Schritt voraussetzen (Freischaltung vor Isolationsmessung),
+  umgekehrt nie — der Anlagen-Schritt fände das Ergebnis in keinem Beutel und
+  bliebe für immer gesperrt. Der Selbsttest erzwingt das.
+* **Abweichung am Stromkreis anbieten** — Eintrag unter `kreisFakten`. Jede
+  Option setzt über `set` einen oder mehrere Fakten, `when` blendet sie nach
+  Netzform aus. Was der Kreis nicht selbst setzt, erbt er von der Anlage.
+* **Spalte im Druckbogen ergänzen** — Eintrag unter `protocol.messtabelle`.
+  `from` sagt, woher der Wert kommt: `{ "step", "input" }` ein einzelnes Feld,
+  `{ "step", "gruppe" }` der maßgebliche Wert einer Feldgruppe, `{ "step" }`
+  der maßgebliche Wert des Schrittes samt Messstellen, `{ "fact" }` eine
+  Antwort aus dem Assistenten, `{ "kreis" }` eine Angabe des Stromkreises.
+  Was eine Spalte hat, lässt der Anhang weg; was keine hat, landet unter
+  „Weitere Prüfschritte" — aus dem Bogen fällt nichts heraus.
+* **Messwert ergänzen** — Eingabe unter `measure.inputs` anlegen. `role` sagt,
+  wie die App damit umgeht: ohne Rolle wird bewertet, `"reference"` ist ein
+  Sollwert (der Grenzwert, gegen den ein anderes Feld über `limitFromInput`
+  bewertet wird), `"doku"` wird festgehalten, aber nicht bewertet. Über
+  `measure.gruppen` und `gruppe` bekommen viele Felder Zwischenüberschriften,
+  über `quickFromLimit` holt ein Feld seine Schnellwerte aus einer
+  Grenzwerttabelle, statt die Zahlen ein zweites Mal zu führen.
+* **Messstellen zulassen** — `measure.messstellen` mit `unit`, `aggregate`
+  (`min` oder `max`), optionalem `limitKey` und `felder`. Dann kann der Prüfer
+  im Feld beliebig viele benannte Messpunkte anlegen; der maßgebliche Wert geht
+  ins Protokoll, die Einzelwerte in den Anhang.
+* **Protokollfeld ergänzen** — Eintrag unter `protocol.fields` anlegen und
+  einer Gruppe aus `protocol.groups` zuordnen. `"kind": "fact"` übernimmt eine
+  Antwort aus dem Assistenten, statt sie zweimal abzufragen; `"default"` gibt
+  eine Vorbelegung vor, `"sticky"` merkt den Wert für weitere Prüfungen. Ein
+  Fakt, der aus `presetFacts` einer Variante stammt, braucht seinen Klartext
+  in `factLabels` — sonst bleibt das Feld im Bogen leer, und der Selbsttest
+  sagt es.
 * **Grenzwert ändern** — Zeile in `data/grenzwerte.json` anpassen. Jeder
   Grenzwert steht genau einmal im Repo; Prüfschritt, Wiki und Protokoll lesen
   dieselbe Zeile.
@@ -679,25 +792,28 @@ pruefung/
     data.js             lädt die Datenpakete, baut Indizes, Varianten, Welt-Terminologie
     limits.js           Grenzwerte auflösen, formatieren, bewerten
     intervals.js        Prüffristen: Richtwerte, Fälligkeitsdatum
+    cable.js            Leitungsberechnung: Rechenkern ohne DOM, vier Nachweise, Vorschlag
     wizard.js           Entscheidungsbaum: Fragen überspringen, antworten, Replay
     plan.js             Prüfplan bauen, topologisch ordnen, Bewertungen ableiten
-    store.js            Zustand, localStorage, Aufträge und Messergebnisse
+    store.js            Zustand, localStorage, Aufträge, Messergebnisse, Leitungsrechnungen
     ui.js               Bausteine: Messzeile, Bewertungsschalter, Grenzwerttabelle, Wiki-Blöcke
     view-auftraege.js   Aufträge, Normauswahl, Auftragsdaten
     view-wizard.js      Fragen, Hinweisknoten, Antwortübersicht
     view-plan.js        Prüfplan und Schritt-Detail mit Messwerterfassung
     view-wiki.js        Wissensdatenbank mit Suche und Filtern
     view-protokoll.js   Zusammenfassung und A4-Druckbogen
+    view-leitungen.js   Leitungsberechnung: Liste, Rechnung, Querschnittsleiter, Nachweisblatt
     app.js              Kopfzeile, Router, Service-Worker-Registrierung, Selbsttest
   data/
     index.json          Registry: Datenstand, Welten, Grenzwerte, Normen, Wiki
     welten.json         EFH und Industrie: Labels, Begriffe, Akzent, Schwerpunkte
     grenzwerte.json     alle Grenzwerttabellen und Formeln, per ID referenzierbar
     prueffristen.json   Richtwerte für Prüffristen, getrennt nach Anlage und Gerät
+    leitungen.json      Leitungsberechnung: Belastbarkeit, Faktoren, Schutzorgane, Vorlagen, Beispiele
     normen/
       anlagenpruefung.json   DIN VDE 0100-600 und 0105-100 als zwei Varianten
       geraetepruefung.json   DIN EN 50678 und 50699 als zwei Varianten
-    wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen
+    wiki/               Messverfahren, Netzformen, Fehlerquellen, Geräte, Grundlagen, Leitungen
 ```
 
 ---

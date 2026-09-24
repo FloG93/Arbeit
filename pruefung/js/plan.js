@@ -33,11 +33,22 @@
 
   /* Sammeln, Voraussetzungen nachziehen, topologisch ordnen, Grenzwerte
    * auflösen. Ergebnis ist die Liste, die der Prüfplan anzeigt. */
-  PL.build = function build(pack, session, results) {
-    const facts = session.facts || {};
+  const scopeOf = step => step.scope || 'anlage';
+  PL.scopeOf = scopeOf;
+
+  /* opts.scope filtert nach Geltungsbereich (Anlage oder Stromkreis),
+   * opts.facts sind die zusammengeführten Fakten (Anlage plus Stromkreis),
+   * opts.resultFor findet auch das Ergebnis eines Schrittes im jeweils
+   * anderen Beutel — eine Vorbedingung kann in der Anlage liegen. */
+  PL.build = function build(pack, session, results, opts) {
+    const o = opts || {};
+    const scope = o.scope || 'anlage';
+    const facts = o.facts || session.facts || {};
+    const resultFor = o.resultFor || (id => (results ? results[id] : null));
     const picked = new Map(); // stepId → { step, reason, requiredBy }
 
     for (const step of pack.steps) {
+      if (scopeOf(step) !== scope) continue;
       if (step.when && !matches(step.when, facts)) continue;
       picked.set(step.id, { step, reason: 'auto' });
     }
@@ -46,6 +57,7 @@
     for (const id of session.extraSteps || []) {
       const step = pack.stepById.get(id);
       if (!step) { console.warn('[Prüfassistent] addSteps verweist auf unbekannten Schritt:', id); continue; }
+      if (scopeOf(step) !== scope) continue;
       if (!picked.has(id)) picked.set(id, { step, reason: 'antwort' });
     }
     // Voraussetzungen transitiv nachziehen: eine Messung ohne ihre Vorbedingung
@@ -60,6 +72,9 @@
         // die Isolationsmessung setzt den Schutzleiterwiderstand voraus — aber
         // ein Gerät der Schutzklasse II hat keinen Schutzleiter.
         if (req.when && !matches(req.when, facts)) continue;
+        // Eine Vorbedingung aus dem anderen Geltungsbereich steht in dessen
+        // eigenem Plan — hier wäre sie eine Zeile, die niemand abhaken kann.
+        if (scopeOf(req) !== scope) continue;
         if (picked.has(reqId)) continue;
         picked.set(reqId, { step: req, reason: 'voraussetzung', requiredBy: current.step.id });
         queue.push(reqId);
@@ -70,18 +85,26 @@
 
     return ordered.map(item => {
       const step = item.step;
-      const values = results && results[step.id] ? results[step.id].values : null;
+      const eigen = resultFor(step.id);
+      const values = eigen ? eigen.values : null;
       const inputLimits = {};
       for (const input of (step.measure && step.measure.inputs) || []) {
         inputLimits[input.id] = P.limits.forInput(step, input, facts, values);
       }
       // Ohne Tabellenwert gilt der aus einem Bezugsfeld (Zs-Sollwert) — so
       // steht im Plan und im Protokoll der eingetragene Sollwert.
-      const limit = P.limits.forStep(step, facts)
-        || Object.values(inputLimits).find(l => l && l.fromInput) || null;
+      // Der eingetragene Sollwert geht der Tabelle vor: er gilt für diese
+      // eine Messung, die Tabelle nur allgemein.
+      const limit = Object.values(inputLimits).find(l => l && l.fromInput)
+        || P.limits.forStep(step, facts) || null;
+      // Auch über Geltungsbereichsgrenzen hinweg: Die Isolationsmessung des
+      // Stromkreises wartet auf die Freischaltung der Anlage.
       const blockedBy = (step.requires || []).filter(reqId => {
-        if (!picked.has(reqId)) return false;
-        return PL.verdict(pack, picked.get(reqId).step, facts, results && results[reqId]) == null;
+        const req = pack.stepById.get(reqId);
+        if (!req) return false;
+        if (scopeOf(req) === scope && !picked.has(reqId)) return false;
+        if (scopeOf(req) !== scope && req.when && !matches(req.when, facts)) return false;
+        return PL.verdict(pack, req, facts, resultFor(reqId)) == null;
       });
       return {
         step,
@@ -99,14 +122,17 @@
    * Daten-Update darf eine laufende Prüfung nicht umsortieren. Neu
    * hinzugekommene Schritte hängen hinten an und werden markiert, statt
    * lautlos zwischen erledigte Zeilen zu rutschen. */
-  PL.ensure = function ensure(job, pack) {
-    const entries = PL.build(pack, job.session, job.results);
-    if (!job.plan) {
-      job.plan = entries.map(e => e.step.id);
+  /* Ohne Stromkreis der Plan der Anlage, mit Stromkreis dessen eigener —
+   * beide werden beim ersten Öffnen eingefroren. */
+  PL.ensure = function ensure(job, pack, kreis) {
+    const holder = kreis || job;
+    const entries = PL.build(pack, job.session, holder.results, PL.context(job, pack, kreis));
+    if (!holder.plan) {
+      holder.plan = entries.map(e => e.step.id);
       P.store.save();
       return entries;
     }
-    const index = new Map(job.plan.map((id, i) => [id, i]));
+    const index = new Map(holder.plan.map((id, i) => [id, i]));
     const known = [];
     const added = [];
     for (const entry of entries) {
@@ -119,9 +145,44 @@
 
   /* Schritte, die es in der Datenbasis nicht mehr gibt, zu denen aber Werte
    * erfasst wurden: sichtbar machen, nicht verschwinden lassen. */
-  PL.orphans = function orphans(job, entries) {
+  PL.orphans = function orphans(holder, entries) {
     const have = new Set(entries.map(e => e.step.id));
-    return (job.plan || []).filter(id => !have.has(id) && job.results && job.results[id]);
+    return (holder.plan || []).filter(id => !have.has(id) && holder.results && holder.results[id]);
+  };
+
+  /* Fakten und Ergebnisbeutel für einen Geltungsbereich. Ein Stromkreis erbt
+   * die Fakten der Anlage und überschreibt, was bei ihm anders ist — RCD,
+   * Nennfehlerstrom, Stromkreisart. Genau daran hängen die Grenzwerte. */
+  PL.facts = function factsFor(job, kreis) {
+    return kreis ? Object.assign({}, job.session.facts, kreis.facts) : (job.session.facts || {});
+  };
+
+  PL.context = function context(job, pack, kreis) {
+    return {
+      scope: kreis ? 'stromkreis' : 'anlage',
+      facts: PL.facts(job, kreis),
+      resultFor: id => {
+        const step = pack.stepById.get(id);
+        if (!step) return null;
+        const bag = scopeOf(step) === 'stromkreis' ? (kreis ? kreis.results : {}) : job.results;
+        return bag[id] || null;
+      },
+    };
+  };
+
+  /* Fortschritt über den ganzen Auftrag: Anlage plus jeder Stromkreis. Ohne
+   * das zählte ein Verteiler mit zwölf Kreisen als fertig, sobald die
+   * Sichtprüfung steht. */
+  PL.summaryAll = function summaryAll(job, pack) {
+    const teile = [PL.summary(pack, job.session, PL.ensure(job, pack), job.results)];
+    for (const kreis of job.kreise || []) {
+      const entries = PL.ensure(job, pack, kreis);
+      teile.push(PL.summary(pack, job.session, entries, kreis.results, PL.facts(job, kreis)));
+    }
+    return teile.reduce((a, t) => ({
+      done: a.done + t.done, total: a.total + t.total, mangel: a.mangel + t.mangel,
+      grenzwertig: a.grenzwertig + t.grenzwertig, open: a.open + t.open,
+    }), { done: 0, total: 0, mangel: 0, grenzwertig: 0, open: 0 });
   };
 
   /* Vorsortieren nach Phase und order, dann topologisch stabilisieren
@@ -173,11 +234,23 @@
     let best = null;
     let overrange = false;
     for (const input of measure.inputs || []) {
-      // Ein Bezugsfeld (Sollwert) ist kein Messwert — sonst stünde bei Zs der
-      // Sollwert als Istwert im Protokoll, sobald er größer ist.
-      if (input.role === 'reference') continue;
+      // Felder mit Rolle sind keine bewerteten Messwerte: „reference" ist der
+      // Sollwert selbst (sonst stünde er bei Zs als Istwert im Protokoll),
+      // „doku" wird festgehalten, aber nicht bewertet — der Wert mit
+      // angeschlossenem Verbraucher ist immer kleiner und wäre sonst bei
+      // jeder Anlage ein Mangel.
+      if (input.role) continue;
       const value = result.values ? result.values[input.id] : null;
       if (result.overrange && result.overrange[input.id]) { overrange = true; continue; }
+      if (value == null || !isFinite(value)) continue;
+      if (best == null) best = value;
+      else best = agg === 'min' ? Math.min(best, value) : Math.max(best, value);
+    }
+    // Frei angelegte Messstellen zählen wie feste Felder — sonst stünde im
+    // Protokoll ein Wert, der den schlechtesten Messpunkt nicht kennt.
+    for (const punkt of result.punkte || []) {
+      if (punkt.overrange) { overrange = true; continue; }
+      const value = punkt.wert;
       if (value == null || !isFinite(value)) continue;
       if (best == null) best = value;
       else best = agg === 'min' ? Math.min(best, value) : Math.max(best, value);
@@ -193,7 +266,7 @@
     let out = null;
     let missing = false;
     for (const input of measure.inputs || []) {
-      if (input.role === 'reference') continue;
+      if (input.role) continue; // siehe keyValue: Bezugs- und Dokufelder
       const value = result.values ? result.values[input.id] : null;
       const over = !!(result.overrange && result.overrange[input.id]);
       if (!over && (value == null || !isFinite(value))) {
@@ -203,24 +276,36 @@
       const limit = P.limits.forInput(step, input, facts, result.values) || P.limits.forStep(step, facts);
       out = worse(out, P.limits.evaluate(value, limit, { overrange: over }));
     }
+    // Eine Messstelle ohne Wert ist eine angefangene Messung: der Schritt
+    // bleibt offen, bis sie einen Wert hat oder wieder gelöscht ist.
+    const punktLimit = P.limits.forPunkt(step, measure.messstellen, facts);
+    for (const punkt of result.punkte || []) {
+      const value = punkt.wert;
+      const over = !!punkt.overrange;
+      if (!over && (value == null || !isFinite(value))) { missing = true; continue; }
+      out = worse(out, P.limits.evaluate(value, punktLimit, { overrange: over }));
+    }
     if (out === 'unbekannt') out = null;
     // Ein Mangel steht auch dann fest, wenn noch Felder leer sind.
     if (missing && out !== 'mangel') return null;
     return out;
   }
 
+  /* „n. a." zählt wie beantwortet, aber nicht als Mangel: ein Schritt, dessen
+   * Punkte alle nicht zutreffen (kein Gas, kein Aufzug), ist bewertet und
+   * nicht offen. Sonst würde das Protokoll nie vollständig. */
   function checklistVerdict(pack, step, facts, result) {
     const items = PL.visibleChecklist(step, facts);
     if (!items.length) return null;
     let anyFalse = false;
-    let allTrue = true;
+    let allAnswered = true;
     for (const item of items) {
       const value = result && result.checks ? result.checks[item.id] : undefined;
       if (value === false) anyFalse = true;
-      if (value !== true) allTrue = false;
+      else if (!P.util.checkAnswered(value)) allAnswered = false;
     }
     if (anyFalse) return 'mangel';
-    return allTrue ? 'ok' : null;
+    return allAnswered ? 'ok' : null;
   }
 
   /* Eine von Hand gesetzte Bewertung gewinnt immer: die Anlage kennt die Norm
@@ -248,8 +333,8 @@
     return PL.autoVerdict(pack, step, facts, result) === 'mangel';
   };
 
-  PL.summary = function summary(pack, session, entries, results) {
-    const facts = session.facts || {};
+  PL.summary = function summary(pack, session, entries, results, facts0) {
+    const facts = facts0 || session.facts || {};
     let done = 0, mangel = 0, grenzwertig = 0;
     for (const entry of entries) {
       const v = PL.verdict(pack, entry.step, facts, results && results[entry.step.id]);
@@ -308,6 +393,13 @@
       const world = P.data.world(session.facts.world);
       return world ? world.label : null;
     }
+    // factLabels zuerst: Das Antwortlabel ist für die Auswahl geschrieben
+    // („Ja, allgemeiner RCD"), nicht für eine Protokollspalte von 14 mm.
+    // Es fängt außerdem Fakten ab, die aus presetFacts einer Variante
+    // stammen und deshalb gar keine Antwortkarte haben.
+    const value = session.facts ? session.facts[factKey] : null;
+    const table = pack.factLabels && pack.factLabels[factKey];
+    if (value != null && table && table[value]) return table[value];
     const hits = optionsFromHistory(pack, session).filter(o => o.set && o.set[factKey] != null);
     const hit = hits[hits.length - 1];
     return hit ? hit.label : null;

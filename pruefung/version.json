@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.6.0",
   "datenstand": "2026-09",
-  "note": "Wiederholungsprüfung nach DIN VDE 0105-100 und Geräteprüfung nach DIN EN 50678/50699 ergänzt, dazu Prüffristen mit Fälligkeitsdatum."
+  "note": "Brücke zur Leitungsberechnung: Der Stromkreis rechnet Ia und den Sollwert für Zs aus seinem Schutzorgan vor und lässt sich mit einer gespeicherten Leitungsberechnung verknüpfen."
 }

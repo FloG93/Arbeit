@@ -12,11 +12,12 @@
   const TABS = [
     { id: 'auftraege', label: 'Aufträge' },
     { id: 'wizard', label: 'Assistent' },
-    { id: 'plan', label: 'Prüfplan' },
+    { id: 'plan', label: 'Plan' },
+    { id: 'leitungen', label: 'Leitungen' },
     { id: 'wiki', label: 'Wiki' },
   ];
 
-  P.nav = { stepId: null, wikiId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
+  P.nav = { stepId: null, wikiId: null, calcId: null, kreisId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
 
   let toast = null;
   let toastTimer = null;
@@ -87,13 +88,23 @@
     // Der Kopfbereich kostet Platz, den der Prüfplan besser gebrauchen kann:
     // Norm als Zeile darüber, Objekt als Titel — und die Kontextzeile nur,
     // wenn Auftrag und eingestellte Welt auseinanderlaufen.
-    const worldMismatch = job && job.world !== state.world;
+    const worldMismatch = job && job.world !== state.world && state.tab !== 'leitungen';
+    // Im Leitungen-Tab gehört der Kopf der Rechnung, nicht dem Prüfauftrag.
+    const calc = state.tab === 'leitungen' && P.nav.calcId ? P.store.calc(P.nav.calcId) : null;
+    const eyebrow = state.tab === 'leitungen' ? 'Leitungsberechnung' : variant ? variant.norm : 'Prüfassistent';
+    const title = state.tab === 'leitungen'
+      ? (calc ? P.views.calcTitle(calc) : 'Leitungen')
+      : job ? P.data.jobTitle(job) : 'VDE-Prüfungen';
 
     return el('div', { class: 'header' }, [
       el('div', { class: 'header-row' }, [
         el('div', { class: 'brand' }, [
-          el('div', { class: 'eyebrow' }, variant ? variant.norm : 'Prüfassistent'),
-          el('div', { class: 'brand-name', 'data-job-title': job ? job.id : null }, job ? P.data.jobTitle(job) : 'VDE-Prüfungen'),
+          el('div', { class: 'eyebrow' }, eyebrow),
+          el('div', {
+            class: 'brand-name',
+            'data-job-title': state.tab !== 'leitungen' && job ? job.id : null,
+            'data-calc-title': calc ? calc.id : null,
+          }, title),
         ]),
         el('div', { class: 'head-tools' }, [
           el('button', {
@@ -129,8 +140,9 @@
       el('div', { class: 'tabbar' }, TABS.map(tab => el('button', {
         class: 'tab-btn' + (activeTab === tab.id ? ' active' : ''), type: 'button',
         onClick: () => {
-          if (tab.id === 'plan') P.nav.stepId = null;
+          if (tab.id === 'plan') { P.nav.stepId = null; P.nav.kreisId = null; }
           if (tab.id === 'wiki') P.nav.wikiId = null;
+          if (tab.id === 'leitungen') P.nav.calcId = null;
           P.store.set({ tab: tab.id });
         },
       }, tab.label))),
@@ -144,6 +156,7 @@
     if (tab === 'plan') return views.plan();
     if (tab === 'protokoll') return views.protokoll();
     if (tab === 'wiki') return views.wiki();
+    if (tab === 'leitungen') return views.leitungen();
     return views.auftraege();
   }
 
@@ -187,10 +200,12 @@
       tab: state.tab,
       jobId: state.activeJobId,
       stepId: state.tab === 'plan' ? P.nav.stepId : null,
+      kreisId: state.tab === 'plan' ? P.nav.kreisId : null,
       wikiId: state.tab === 'wiki' ? P.nav.wikiId : null,
+      calcId: state.tab === 'leitungen' ? P.nav.calcId : null,
     };
   }
-  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId].join('|');
+  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId, st.calcId, st.kreisId].join('|');
 
   function syncHistory() {
     if (restoring || !window.history || !history.replaceState) return;
@@ -206,7 +221,9 @@
     restoring = true;
     try {
       P.nav.stepId = st.stepId || null;
+      P.nav.kreisId = st.kreisId != null ? st.kreisId : null;
       P.nav.wikiId = st.wikiId || null;
+      P.nav.calcId = st.calcId && P.store.calc(st.calcId) ? st.calcId : null;
       const patch = { tab: st.tab || 'auftraege' };
       if (st.jobId && P.store.job(st.jobId)) patch.activeJobId = st.jobId;
       P.store.set(patch);
@@ -284,15 +301,68 @@
         checkWiki(step.wiki, pack.id + '/' + step.id);
         checkWiki(step.pitfalls, pack.id + '/' + step.id + ' (pitfalls)');
         for (const reqId of step.requires || []) {
-          if (!pack.stepById.has(reqId)) note('Schritt', pack.id + '/' + step.id + ': requires → „' + reqId + '“ existiert nicht');
+          if (!pack.stepById.has(reqId)) { note('Schritt', pack.id + '/' + step.id + ': requires → „' + reqId + '“ existiert nicht'); continue; }
+          // Ein Stromkreis-Schritt darf auf die Anlage warten (Freischaltung
+          // vor Isolationsmessung), umgekehrt nie: Der Anlagen-Schritt fände
+          // das Ergebnis in keinem Beutel und bliebe für immer gesperrt.
+          const reqScope = P.plan.scopeOf(pack.stepById.get(reqId));
+          if (P.plan.scopeOf(step) === 'anlage' && reqScope === 'stromkreis') {
+            note('Schritt', pack.id + '/' + step.id + ': setzt den Stromkreis-Schritt „' + reqId + '“ voraus — das ist nie erfüllbar');
+          }
         }
         if (step.phase && !pack.phaseById.has(step.phase)) note('Schritt', pack.id + '/' + step.id + ': Phase „' + step.phase + '“ ist nicht definiert');
         if (step.limitRef && !P.limits.table(step.limitRef)) note('Grenzwert', pack.id + '/' + step.id + ': limitRef → „' + step.limitRef + '“ existiert nicht');
         if (step.formulaRef && !P.limits.formula(step.formulaRef)) note('Grenzwert', pack.id + '/' + step.id + ': formulaRef → „' + step.formulaRef + '“ existiert nicht');
         const inputs = (step.measure && step.measure.inputs) || [];
+        const gruppenIds = new Set(((step.measure && step.measure.gruppen) || []).map(g => g.id));
         for (const input of inputs) {
           if (input.limitFromInput && !inputs.some(i => i.id === input.limitFromInput && i.id !== input.id)) {
             note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': limitFromInput → „' + input.limitFromInput + '“ ist kein anderes Feld dieses Schrittes');
+          }
+          if (input.role && !['reference', 'doku'].includes(input.role)) {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannte Rolle „' + input.role + '“');
+          }
+          if (input.gruppe && !gruppenIds.has(input.gruppe)) {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': Gruppe „' + input.gruppe + '“ ist nicht definiert');
+          }
+          if (input.quickFromLimit && !P.limits.table(input.quickFromLimit)) {
+            note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': quickFromLimit → „' + input.quickFromLimit + '“ existiert nicht');
+          }
+          // Die Brücke zur Leitungsberechnung zieht ihre Zahlen aus dem
+          // Schutzorgan des Stromkreises. An einem Schritt der ganzen Anlage
+          // gibt es keines — dort bliebe die Karte für immer leer.
+          if ((input.vorschlagAus || input.vergleichAus) && step.scope !== 'stromkreis') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': Brücke zum Schutzorgan, aber der Schritt gilt nicht je Stromkreis');
+          }
+          if (input.vorschlagAus && input.vorschlagAus !== 'schutzorgan') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannte Quelle „' + input.vorschlagAus + '“');
+          }
+          if (input.vergleichAus && input.vergleichAus !== 'ia') {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannter Vergleich „' + input.vergleichAus + '“');
+          }
+        }
+        // Messstellen: Was hier fehlt, fällt erst im Feld auf — und dann steht
+        // der Prüfer vor einer Liste, die keinen Wert annimmt.
+        const messstellen = step.measure && step.measure.messstellen;
+        if (messstellen) {
+          if (!messstellen.unit) note('Schritt', pack.id + '/' + step.id + ': Messstellen ohne Einheit');
+          if (!['min', 'max'].includes(messstellen.aggregate || (step.measure.aggregate || 'max'))) {
+            note('Schritt', pack.id + '/' + step.id + ': Messstellen mit unbekanntem aggregate');
+          }
+          if (messstellen.limitKey && step.limitRef) {
+            const table = P.limits.table(step.limitRef);
+            if (table && !(table.rows || []).some(r => r.key === messstellen.limitKey)) {
+              note('Grenzwert', pack.id + '/' + step.id + ': Messstellen-limitKey „' + messstellen.limitKey + '“ gibt es in „' + step.limitRef + '“ nicht');
+            }
+          }
+          const seenFeld = new Set();
+          for (const feld of messstellen.felder || []) {
+            if (!feld.id || !feld.label) { note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld ohne id oder label'); continue; }
+            if (seenFeld.has(feld.id)) note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld „' + feld.id + '“ kommt doppelt vor');
+            seenFeld.add(feld.id);
+            if (feld.id === 'wert' || feld.id === 'id') note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld „' + feld.id + '“ überschreibt ein Pflichtfeld');
+            if (!['text', 'auswahl'].includes(feld.kind)) note('Schritt', pack.id + '/' + step.id + '/' + feld.id + ': unbekannte Feldart „' + feld.kind + '“');
+            if (feld.kind === 'auswahl' && !(feld.optionen || []).length) note('Schritt', pack.id + '/' + step.id + '/' + feld.id + ': Auswahl ohne Optionen');
           }
         }
         // Zyklen in requires.
@@ -308,11 +378,82 @@
       }
     }
 
+    // Protokollfelder: Ein Feld, das eine Antwort übernimmt, ist nur so gut
+    // wie der Fakt dahinter. Steht der nirgends, bleibt das Feld im Bogen
+    // für immer leer — und niemand merkt es, bis er unterschreiben soll.
+    for (const pack of P.data.activePacks()) {
+      const groupIds = new Set(((pack.protocol && pack.protocol.groups) || []).map(g => g.id));
+      const settable = new Set();
+      for (const node of pack.nodes) {
+        for (const opt of node.options || []) {
+          for (const key of Object.keys(opt.set || {})) settable.add(key);
+        }
+      }
+      for (const variant of pack.variants) {
+        for (const key of Object.keys(variant.presetFacts || {})) settable.add(key);
+      }
+      for (const field of (pack.protocol && pack.protocol.fields) || []) {
+        if (field.gruppe && !groupIds.has(field.gruppe)) {
+          note('Protokoll', pack.id + '/' + field.id + ': Gruppe „' + field.gruppe + '“ ist nicht definiert');
+        }
+        if (field.kind !== 'fact') continue;
+        if (!field.factKey) { note('Protokoll', pack.id + '/' + field.id + ': kind „fact“ ohne factKey'); continue; }
+        if (!settable.has(field.factKey)) {
+          note('Protokoll', pack.id + '/' + field.id + ': Fakt „' + field.factKey + '“ wird nirgends gesetzt');
+        }
+      }
+      // Ein vorbelegter Fakt hat keine Antwortkarte, aus der ein Klartext
+      // käme — dafür ist factLabels da. Fehlt er dort, bleibt das Feld leer.
+      for (const variant of pack.variants) {
+        for (const [key, value] of Object.entries(variant.presetFacts || {})) {
+          const used = ((pack.protocol && pack.protocol.fields) || []).some(f => f.kind === 'fact' && f.factKey === key);
+          if (!used) continue;
+          const table = pack.factLabels && pack.factLabels[key];
+          if (!table || !table[value]) {
+            note('Protokoll', pack.id + '/' + variant.id + ': factLabels fehlt für ' + key + ' = „' + value + '“');
+          }
+        }
+      }
+      // Die Abweichungen am Stromkreis setzen Fakten — auf die hören
+      // when-Bedingungen und Grenzwertzeilen. Was hier ins Leere greift,
+      // fällt erst im Keller auf.
+      for (const gruppe of pack.kreisFakten || []) {
+        if (!(gruppe.optionen || []).length) note('Stromkreis', pack.id + '/' + gruppe.id + ': Auswahl ohne Optionen');
+        for (const option of gruppe.optionen || []) {
+          if (!Object.keys(option.set || {}).length) {
+            note('Stromkreis', pack.id + '/' + gruppe.id + '/' + option.id + ': Option setzt keinen Fakt');
+          }
+          for (const key of Object.keys(option.set || {})) {
+            if (!settable.has(key)) {
+              note('Stromkreis', pack.id + '/' + gruppe.id + '/' + option.id + ': Fakt „' + key + '“ kennt der Assistent nicht');
+            }
+          }
+        }
+        for (const world of P.data.worlds) {
+          const moeglich = (gruppe.optionen || []).filter(o => !o.when || o.when.netzform == null);
+          if (!moeglich.length && !(gruppe.optionen || []).some(o => o.when && o.when.netzform)) {
+            note('Stromkreis', pack.id + '/' + gruppe.id + ' hat in „' + world.short + '“ keine mögliche Option');
+          }
+        }
+      }
+
+      // Doppelte Checklisten-IDs teilen sich einen Zustand: zwei Zeilen, ein
+      // Häkchen. Im Feld sieht das aus wie ein Fehler der App.
+      for (const step of pack.steps) {
+        const seen = new Set();
+        for (const item of step.checklist || []) {
+          if (seen.has(item.id)) note('Schritt', pack.id + '/' + step.id + ': Checklisten-ID „' + item.id + '“ kommt doppelt vor');
+          seen.add(item.id);
+        }
+      }
+    }
+
     // Ungeprüfte Grenzwerte sind kein Defekt, sondern ein Zustand — aber einer,
     // den man sehen muss. Deshalb Statuszeile statt Befund.
-    const ungeprueft = (P.data.limits.tables || []).filter(t => !(t.reviewed && t.reviewed.date));
+    const alleTabellen = (P.data.limits.tables || []).concat(P.data.cables ? P.cable.reviewTables(P.data.cables) : []);
+    const ungeprueft = alleTabellen.filter(t => !(t.reviewed && t.reviewed.date));
     const reviewStatus = ungeprueft.length
-      ? ungeprueft.length + ' von ' + (P.data.limits.tables || []).length + ' Grenzwerttabellen sind nicht gegen die Normfassung geprüft: ' + ungeprueft.map(t => t.id).join(', ')
+      ? ungeprueft.length + ' von ' + alleTabellen.length + ' Grenzwerttabellen sind nicht gegen die Normfassung geprüft: ' + ungeprueft.map(t => t.id).join(', ')
       : 'Alle Grenzwerttabellen sind gegengeprüft.';
 
     for (const table of (P.data.limits.tables || [])) {
@@ -324,10 +465,13 @@
       }
     }
 
+    if (P.data.cables) checkCables(P.data.cables, note);
+
     for (const entry of P.data.wiki) {
       checkWiki(entry.related && entry.related.filter(id => !isStepId(id)), 'wiki/' + entry.id + ' (related)');
       for (const block of entry.body || []) {
         if (block.type === 'limits' && !P.limits.table(block.limitRef)) note('Wiki', entry.id + ': limits → „' + block.limitRef + '“ existiert nicht');
+        if (block.type === 'cable-table' && !U.CABLE_TABLES.includes(block.ref)) note('Wiki', entry.id + ': cable-table → „' + block.ref + '“ existiert nicht');
         if (block.type === 'formula' && !P.limits.formula(block.formulaRef)) note('Wiki', entry.id + ': formula → „' + block.formulaRef + '“ existiert nicht');
         if (block.type === 'link') checkWiki([block.to].filter(id => !isStepId(id)), 'wiki/' + entry.id + ' (link)');
       }
@@ -376,6 +520,7 @@
     if (window.caches) {
       const expected = ['data/index.json', 'data/' + P.data.registry.worlds, 'data/' + P.data.registry.limits]
         .concat(P.data.registry.intervals ? ['data/' + P.data.registry.intervals] : [])
+        .concat(P.data.registry.cables ? ['data/' + P.data.registry.cables] : [])
         .concat((P.data.registry.norms || []).map(n => 'data/' + n.file))
         .concat((P.data.registry.wiki || []).map(f => 'data/' + f));
       // Den eigenen Cache suchen statt seinen Namen zu kennen: eine zweite
@@ -430,6 +575,61 @@
 
     walk(P.wizard.start(pack, worldId, variant), 0);
     return ends;
+  }
+
+  /* Leitungsdaten: eine Lücke in einer Tabelle wäre im Feld ein stilles
+   * „kein Wert“ — deshalb vollständig prüfen und die handgerechneten
+   * Beispiele nachrechnen. */
+  function checkCables(cb, note) {
+    const bel = cb.belastbarkeit;
+    const arten = new Set(cb.verlegearten.arten.map(a => a.id));
+    for (const t of cb.leitungstypen.typen) {
+      for (const va of t.verlegearten) {
+        if (!arten.has(va)) { note('Leitung', t.id + ': Verlegeart „' + va + '“ existiert nicht'); continue; }
+        for (const adern of ['2', '3']) {
+          const reihe = bel.werte[va] && bel.werte[va][adern];
+          if (!reihe || reihe.length !== bel.querschnitte.length) { note('Leitung', 'Belastbarkeit ' + va + '/' + adern + ' Adern unvollständig'); continue; }
+          for (const S of t.querschnitte) {
+            const i = bel.querschnitte.indexOf(S);
+            if (i < 0 || !(reihe[i] > 0)) note('Leitung', t.id + ' ' + S + ' mm² hat in ' + va + '/' + adern + ' keinen Belastbarkeitswert');
+          }
+          for (let i = 1; i < reihe.length; i++) if (!(reihe[i] > reihe[i - 1])) note('Leitung', 'Belastbarkeit ' + va + '/' + adern + ' steigt nicht mit dem Querschnitt bei ' + bel.querschnitte[i] + ' mm²');
+        }
+      }
+    }
+    const fallend = (list, key, where) => {
+      for (let i = 1; i < list.length; i++) {
+        if (!(list[i][key] > list[i - 1][key])) note('Leitung', where + ': Stufen nicht aufsteigend');
+        if (list[i].f > list[i - 1].f) note('Leitung', where + ': Faktor steigt bei ' + list[i][key]);
+      }
+    };
+    const temp = cb.faktoren.temperatur;
+    fallend(temp.luft.stufen, 'bis', 'Temperatur Luft');
+    fallend(temp.erde.stufen, 'bis', 'Temperatur Erde');
+    for (const a of cb.faktoren.haeufung.anordnungen) fallend(a.stufen, 'n', 'Häufung ' + a.id);
+    const ls = cb.schutzorgane.ls;
+    for (const ch of ls.charakteristiken) if (!(ch.ia_faktor > 0)) note('Leitung', 'LS ' + ch.id + ' ohne Ia-Faktor');
+    for (const b of cb.schutzorgane.ls_durchlass.bereiche) {
+      for (const ch of ['B', 'C']) if (!b[ch] || b[ch].length !== cb.schutzorgane.ls_durchlass.stufen_ik.length) note('Leitung', 'LS-Durchlass ' + ch + ' bis ' + b.in_max + ' A unvollständig');
+    }
+    const gg = cb.schutzorgane.gg;
+    for (const r of gg.reihe) {
+      for (const t of gg.zeiten) if (!(r.ia[String(t)] > 0)) note('Leitung', 'gG ' + r.in + ' A: Ia bei ' + t + ' s fehlt');
+      if (!(r.ia['5'] < r.ia['0.4'] && r.ia['0.4'] < r.ia['0.1'])) note('Leitung', 'gG ' + r.in + ' A: Ia steigt nicht mit kürzerer Zeit');
+      if (!(r.i2t > 0)) note('Leitung', 'gG ' + r.in + ' A: I²t fehlt');
+    }
+    const lim = P.limits.table('spannungsfall');
+    for (const [welt, v] of Object.entries(cb.vorbelegung)) {
+      if (!P.data.worldById.has(welt)) note('Leitung', 'Vorbelegung für unbekannte Welt „' + welt + '“');
+      if (!lim || !lim.rows.some(r => r.key === v.netz.duGrenze)) note('Leitung', 'Vorbelegung ' + welt + ': Spannungsfall-Grenze „' + v.netz.duGrenze + '“ fehlt');
+    }
+    for (const vl of cb.vorlagen) {
+      if (!P.data.worldById.has(vl.welt)) note('Leitung', 'Vorlage ' + vl.id + ': Welt „' + vl.welt + '“ existiert nicht');
+      const r = P.cable.compute(Object.assign({ vorlage: vl.id }, vl.calc, { leitung: Object.assign({ laenge: 20 }, vl.calc.leitung) }), { cables: cb, limits: P.data.limits }, vl.welt);
+      if (r.fehler.length) note('Leitung', 'Vorlage ' + vl.id + ': ' + r.fehler.join(' '));
+      else if (r.vorschlag == null) note('Leitung', 'Vorlage ' + vl.id + ': bei 20 m kein Querschnitt möglich');
+    }
+    for (const b of P.cable.checkExamples({ cables: cb, limits: P.data.limits })) note('Leitung', b);
   }
 
   function isStepId(id) {
