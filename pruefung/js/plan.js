@@ -33,11 +33,22 @@
 
   /* Sammeln, Voraussetzungen nachziehen, topologisch ordnen, Grenzwerte
    * auflösen. Ergebnis ist die Liste, die der Prüfplan anzeigt. */
-  PL.build = function build(pack, session, results) {
-    const facts = session.facts || {};
+  const scopeOf = step => step.scope || 'anlage';
+  PL.scopeOf = scopeOf;
+
+  /* opts.scope filtert nach Geltungsbereich (Anlage oder Stromkreis),
+   * opts.facts sind die zusammengeführten Fakten (Anlage plus Stromkreis),
+   * opts.resultFor findet auch das Ergebnis eines Schrittes im jeweils
+   * anderen Beutel — eine Vorbedingung kann in der Anlage liegen. */
+  PL.build = function build(pack, session, results, opts) {
+    const o = opts || {};
+    const scope = o.scope || 'anlage';
+    const facts = o.facts || session.facts || {};
+    const resultFor = o.resultFor || (id => (results ? results[id] : null));
     const picked = new Map(); // stepId → { step, reason, requiredBy }
 
     for (const step of pack.steps) {
+      if (scopeOf(step) !== scope) continue;
       if (step.when && !matches(step.when, facts)) continue;
       picked.set(step.id, { step, reason: 'auto' });
     }
@@ -46,6 +57,7 @@
     for (const id of session.extraSteps || []) {
       const step = pack.stepById.get(id);
       if (!step) { console.warn('[Prüfassistent] addSteps verweist auf unbekannten Schritt:', id); continue; }
+      if (scopeOf(step) !== scope) continue;
       if (!picked.has(id)) picked.set(id, { step, reason: 'antwort' });
     }
     // Voraussetzungen transitiv nachziehen: eine Messung ohne ihre Vorbedingung
@@ -60,6 +72,9 @@
         // die Isolationsmessung setzt den Schutzleiterwiderstand voraus — aber
         // ein Gerät der Schutzklasse II hat keinen Schutzleiter.
         if (req.when && !matches(req.when, facts)) continue;
+        // Eine Vorbedingung aus dem anderen Geltungsbereich steht in dessen
+        // eigenem Plan — hier wäre sie eine Zeile, die niemand abhaken kann.
+        if (scopeOf(req) !== scope) continue;
         if (picked.has(reqId)) continue;
         picked.set(reqId, { step: req, reason: 'voraussetzung', requiredBy: current.step.id });
         queue.push(reqId);
@@ -70,7 +85,8 @@
 
     return ordered.map(item => {
       const step = item.step;
-      const values = results && results[step.id] ? results[step.id].values : null;
+      const eigen = resultFor(step.id);
+      const values = eigen ? eigen.values : null;
       const inputLimits = {};
       for (const input of (step.measure && step.measure.inputs) || []) {
         inputLimits[input.id] = P.limits.forInput(step, input, facts, values);
@@ -81,9 +97,14 @@
       // eine Messung, die Tabelle nur allgemein.
       const limit = Object.values(inputLimits).find(l => l && l.fromInput)
         || P.limits.forStep(step, facts) || null;
+      // Auch über Geltungsbereichsgrenzen hinweg: Die Isolationsmessung des
+      // Stromkreises wartet auf die Freischaltung der Anlage.
       const blockedBy = (step.requires || []).filter(reqId => {
-        if (!picked.has(reqId)) return false;
-        return PL.verdict(pack, picked.get(reqId).step, facts, results && results[reqId]) == null;
+        const req = pack.stepById.get(reqId);
+        if (!req) return false;
+        if (scopeOf(req) === scope && !picked.has(reqId)) return false;
+        if (scopeOf(req) !== scope && req.when && !matches(req.when, facts)) return false;
+        return PL.verdict(pack, req, facts, resultFor(reqId)) == null;
       });
       return {
         step,
@@ -101,14 +122,17 @@
    * Daten-Update darf eine laufende Prüfung nicht umsortieren. Neu
    * hinzugekommene Schritte hängen hinten an und werden markiert, statt
    * lautlos zwischen erledigte Zeilen zu rutschen. */
-  PL.ensure = function ensure(job, pack) {
-    const entries = PL.build(pack, job.session, job.results);
-    if (!job.plan) {
-      job.plan = entries.map(e => e.step.id);
+  /* Ohne Stromkreis der Plan der Anlage, mit Stromkreis dessen eigener —
+   * beide werden beim ersten Öffnen eingefroren. */
+  PL.ensure = function ensure(job, pack, kreis) {
+    const holder = kreis || job;
+    const entries = PL.build(pack, job.session, holder.results, PL.context(job, pack, kreis));
+    if (!holder.plan) {
+      holder.plan = entries.map(e => e.step.id);
       P.store.save();
       return entries;
     }
-    const index = new Map(job.plan.map((id, i) => [id, i]));
+    const index = new Map(holder.plan.map((id, i) => [id, i]));
     const known = [];
     const added = [];
     for (const entry of entries) {
@@ -121,9 +145,44 @@
 
   /* Schritte, die es in der Datenbasis nicht mehr gibt, zu denen aber Werte
    * erfasst wurden: sichtbar machen, nicht verschwinden lassen. */
-  PL.orphans = function orphans(job, entries) {
+  PL.orphans = function orphans(holder, entries) {
     const have = new Set(entries.map(e => e.step.id));
-    return (job.plan || []).filter(id => !have.has(id) && job.results && job.results[id]);
+    return (holder.plan || []).filter(id => !have.has(id) && holder.results && holder.results[id]);
+  };
+
+  /* Fakten und Ergebnisbeutel für einen Geltungsbereich. Ein Stromkreis erbt
+   * die Fakten der Anlage und überschreibt, was bei ihm anders ist — RCD,
+   * Nennfehlerstrom, Stromkreisart. Genau daran hängen die Grenzwerte. */
+  PL.facts = function factsFor(job, kreis) {
+    return kreis ? Object.assign({}, job.session.facts, kreis.facts) : (job.session.facts || {});
+  };
+
+  PL.context = function context(job, pack, kreis) {
+    return {
+      scope: kreis ? 'stromkreis' : 'anlage',
+      facts: PL.facts(job, kreis),
+      resultFor: id => {
+        const step = pack.stepById.get(id);
+        if (!step) return null;
+        const bag = scopeOf(step) === 'stromkreis' ? (kreis ? kreis.results : {}) : job.results;
+        return bag[id] || null;
+      },
+    };
+  };
+
+  /* Fortschritt über den ganzen Auftrag: Anlage plus jeder Stromkreis. Ohne
+   * das zählte ein Verteiler mit zwölf Kreisen als fertig, sobald die
+   * Sichtprüfung steht. */
+  PL.summaryAll = function summaryAll(job, pack) {
+    const teile = [PL.summary(pack, job.session, PL.ensure(job, pack), job.results)];
+    for (const kreis of job.kreise || []) {
+      const entries = PL.ensure(job, pack, kreis);
+      teile.push(PL.summary(pack, job.session, entries, kreis.results, PL.facts(job, kreis)));
+    }
+    return teile.reduce((a, t) => ({
+      done: a.done + t.done, total: a.total + t.total, mangel: a.mangel + t.mangel,
+      grenzwertig: a.grenzwertig + t.grenzwertig, open: a.open + t.open,
+    }), { done: 0, total: 0, mangel: 0, grenzwertig: 0, open: 0 });
   };
 
   /* Vorsortieren nach Phase und order, dann topologisch stabilisieren
@@ -274,8 +333,8 @@
     return PL.autoVerdict(pack, step, facts, result) === 'mangel';
   };
 
-  PL.summary = function summary(pack, session, entries, results) {
-    const facts = session.facts || {};
+  PL.summary = function summary(pack, session, entries, results, facts0) {
+    const facts = facts0 || session.facts || {};
     let done = 0, mangel = 0, grenzwertig = 0;
     for (const entry of entries) {
       const v = PL.verdict(pack, entry.step, facts, results && results[entry.step.id]);

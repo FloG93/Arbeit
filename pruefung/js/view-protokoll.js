@@ -45,17 +45,22 @@
 
   /* Eine von Hand gesetzte Bewertung, die einem Messmangel widerspricht, steht
    * als solche im Protokoll — mit Vermerk statt still. */
-  function rowsFor(pack, job, entries) {
-    const facts = job.session.facts;
+  const kreisName = kreis => 'Stromkreis ' + (kreis.nr || '?') + (kreis.ziel ? ' · ' + kreis.ziel : '');
+
+  function rowsFor(pack, job, entries, kreis) {
+    const facts = P.plan.facts(job, kreis);
+    const holder = kreis || job;
     return entries.map(entry => {
       const step = entry.step;
-      const result = job.results[step.id] || {};
+      const result = holder.results[step.id] || {};
       const overridden = P.plan.overridden(pack, step, facts, result);
       const notes = [];
       if (overridden) notes.push('Bewertung von Hand, Messwert außerhalb des Grenzwerts');
       if (result.note) notes.push(result.note);
       return {
-        label: step.protocolLabel || step.title,
+        step,
+        kreis: kreis || null,
+        label: (kreis ? kreisName(kreis) + ' · ' : '') + (step.protocolLabel || step.title),
         soll: entry.limit ? P.limits.format(entry.limit) : (step.protocolSoll || '—'),
         ist: step.measure ? valueText(step, result) : '—',
         verdict: P.plan.verdict(pack, step, facts, result),
@@ -63,6 +68,19 @@
         note: notes.join(' — '),
       };
     });
+  }
+
+  /* Alles, was zu diesem Auftrag gehört: die Anlage und jeder Stromkreis.
+   * Ohne das führte das Protokoll eines Verteilers mit zwölf Kreisen nur die
+   * Sichtprüfung auf. */
+  function alleTeile(job, pack) {
+    const teile = [{ kreis: null, entries: P.plan.ensure(job, pack) }];
+    for (const kreis of job.kreise || []) teile.push({ kreis, entries: P.plan.ensure(job, pack, kreis) });
+    for (const teil of teile) {
+      teil.holder = teil.kreis || job;
+      teil.rows = rowsFor(pack, job, teil.entries, teil.kreis);
+    }
+    return teile;
   }
 
   const verdictCell = row => U.verdictSym(row.verdict) + ' ' + U.verdictLabel(row.verdict) + (row.overridden ? ' (von Hand)' : '');
@@ -88,9 +106,10 @@
       };
     }
 
-    const entries = P.plan.ensure(job, pack);
-    const sum = P.plan.summary(pack, job.session, entries, job.results);
-    const rows = rowsFor(pack, job, entries);
+    const teile = alleTeile(job, pack);
+    const entries = teile.flatMap(t => t.entries);
+    const sum = P.plan.summaryAll(job, pack);
+    const rows = teile.flatMap(t => t.rows);
     const maengel = rows.filter(r => r.verdict === 'mangel');
 
     const children = [
@@ -144,7 +163,7 @@
       el('button', { class: 'btn btn-ghost back', type: 'button', onClick: () => P.store.set({ tab: 'plan' }) }, 'Prüfplan'),
       el('button', {
         class: 'btn btn-primary', type: 'button',
-        onClick: () => { buildSheet(job, pack, rows, sum); window.print(); },
+        onClick: () => { buildSheet(job, pack, teile, sum); window.print(); },
       }, 'Drucken / als PDF'),
     ]);
 
@@ -154,41 +173,44 @@
   /* Einzeln erfasste Messstellen stehen nicht in der Hauptzeile — dort steht
    * der maßgebliche Wert. Sie gehen trotzdem nicht verloren: Wer nachvollziehen
    * will, wo gemessen wurde, findet es im Anhang. */
-  function messstellenAnhang(job, pack, abgedeckt) {
+  function messstellenAnhang(teile, abgedeckt) {
     const bloecke = [];
-    for (const step of pack.steps) {
-      const result = job.results[step.id];
-      const punkte = (result && result.punkte) || [];
-      const messstellen = step.measure && step.measure.messstellen;
-      // Dokumentierende Felder stehen nicht in der Hauptzeile, weil sie nicht
-      // bewertet werden — aufgeschrieben wurden sie trotzdem.
-      const doku = ((step.measure && step.measure.inputs) || []).filter(i => i.role === 'doku').filter(input => {
-        // Was die Messtabelle schon zeigt, steht nicht noch einmal im Anhang.
-        const felder = abgedeckt && abgedeckt.get(step.id);
-        return !felder || !(felder.has(input.id) || (input.gruppe && felder.has('gruppe:' + input.gruppe)));
-      }).map(input => {
-        const value = result && result.values ? result.values[input.id] : null;
-        if (value == null || !isFinite(value)) return null;
-        const gruppe = ((step.measure.gruppen || []).find(g => g.id === input.gruppe) || {}).label;
-        return { label: (gruppe ? gruppe + ' · ' : '') + input.label, wert: num(value) + (input.unit ? ' ' + input.unit : '') };
-      }).filter(Boolean);
-      if (!doku.length && (!punkte.length || !messstellen)) continue;
-      const felder = messstellen ? (messstellen.felder || []).map(f => f.id) : [];
-      bloecke.push(el('div', {}, [
-        el('div', { class: 'p-row p-row-head p-row-punkt' }, [
-          el('div', {}, step.protocolLabel || step.title),
-          el('div', {}, 'Wert'),
-        ]),
-        doku.map(d => el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, d.label), el('div', {}, d.wert)])),
-        (messstellen ? punkte : []).map((punkt, i) => {
-          const bezeichnung = felder.map(id => punkt[id]).filter(Boolean).join(' · ')
-            || (messstellen.label || 'Messstelle') + ' ' + (i + 1);
-          const wert = punkt.overrange
-            ? 'über Messbereich'
-            : punkt.wert == null || !isFinite(punkt.wert) ? '—' : num(punkt.wert) + ' ' + (messstellen.unit || '');
-          return el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, bezeichnung), el('div', {}, wert)]);
-        }),
-      ]));
+    for (const teil of teile) {
+      for (const entry of teil.entries) {
+        const step = entry.step;
+        const result = teil.holder.results[step.id];
+        if (!result) continue;
+        const punkte = result.punkte || [];
+        const messstellen = step.measure && step.measure.messstellen;
+        // Dokumentierende Felder stehen nicht in der Hauptzeile, weil sie
+        // nicht bewertet werden — aufgeschrieben wurden sie trotzdem.
+        const doku = ((step.measure && step.measure.inputs) || []).filter(i => i.role === 'doku').filter(input => {
+          const felder = abgedeckt && abgedeckt.get(step.id);
+          return !felder || !(felder.has(input.id) || (input.gruppe && felder.has('gruppe:' + input.gruppe)));
+        }).map(input => {
+          const value = result.values ? result.values[input.id] : null;
+          if (value == null || !isFinite(value)) return null;
+          const gruppe = ((step.measure.gruppen || []).find(g => g.id === input.gruppe) || {}).label;
+          return { label: (gruppe ? gruppe + ' · ' : '') + input.label, wert: num(value) + (input.unit ? ' ' + input.unit : '') };
+        }).filter(Boolean);
+        if (!doku.length && (!punkte.length || !messstellen)) continue;
+        const felder = messstellen ? (messstellen.felder || []).map(f => f.id) : [];
+        bloecke.push(el('div', {}, [
+          el('div', { class: 'p-row p-row-head p-row-punkt' }, [
+            el('div', {}, (teil.kreis ? kreisName(teil.kreis) + ' · ' : '') + (step.protocolLabel || step.title)),
+            el('div', {}, 'Wert'),
+          ]),
+          doku.map(d => el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, d.label), el('div', {}, d.wert)])),
+          (messstellen ? punkte : []).map((punkt, i) => {
+            const bezeichnung = felder.map(id => punkt[id]).filter(Boolean).join(' · ')
+              || (messstellen.label || 'Messstelle') + ' ' + (i + 1);
+            const wert = punkt.overrange
+              ? 'über Messbereich'
+              : punkt.wert == null || !isFinite(punkt.wert) ? '—' : num(punkt.wert) + ' ' + (messstellen.unit || '');
+            return el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, bezeichnung), el('div', {}, wert)]);
+          }),
+        ]));
+      }
     }
     if (!bloecke.length) return null;
     return el('div', {}, [el('div', { class: 'p-section' }, 'Weitere erfasste Werte und Messstellen'), bloecke]);
@@ -247,13 +269,24 @@
     const from = spalte.from || {};
     if (from.kreis) {
       const wert = from.kreis.split('.').reduce((o, k) => (o == null ? null : o[k]), kreis);
-      return wert == null || wert === '' ? '' : String(wert);
+      if (wert == null || wert === '') return '';
+      return typeof wert === 'number' ? num(wert) : String(wert);
     }
-    if (from.fact) return P.plan.factLabel(pack, job.session, from.fact) || '';
+    // Ein Fakt kann am Stromkreis abweichen — dann gilt seiner.
+    if (from.fact) {
+      const eigen = kreis && kreis.facts ? kreis.facts[from.fact] : null;
+      if (eigen != null) {
+        const table = pack.factLabels && pack.factLabels[from.fact];
+        return (table && table[eigen]) || String(eigen);
+      }
+      return P.plan.factLabel(pack, job.session, from.fact) || '';
+    }
     if (!from.step) return '';
     const step = pack.stepById.get(from.step);
-    const result = job.results[from.step];
-    if (!step || !result) return '';
+    if (!step) return '';
+    const bag = P.plan.scopeOf(step) === 'stromkreis' ? (kreis && kreis.results) || {} : job.results;
+    const result = bag[from.step];
+    if (!result) return '';
     const measure = step.measure || {};
     const einheit = '';
     if (from.input) {
@@ -341,19 +374,21 @@
    * Spannungsfall, SELV-Trennung, Differenzstrom, die Dokumentationsschritte.
    * Ohne diesen Block fiele es lautlos aus dem Bogen, obwohl es gemessen
    * wurde. */
-  function weitereSchritte(job, pack, entries, rows, tabellenSchritte) {
-    const rowById = new Map(rows.map((row, i) => [entries[i] && entries[i].step.id, row]));
-    const offen = entries.filter(entry => {
-      const step = entry.step;
-      if (tabellenSchritte.has(step.id) || step.protocolBlock) return false;
-      return step.phase === 'messen' || step.phase === 'dokumentieren';
-    });
+  function weitereSchritte(teile, tabellenSchritte) {
+    const offen = [];
+    for (const teil of teile) {
+      teil.entries.forEach((entry, i) => {
+        const step = entry.step;
+        if (tabellenSchritte.has(step.id) || step.protocolBlock) return;
+        if (step.phase !== 'messen' && step.phase !== 'dokumentieren') return;
+        offen.push(teil.rows[i]);
+      });
+    }
     if (!offen.length) return null;
     return el('div', {}, [
       el('div', { class: 'p-section' }, 'Weitere Prüfschritte'),
       el('div', { class: 'p-row p-row-head' }, [el('div', {}, 'Prüfschritt'), el('div', {}, 'Soll'), el('div', {}, 'Ist'), el('div', {}, 'Bewertung')]),
-      offen.map(entry => {
-        const row = rowById.get(entry.step.id);
+      offen.map(row => {
         if (!row) return null;
         return el('div', { class: 'p-row' }, [
           el('div', {}, row.label),
@@ -366,7 +401,9 @@
     ]);
   }
 
-  function buildSheet(job, pack, rows, sum) {
+  function buildSheet(job, pack, teile, sum) {
+    const rows = teile.flatMap(t => t.rows);
+    const anlagenTeil = teile.find(t => !t.kreis) || { entries: [], rows: [] };
     const root = document.getElementById('print-root');
     root.innerHTML = '';
     const alleFelder = (pack.protocol && pack.protocol.fields) || [];
@@ -375,7 +412,7 @@
     const world = P.data.world(job.world);
     const variant = P.data.variant(job.normId, job.variantId);
     const due = job.interval && job.interval.nextDue;
-    const entries = P.plan.ensure(job, pack);
+    const entries = teile.flatMap(t => t.entries);
     const spalten = (pack.protocol && pack.protocol.messtabelle) || [];
     const tabellenSchritte = new Set(spalten.map(c => c.from && c.from.step).filter(Boolean));
     // Welche Felder eines Schrittes die Tabelle bereits zeigt — der Anhang
@@ -394,7 +431,7 @@
     // sich dann nichts mehr.
     const kreise = (job.kreise && job.kreise.length)
       ? job.kreise
-      : [{ nr: '1', ziel: job.protocol.anlagenteil || '', leitung: {}, schutz: {} }];
+      : [{ nr: '1', ziel: job.protocol.anlagenteil || '', leitung: {}, schutz: {}, facts: {}, results: {} }];
 
     const plakette = (() => {
       const step = pack.stepById.get('s-pruefplakette');
@@ -425,19 +462,20 @@
       ]))),
 
       el('div', { class: 'p-section' }, 'Besichtigen'),
-      markierteListe(job, pack, entries, 'besichtigen', tabellenSchritte),
+      markierteListe(job, pack, anlagenTeil.entries, 'besichtigen', tabellenSchritte),
       el('div', { class: 'p-section' }, 'Erproben'),
-      markierteListe(job, pack, entries, 'erproben', tabellenSchritte),
+      markierteListe(job, pack, anlagenTeil.entries, 'erproben', tabellenSchritte),
 
       el('div', { class: 'p-section' }, 'Messen'),
+      el('div', { class: 'p-inline' }, [el('div', {}, 'Stromkreisverteiler: ' + (job.protocol.anlagenteil || '—'))]),
       el('div', { class: 'p-table-wrap' }, [el('table', { class: 'p-mess' }, [
         el('thead', {}, el('tr', {}, spalten.map(c => el('th', { class: c.breit ? 'w' : null }, c.label)))),
         el('tbody', {}, kreise.map(kreis => el('tr', {}, spalten.map(c =>
           el('td', { class: c.breit ? 'w' : null }, zelle(job, pack, kreis, c)))))),
       ])]),
 
-      potentialausgleich(job, pack, entries),
-      weitereSchritte(job, pack, entries, rows, tabellenSchritte),
+      potentialausgleich(job, pack, anlagenTeil.entries),
+      weitereSchritte(teile, tabellenSchritte),
 
       messgeraete.length
         ? el('div', {}, [
@@ -480,7 +518,7 @@
         ? el('p', { class: 'p-note' }, 'Hinweis: Die Erklärung steht auf „ja", obwohl in diesem Protokoll Mängel erfasst sind.')
         : null,
 
-      messstellenAnhang(job, pack, abgedeckt),
+      messstellenAnhang(teile, abgedeckt),
       review ? el('p', { class: 'p-note' }, review.text) : null,
 
       el('div', { class: 'p-sign' }, [

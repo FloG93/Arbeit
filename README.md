@@ -547,6 +547,7 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Geräteprüfung nach DIN EN 50678 / 50699, Schutzklasse I, II und III | fertig |
 | Zwei-Welten-Modus EFH / Industrie: Fragen, Schritte, Wiki und Begriffe | fertig |
 | Prüfplan mit verbindlicher Reihenfolge (`requires`) und Sperrhinweis | fertig |
+| Verteiler mit beliebig vielen Stromkreisen, jeder mit eigenen Stammdaten und eigenen Grenzwerten | fertig |
 | Messwerte mit Live-Bewertung gegen den passenden Grenzwert | fertig |
 | Checklisten mit vier Zuständen (offen / OK / Mangel / n. a.), Bewertung je Schritt überschreibbar | fertig |
 | Kopfdaten im Aufbau des IHK-Prüfprotokolls, nach Auftrag, Anlage, Netz und Prüfung gruppiert | fertig |
@@ -610,6 +611,15 @@ Selbsttest der App ebenso.
 Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
 
+* **Geltungsbereich eines Prüfschrittes** — `"scope": "stromkreis"` heißt: je
+  Stromkreis einmal, mit den Fakten und Messwerten dieses Kreises. Ohne
+  `scope` gilt der Schritt einmal für die Anlage. Ein Stromkreis-Schritt darf
+  einen Anlagen-Schritt voraussetzen (Freischaltung vor Isolationsmessung),
+  umgekehrt nie — der Anlagen-Schritt fände das Ergebnis in keinem Beutel und
+  bliebe für immer gesperrt. Der Selbsttest erzwingt das.
+* **Abweichung am Stromkreis anbieten** — Eintrag unter `kreisFakten`. Jede
+  Option setzt über `set` einen oder mehrere Fakten, `when` blendet sie nach
+  Netzform aus. Was der Kreis nicht selbst setzt, erbt er von der Anlage.
 * **Spalte im Druckbogen ergänzen** — Eintrag unter `protocol.messtabelle`.
   `from` sagt, woher der Wert kommt: `{ "step", "input" }` ein einzelnes Feld,
   `{ "step", "gruppe" }` der maßgebliche Wert einer Feldgruppe, `{ "step" }`

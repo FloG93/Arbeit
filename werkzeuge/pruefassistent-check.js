@@ -47,6 +47,18 @@ const TAPS = () => {
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? '  ✓ ' : '  ✗ ') + msg); if (!ok) fails++; };
 
+/* Seit Paket 3 liegen die Messschritte im Stromkreis, nicht am Auftrag.
+   Diese Hilfe öffnet den n-ten Kreis, damit seine Schritte anklickbar sind. */
+async function openKreis(page, index = 0) {
+  await page.evaluate(i => {
+    const job = Pruefung.store.activeJob();
+    Pruefung.nav.kreisId = job.kreise[i].id;
+    Pruefung.nav.stepId = null;
+    Pruefung.store.set({ tab: 'plan' });
+  }, index);
+  await page.waitForTimeout(150);
+}
+
 async function runWizard(page) {
   for (let i = 0; i < 25; i++) {
     const a = page.locator('.answer');
@@ -76,7 +88,7 @@ async function runWizard(page) {
   console.log('Fix 1 — Komma beim Tippen');
   await page.locator('.norm-card:not([disabled])').first().click();
   await runWizard(page);
-  await page.locator('.tab-btn', { hasText: /plan/i }).click();
+  await openKreis(page);
   await page.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click();
   await page.waitForTimeout(150);
   const field = () => page.locator('.measure-line input.input').first();
@@ -87,7 +99,7 @@ async function runWizard(page) {
     await page.waitForTimeout(200);
     check(await field().inputValue() === typed, 'getippt „' + typed + '“ → Feld zeigt „' + await field().inputValue() + '“');
   }
-  const stored = await page.evaluate(() => { const j = Pruefung.store.activeJob(); return j.results['s-iso-widerstand'].values.riso_l_pe; });
+  const stored = await page.evaluate(() => Pruefung.store.resultOf(Pruefung.store.activeJob(), 's-iso-widerstand').values.riso_l_pe);
   check(stored === 0.4, 'gespeichert als ' + stored);
   const badge = await page.locator('.measure-row').first().locator('.limit-badge').first().getAttribute('class');
   check(/mangel/.test(badge), 'Riso 0,4 MΩ am Feld als Mangel markiert (' + badge + ')');
@@ -150,8 +162,7 @@ async function runWizard(page) {
   check(due === '2027-03-31', 'Datum 31.03.2026 + 12 Monate → ' + due);
 
   console.log('Fix 7 — Zurück-Taste');
-  await page.locator('.tab-btn', { hasText: /plan/i }).click();
-  await page.waitForTimeout(100);
+  await openKreis(page);
   await page.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click();
   await page.waitForTimeout(100);
   await page.goBack();
@@ -260,19 +271,18 @@ async function runWizard(page) {
 
     // Alter Auftrag: r_pa wandert zum neuen Schritt
     await p4.evaluate(() => {
-      const raw = JSON.parse(localStorage.getItem('pruefung.v1'));
-      const job = raw.jobs[0];
-      job.results['s-durchgang-schutzleiter'] = { values: { r_pe_max: 0.3, r_pa: 0.42 }, at: 1 };
+      const job = Pruefung.store.state.jobs[0];
+      job.kreise[0].results['s-durchgang-schutzleiter'] = { values: { r_pe_max: 0.3, r_pa: 0.42 }, at: 1 };
       delete job.results['s-pa-durchgaengigkeit'];
-      localStorage.setItem('pruefung.v1', JSON.stringify(raw));
+      Pruefung.store.save(true);
     });
     await p4.reload({ waitUntil: 'networkidle' }); await p4.waitForTimeout(500);
     const gewandert = await p4.evaluate(() => {
       const j = Pruefung.store.state.jobs[0];
       return {
         neu: j.results['s-pa-durchgaengigkeit'] && j.results['s-pa-durchgaengigkeit'].values.r_pa,
-        alt: j.results['s-durchgang-schutzleiter'].values.r_pa,
-        rpe: j.results['s-durchgang-schutzleiter'].values.r_pe_max,
+        alt: j.kreise[0].results['s-durchgang-schutzleiter'].values.r_pa,
+        rpe: j.kreise[0].results['s-durchgang-schutzleiter'].values.r_pe_max,
       };
     });
     check(gewandert.neu === 0.42 && gewandert.alt === undefined && gewandert.rpe === 0.3,
@@ -291,7 +301,7 @@ async function runWizard(page) {
     await p5.reload({ waitUntil: 'networkidle' }); await p5.waitForTimeout(400);
     await p5.locator('.norm-card:not([disabled])').first().click(); await p5.waitForTimeout(120);
     await runWizard(p5);
-    await p5.locator('.tab-btn', { hasText: /^Plan$/ }).click(); await p5.waitForTimeout(150);
+    await openKreis(p5);
 
     const typeInto = async (sel, text) => {
       await p5.locator(sel).click();
@@ -303,8 +313,8 @@ async function runWizard(page) {
       const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
       const step = pack.stepById.get(id);
       return {
-        verdict: Pruefung.plan.verdict(pack, step, j.session.facts, j.results[id]) || 'offen',
-        key: Pruefung.plan.keyValue(step, j.results[id]),
+        verdict: Pruefung.plan.verdict(pack, step, Pruefung.plan.facts(j, j.kreise[0]), Pruefung.store.resultOf(j, id)) || 'offen',
+        key: Pruefung.plan.keyValue(step, Pruefung.store.resultOf(j, id)),
       };
     }, stepId);
 
@@ -363,16 +373,16 @@ async function runWizard(page) {
     await typeInto('[data-fkey="m-s-beruehrungsspannung-u_mess"]', '30');
     const ohneSoll = await p5.evaluate(() => {
       const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
-      const entry = Pruefung.plan.ensure(j, pack).find(e => e.step.id === 's-beruehrungsspannung');
+      const entry = Pruefung.plan.ensure(j, pack, j.kreise[0]).find(e => e.step.id === 's-beruehrungsspannung');
       return Pruefung.limits.format(entry.limit);
     });
     check(ohneSoll === '≤ 50 V', 'ohne eingetragene Grenze gilt der Tabellenwert: ' + ohneSoll);
     await p5.locator('.quick-chip', { hasText: '25' }).click(); await p5.waitForTimeout(200);
     const mitSoll = await p5.evaluate(() => {
       const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
-      const entry = Pruefung.plan.ensure(j, pack).find(e => e.step.id === 's-beruehrungsspannung');
+      const entry = Pruefung.plan.ensure(j, pack, j.kreise[0]).find(e => e.step.id === 's-beruehrungsspannung');
       return { soll: Pruefung.limits.format(entry.limit),
-               verdict: Pruefung.plan.verdict(pack, pack.stepById.get('s-beruehrungsspannung'), j.session.facts, j.results['s-beruehrungsspannung']) };
+               verdict: Pruefung.plan.verdict(pack, pack.stepById.get('s-beruehrungsspannung'), Pruefung.plan.facts(j, j.kreise[0]), Pruefung.store.resultOf(j, 's-beruehrungsspannung')) };
     });
     check(mitSoll.soll === '≤ 25 V' && mitSoll.verdict === 'mangel',
       'eingetragene Grenze schlägt die Tabelle, 30 V > 25 V ist ein Mangel: ' + JSON.stringify(mitSoll));
@@ -386,6 +396,147 @@ async function runWizard(page) {
     check(/Abgang Küche/.test(anhang) && !/287/.test(anhang) && !/Mit Verbraucher/.test(anhang),
       'Anhang nennt die Messstellen; Ik und Riso mit Verbraucher stehen in der Tabelle');
     await c5.close();
+  }
+
+  console.log('Paket 3 — Stromkreise');
+  {
+    const c7 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p7 = await c7.newPage();
+    p7.on('pageerror', e => errors.push(e.message));
+    p7.on('console', m => {
+      if (m.type() !== 'warning' && m.type() !== 'error') return;
+      if (/neueren Fassung/.test(m.text())) return; // dieser Test löst sie absichtlich aus
+      errors.push('[' + m.type() + '] ' + m.text());
+    });
+    await p7.goto(BASE, { waitUntil: 'networkidle' });
+    await p7.evaluate(() => localStorage.clear());
+    await p7.reload({ waitUntil: 'networkidle' }); await p7.waitForTimeout(400);
+    await p7.locator('.norm-card:not([disabled])').first().click(); await p7.waitForTimeout(120);
+    await runWizard(p7);
+    await p7.locator('.tab-btn', { hasText: /^Plan$/ }).click(); await p7.waitForTimeout(200);
+
+    check(await p7.locator('.job-card').count() === 1,
+      'ein neuer Auftrag bringt einen Stromkreis mit');
+
+    // „+" legt den zweiten an und öffnet ihn
+    await p7.locator('.punkt-add', { hasText: 'Stromkreis hinzufügen' }).click(); await p7.waitForTimeout(250);
+    check(/Stromkreis 2/.test(await p7.locator('.q-title').first().textContent()),
+      '„+" legt Stromkreis 2 an und öffnet ihn');
+    await p7.locator('[data-fkey^="kreis-ziel-"]').click();
+    await p7.keyboard.type('Wallbox Garage', { delay: 10 });
+    await p7.waitForTimeout(250);
+    check(await p7.locator('.q-title').first().textContent() === 'Stromkreis 2 · Wallbox Garage'
+       && await p7.evaluate(() => document.activeElement.dataset.fkey || '').then(k => /kreis-ziel/.test(k)),
+      'Zielbezeichnung führt den Titel nach, ohne den Fokus zu verlieren');
+
+    // Der zweite Kreis bekommt einen abweichenden Nennfehlerstrom
+    await p7.locator('[data-kreisfakt="rcdIn-300ma"]').click(); await p7.waitForTimeout(250);
+    check(await p7.locator('.card', { hasText: 'Abweichend von der Anlage' }).locator('.hint-text').count() === 1,
+      'die Abweichung ist als solche gekennzeichnet');
+
+    // Derselbe Messwert, zwei Grenzwerte — der Kernfall dieses Pakets
+    const messen = async (index, wert) => {
+      await p7.evaluate(i => {
+        Pruefung.nav.kreisId = Pruefung.store.activeJob().kreise[i].id;
+        Pruefung.nav.stepId = 's-rcd-ausloesestrom';
+        Pruefung.render();
+      }, index);
+      await p7.waitForTimeout(150);
+      for (const f of ['i_0', 'i_180']) {
+        await p7.locator('[data-fkey="m-s-rcd-ausloesestrom-' + f + '"]').click();
+        await p7.keyboard.press('Control+A'); await p7.keyboard.press('Backspace');
+        await p7.keyboard.type(String(wert), { delay: 30 });
+        await p7.waitForTimeout(150);
+      }
+    };
+    await messen(0, 22);
+    await messen(1, 22);
+    const urteile = await p7.evaluate(() => {
+      const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      const step = pack.stepById.get('s-rcd-ausloesestrom');
+      return j.kreise.map(k => ({
+        nr: k.nr,
+        verdict: Pruefung.plan.verdict(pack, step, Pruefung.plan.facts(j, k), k.results['s-rcd-ausloesestrom']),
+        grenze: Pruefung.limits.format(Pruefung.limits.forStep(step, Pruefung.plan.facts(j, k))),
+      }));
+    });
+    check(urteile[0].verdict === 'ok' && urteile[1].verdict === 'mangel',
+      'derselbe Messwert, jeder Kreis gegen seinen eigenen Grenzwert: '
+      + urteile.map(u => 'Kreis ' + u.nr + ' ' + u.grenze + ' → ' + u.verdict).join(' | '));
+
+    // Messwerte liegen am Kreis, nicht am Auftrag
+    const beutel = await p7.evaluate(() => {
+      const j = Pruefung.store.activeJob();
+      return { amAuftrag: !!j.results['s-rcd-ausloesestrom'], amKreis: !!j.kreise[1].results['s-rcd-ausloesestrom'] };
+    });
+    check(!beutel.amAuftrag && beutel.amKreis, 'Messwerte liegen am Stromkreis, nicht am Auftrag');
+
+    // Zurück-Taste: Schritt → Kreis → Liste
+    await p7.evaluate(() => { Pruefung.nav.stepId = null; Pruefung.render(); });
+    await p7.waitForTimeout(200);
+    await p7.locator('.step-card').first().click(); await p7.waitForTimeout(200);
+    await p7.goBack(); await p7.waitForTimeout(300);
+    check(await p7.locator('[data-fkey^="kreis-ziel-"]').count() === 1, 'Zurück führt vom Schritt in den Stromkreis');
+    await p7.evaluate(() => { Pruefung.nav.kreisId = null; Pruefung.render(); });
+    await p7.waitForTimeout(150);
+    check(await p7.locator('.job-card').count() === 2, 'die Liste zeigt beide Stromkreise');
+
+    // Fortschritt zählt Anlage und Kreise zusammen
+    const summe = await p7.evaluate(() => {
+      const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      const anlage = Pruefung.plan.summary(pack, j.session, Pruefung.plan.ensure(j, pack), j.results);
+      return { gesamt: Pruefung.plan.summaryAll(j, pack).total, nurAnlage: anlage.total };
+    });
+    check(summe.gesamt > summe.nurAnlage,
+      'der Fortschritt zählt die Stromkreise mit (' + summe.nurAnlage + ' Anlage → ' + summe.gesamt + ' gesamt)');
+
+    // Kopieren übernimmt Stammdaten, aber keine Messwerte
+    await p7.locator('.job-card', { hasText: 'Wallbox Garage' }).locator('.mini-btn', { hasText: 'Kopieren' }).click();
+    await p7.waitForTimeout(250);
+    const kopie = await p7.evaluate(() => {
+      const k = Pruefung.store.activeJob().kreise[2];
+      return { ziel: k.ziel, nr: k.nr, rcdIn: k.facts.rcdIn, messwerte: Object.keys(k.results).length };
+    });
+    check(kopie.ziel === 'Wallbox Garage' && kopie.nr === '3' && kopie.rcdIn === '300ma' && kopie.messwerte === 0,
+      'Kopieren übernimmt Stammdaten und Abweichung, aber keine Messwerte: ' + JSON.stringify(kopie));
+
+    // Alt-Auftrag ohne Stromkreise wird migriert
+    await p7.evaluate(() => {
+      const job = Pruefung.store.state.jobs[0];
+      delete job.kreise;
+      job.results['s-iso-widerstand'] = { values: { riso_l_pe: 42 }, at: 1 };
+      job.protocol.anlagenteil = 'UV Keller';
+      Pruefung.store.save(true);
+    });
+    await p7.reload({ waitUntil: 'networkidle' }); await p7.waitForTimeout(500);
+    const migriert = await p7.evaluate(() => {
+      const j = Pruefung.store.state.jobs[0];
+      return {
+        kreise: j.kreise.length,
+        nr: j.kreise[0].nr,
+        ziel: j.kreise[0].ziel,
+        amKreis: j.kreise[0].results['s-iso-widerstand'] && j.kreise[0].results['s-iso-widerstand'].values.riso_l_pe,
+        amAuftrag: !!j.results['s-iso-widerstand'],
+      };
+    });
+    check(migriert.kreise === 1 && migriert.nr === '1' && migriert.ziel === 'UV Keller'
+       && migriert.amKreis === 42 && !migriert.amAuftrag,
+      'alter Auftrag wird zu einem Stromkreis, die Messwerte wandern mit: ' + JSON.stringify(migriert));
+
+    // Gespeicherter Stand einer neueren Fassung wird nicht weggeworfen
+    await p7.evaluate(() => {
+      Pruefung.store.state.schemaVersion = 99;
+      Pruefung.store.state.zukunft = 'darf nicht verloren gehen';
+      Pruefung.store.save(true);
+    });
+    await p7.reload({ waitUntil: 'networkidle' }); await p7.waitForTimeout(500);
+    const ueberlebt = await p7.evaluate(() => ({
+      jobs: Pruefung.store.state.jobs.length,
+      zukunft: Pruefung.store.state.zukunft,
+    }));
+    check(ueberlebt.jobs === 1 && ueberlebt.zukunft === 'darf nicht verloren gehen',
+      'ein Stand aus einer neueren Fassung wird übernommen statt gelöscht');
+    await c7.close();
   }
 
   console.log('Druckbogen im Aufbau des IHK-Protokolls');
@@ -443,15 +594,18 @@ async function runWizard(page) {
       'Weitere Prüfschritte', 'Verwendete Messgeräte', 'Prüfergebnis', 'Mängel und Bemerkungen'];
     check(bloecke.every(t => bogen.includes(t)), 'Bogen hat alle Blöcke des Formulars: '
       + bloecke.filter(t => !bogen.includes(t)).join(', ') || 'alle da');
-    check(kopf.length === 17 && kopf[0] === 'Nr.' && kopf.includes('Zs (Ω)') && kopf.includes('Ik (A)')
-       && kopf.includes('Riso ohne (MΩ)') && kopf.includes('Riso mit (MΩ)') && kopf.includes('Umess (V)') && kopf.includes('RPE (Ω)'),
-      'Messtabelle hat die 17 Spalten des Formulars');
+    check(kopf.length === 18 && kopf[0] === 'Nr.' && kopf.includes('Adern') && kopf.includes('mm²')
+       && kopf.includes('Zs (Ω)') && kopf.includes('Ik (A)') && kopf.includes('Riso ohne (MΩ)')
+       && kopf.includes('Riso mit (MΩ)') && kopf.includes('Umess (V)') && kopf.includes('RPE (Ω)'),
+      'Messtabelle hat die 18 Spalten des Formulars: ' + kopf.length);
     const zellen = await p6.locator('table.p-mess tbody td').allTextContents();
-    check(zellen[6] === '0,82' && zellen[7] === '280' && zellen[8] === '185' && zellen[9] === '1,8'
-       && zellen[16] === '0,28',
-      'Werte stehen in den richtigen Spalten: ' + JSON.stringify(zellen.slice(6, 11)) + ' … RPE ' + zellen[16]);
-    check(zellen[10] === 'allgemein',
-      'RCD-Spalte zeigt den Kurztext, nicht den Antwortsatz: „' + zellen[10] + '“');
+    const spalte = name => zellen[kopf.indexOf(name)];
+    check(spalte('Zs (Ω)') === '0,82' && spalte('Ik (A)') === '280' && spalte('Riso ohne (MΩ)') === '185'
+       && spalte('Riso mit (MΩ)') === '1,8' && spalte('RPE (Ω)') === '0,28',
+      'Werte stehen in den richtigen Spalten: Zs ' + spalte('Zs (Ω)') + ' · Ik ' + spalte('Ik (A)')
+      + ' · Riso ' + spalte('Riso ohne (MΩ)') + '/' + spalte('Riso mit (MΩ)') + ' · RPE ' + spalte('RPE (Ω)'));
+    check(spalte('RCD Art') === 'allgemein',
+      'RCD-Spalte zeigt den Kurztext, nicht den Antwortsatz: „' + spalte('RCD Art') + '“');
     check(/Die elektrische Anlage entspricht den anerkannten Regeln/.test(bogen) && /☒ ja/.test(bogen)
        && /Erklärung steht auf „ja", obwohl/.test(bogen),
       'Leitsatz steht im Bogen, angekreuzt, mit Vermerk zum Widerspruch');
@@ -546,11 +700,14 @@ async function runWizard(page) {
     found.push(...await p2.evaluate(AUDIT));
     await p2.locator('.tab-btn', { hasText: /plan/i }).click(); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    await openKreis(p2);
+    // Die Stromkreis-Ansicht mit Stammdaten und Abweichungen mitprüfen.
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click(); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     // Potentialausgleich: lange Checkliste, und alle vier Zustände einmal
     // gezeichnet — „n. a." muss im Kontrast-Audit vorkommen.
-    await p2.evaluate(() => { Pruefung.nav.stepId = 's-pa-durchgaengigkeit'; Pruefung.render(); });
+    await p2.evaluate(() => { Pruefung.nav.kreisId = null; Pruefung.nav.stepId = 's-pa-durchgaengigkeit'; Pruefung.render(); });
     await p2.waitForTimeout(100);
     const naRow = p2.locator('.check-row').first();
     for (let i = 0; i < 3; i++) { await naRow.click(); await p2.waitForTimeout(40); }

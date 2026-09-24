@@ -6,7 +6,7 @@
  * mit Begründung, aber nicht verriegelt: eine Prüfung im Feld läuft nie ganz
  * linear, und ein bevormundendes Werkzeug wird umgangen statt benutzt. */
 (function (P) {
-  const { el, num, plural } = P.util;
+  const { el, num, plural, matches } = P.util;
   const U = P.ui;
 
   P.views = P.views || {};
@@ -28,20 +28,23 @@
     const pack = P.data.packById.get(job.normId);
     if (!pack || !job.session.done) return needWizard();
 
-    const entries = P.plan.ensure(job, pack);
+    const kreis = P.nav.kreisId != null ? P.store.kreis(job, P.nav.kreisId) : null;
+    if (P.nav.kreisId != null && !kreis) P.nav.kreisId = null;
+
+    const entries = P.plan.ensure(job, pack, kreis);
     if (P.nav.stepId) {
       const entry = entries.find(e => e.step.id === P.nav.stepId);
-      if (entry) return stepDetail(job, pack, entries, entry);
+      if (entry) return stepDetail(job, pack, entries, entry, kreis);
       P.nav.stepId = null;
     }
+    return kreis ? kreisAnsicht(job, pack, kreis, entries) : anlagenAnsicht(job, pack, entries);
+  };
 
-    const facts = job.session.facts;
-    const sum = P.plan.summary(pack, job.session, entries, job.results);
+  /* Die Schrittliste — für die Anlage und für jeden Stromkreis dieselbe. */
+  function schrittListe(job, pack, entries, kreis) {
+    const facts = P.plan.facts(job, kreis);
+    const holder = kreis || job;
     const children = [];
-
-    children.push(U.progress(sum.done, sum.total,
-      sum.done + ' von ' + sum.total + ' erledigt' + (sum.mangel ? ' · ' + plural(sum.mangel, 'Mangel', 'Mängel') : '') + (sum.grenzwertig ? ' · ' + sum.grenzwertig + ' grenzwertig' : '')));
-
     let lastPhase = null;
     let nr = 0;
     for (const entry of entries) {
@@ -55,7 +58,7 @@
         ]));
       }
       nr++;
-      const result = job.results[step.id];
+      const result = holder.results[step.id];
       const verdict = P.plan.verdict(pack, step, facts, result);
       const blocked = entry.blockedBy.length > 0;
       const overridden = P.plan.overridden(pack, step, facts, result);
@@ -80,21 +83,215 @@
       ]));
     }
 
-    const orphans = P.plan.orphans(job, entries);
+    const orphans = P.plan.orphans(holder, entries);
     if (orphans.length) {
       children.push(el('div', { class: 'w-note' }, [
         el('span', { class: 'sym' }, 'i'),
         el('div', { class: 't' }, orphans.length + ' erfasste Schritte stehen nicht mehr in der Datenbasis. Die Werte bleiben im Protokoll erhalten.'),
       ]));
     }
+    return children;
+  }
+
+  const kreisName = kreis => 'Stromkreis ' + (kreis.nr || '?') + (kreis.ziel ? ' · ' + kreis.ziel : '');
+
+  function kreisZeile(kreis) {
+    const teile = [];
+    const l = kreis.leitung || {};
+    const sch = kreis.schutz || {};
+    if (l.typ) teile.push(l.typ + (l.adern && l.querschnitt ? ' ' + l.adern + '×' + num(l.querschnitt) : ''));
+    if (sch.char || sch.in) teile.push((sch.art === 'gg' ? 'gG ' : (sch.char || '')) + (sch.in || ''));
+    return teile.join(' · ');
+  }
+
+  /* Der Plan der Anlage: erst die Schritte, die einmal je Anlage gelten,
+   * darunter die Stromkreise des Verteilers. */
+  function anlagenAnsicht(job, pack, entries) {
+    const sum = P.plan.summaryAll(job, pack);
+    const children = [];
+    children.push(U.progress(sum.done, sum.total,
+      sum.done + ' von ' + sum.total + ' erledigt' + (sum.mangel ? ' · ' + plural(sum.mangel, 'Mangel', 'Mängel') : '') + (sum.grenzwertig ? ' · ' + sum.grenzwertig + ' grenzwertig' : '')));
+
+    children.push(schrittListe(job, pack, entries, null));
+
+    const kreise = job.kreise || [];
+    children.push(U.sectionHead('Stromkreise', kreise.length
+      ? kreise.length + (kreise.length === 1 ? ' Stromkreis' : ' Stromkreise')
+      : 'noch keiner angelegt'));
+    children.push(el('div', { class: 'step-list' }, kreise.map((kreis, i) => {
+      const kEntries = P.plan.ensure(job, pack, kreis);
+      const kSum = P.plan.summary(pack, job.session, kEntries, kreis.results, P.plan.facts(job, kreis));
+      const oeffnen = () => { P.nav.kreisId = kreis.id; P.nav.stepId = null; P.render(); };
+      return el('div', { class: 'job-card' }, [
+        el('button', { class: 'job-open', type: 'button', onClick: oeffnen }, [
+          el('div', { class: 'info' }, [
+            el('div', { class: 'name' }, kreisName(kreis)),
+            el('div', { class: 'meta' }, [kreisZeile(kreis), kSum.done + ' von ' + kSum.total + ' bewertet'].filter(Boolean).join(' · ')),
+          ]),
+          kSum.mangel ? U.badge(plural(kSum.mangel, 'Mangel', 'Mängel'), 'mangel')
+            : kSum.open ? U.badge(kSum.open + ' offen') : U.badge('vollständig', 'ok'),
+          el('div', { class: 'chevron' }, '›'),
+        ]),
+        el('div', { class: 'job-actions' }, [
+          el('button', { class: 'mini-btn', type: 'button', onClick: oeffnen }, 'Öffnen'),
+          el('button', {
+            class: 'mini-btn', type: 'button', disabled: i === 0,
+            'aria-label': kreisName(kreis) + ' nach oben',
+            onClick: () => P.store.moveKreis(job.id, kreis.id, -1),
+          }, '↑'),
+          el('button', {
+            class: 'mini-btn', type: 'button', disabled: i === kreise.length - 1,
+            'aria-label': kreisName(kreis) + ' nach unten',
+            onClick: () => P.store.moveKreis(job.id, kreis.id, 1),
+          }, '↓'),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            onClick: () => { const k = P.store.duplicateKreis(job.id, kreis.id); if (k) { P.nav.kreisId = k.id; P.render(); } },
+          }, 'Kopieren'),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            onClick: () => { if (confirm(kreisName(kreis) + ' mit allen Messwerten löschen?')) P.store.removeKreis(job.id, kreis.id); },
+          }, 'Löschen'),
+        ]),
+      ]);
+    })));
+    children.push(el('button', {
+      class: 'btn btn-outline btn-block punkt-add', type: 'button',
+      onClick: () => { const k = P.store.newKreis(job.id); if (k) { P.nav.kreisId = k.id; P.render(); } },
+    }, '+  Stromkreis hinzufügen'));
 
     const bottom = U.bottomBar([
       el('button', { class: 'btn btn-ghost back', type: 'button', onClick: () => P.store.set({ tab: 'wizard' }) }, 'Assistent'),
       el('button', { class: 'btn btn-primary', type: 'button', onClick: () => P.store.set({ tab: 'protokoll' }) }, 'Protokoll'),
     ]);
-
     return { view: el('div', { class: 'view' }, children), bottom };
-  };
+  }
+
+  /* Ein einzelner Stromkreis: seine Stammdaten, dann seine Prüfschritte. */
+  function kreisAnsicht(job, pack, kreis, entries) {
+    const facts = P.plan.facts(job, kreis);
+    const sum = P.plan.summary(pack, job.session, entries, kreis.results, facts);
+    const setzen = fn => P.store.patchKreis(job.id, kreis.id, fn);
+    const nachfuehren = () => {
+      document.querySelectorAll('[data-kreis-title="' + kreis.id + '"]').forEach(node => { node.textContent = kreisName(kreis); });
+    };
+    const children = [];
+
+    children.push(el('div', { class: 'q-head' }, [
+      el('div', { class: 'q-title', 'data-kreis-title': kreis.id }, kreisName(kreis)),
+      el('div', { class: 'q-hint' }, 'Gehört zu ' + (job.protocol.anlagenteil || P.data.term('verteiler', job.world, 'Verteiler'))),
+    ]));
+    children.push(U.progress(sum.done, sum.total, sum.done + ' von ' + sum.total + ' bewertet'
+      + (sum.mangel ? ' · ' + plural(sum.mangel, 'Mangel', 'Mängel') : '')));
+
+    // Stammdaten. Beim Tippen wird nicht neu gezeichnet, nur der Titel
+    // nachgeführt — sonst schluckt es den Fokus des nächsten Feldes.
+    children.push(U.card('Stammdaten', [
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field-label' }, 'Nr.'),
+        U.textInput('kreis-nr-' + kreis.id, kreis.nr, v => {
+          P.store.patchKreis(job.id, kreis.id, k => { k.nr = v; }, { silent: true });
+          nachfuehren();
+        }),
+      ]),
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field-label' }, 'Zielbezeichnung'),
+        U.textInput('kreis-ziel-' + kreis.id, kreis.ziel, v => {
+          P.store.patchKreis(job.id, kreis.id, k => { k.ziel = v; }, { silent: true });
+          nachfuehren();
+        }, { placeholder: 'z. B. Steckdosen Küche' }),
+      ]),
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field-label' }, 'Leitung'),
+        el('div', { class: 'calc-inline' }, [
+          U.textInput('kreis-typ-' + kreis.id, kreis.leitung.typ || '',
+            v => P.store.patchKreis(job.id, kreis.id, k => { k.leitung.typ = v; }, { silent: true }),
+            { placeholder: 'NYM-J' }),
+          el('div', { class: 'measure-line calc-num' }, [
+            el('div', { class: 'lbl' }, 'Adern'),
+            U.numInput('kreis-adern-' + kreis.id, kreis.leitung.adern, '',
+              v => P.store.patchKreis(job.id, kreis.id, k => { k.leitung.adern = v; }, { silent: true }),
+              { inputmode: 'numeric', 'aria-label': 'Anzahl Adern' }),
+            el('div', { class: 'unit' }, '×'),
+          ]),
+          el('div', { class: 'measure-line calc-num' }, [
+            el('div', { class: 'lbl' }, 'Querschnitt'),
+            U.numInput('kreis-quer-' + kreis.id, kreis.leitung.querschnitt, 'mm²',
+              v => P.store.patchKreis(job.id, kreis.id, k => { k.leitung.querschnitt = v; }, { silent: true }),
+              { 'aria-label': 'Querschnitt in mm²' }),
+            el('div', { class: 'unit' }, 'mm²'),
+          ]),
+        ]),
+      ]),
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field-label' }, 'Schutzorgan'),
+        el('div', { class: 'chips' }, [
+          { id: 'ls', label: 'LS' }, { id: 'gg', label: 'gG' },
+        ].map(art => el('button', {
+          class: 'chip' + ((kreis.schutz.art || 'ls') === art.id ? ' active' : ''), type: 'button',
+          onClick: () => setzen(k => { k.schutz.art = art.id; }),
+        }, art.label))),
+        (kreis.schutz.art || 'ls') === 'ls'
+          ? el('div', { class: 'chips' }, ['B', 'C', 'D'].map(c => el('button', {
+              class: 'chip' + (kreis.schutz.char === c ? ' active' : ''), type: 'button',
+              onClick: () => setzen(k => { k.schutz.char = kreis.schutz.char === c ? null : c; }),
+            }, c)))
+          : null,
+        el('div', { class: 'measure-line calc-num' }, [
+          el('div', { class: 'lbl' }, 'In'),
+          U.numInput('kreis-in-' + kreis.id, kreis.schutz.in, 'A',
+            v => P.store.patchKreis(job.id, kreis.id, k => { k.schutz.in = v; }, { silent: true }),
+            { 'aria-label': 'Nennstrom in A' }),
+          el('div', { class: 'unit' }, 'A'),
+        ]),
+      ]),
+    ]));
+
+    // Abweichende Fakten des Kreises — daran hängen seine Grenzwerte.
+    children.push(kreisFakten(job, pack, kreis, facts));
+
+    children.push(U.sectionHead('Prüfschritte', sum.total + ' Schritte'));
+    children.push(schrittListe(job, pack, entries, kreis));
+
+    const bottom = U.bottomBar([
+      el('button', { class: 'btn btn-ghost back', type: 'button', onClick: () => { P.nav.kreisId = null; P.render(); } }, 'Stromkreise'),
+      el('button', { class: 'btn btn-primary', type: 'button', onClick: () => P.store.set({ tab: 'protokoll' }) }, 'Protokoll'),
+    ]);
+    return { view: el('div', { class: 'view' }, children), bottom };
+  }
+
+  /* Was an diesem Stromkreis anders ist als am Rest der Anlage. Der Assistent
+   * hat nach dem typischen Kreis gefragt; hier steht die Abweichung — und nur
+   * sie wird gespeichert, damit eine spätere Antwortänderung durchschlägt. */
+  function kreisFakten(job, pack, kreis, facts) {
+    const gruppen = (pack.kreisFakten || []).filter(g => !g.when || matches(g.when, facts));
+    if (!gruppen.length) return null;
+    return U.card('Abweichend von der Anlage', gruppen.map(gruppe => {
+      const optionen = (gruppe.optionen || []).filter(o => !o.when || matches(o.when, facts));
+      if (!optionen.length) return null;
+      const keys = Array.from(new Set(optionen.flatMap(o => Object.keys(o.set || {}))));
+      const eigen = keys.some(k => kreis.facts[k] != null);
+      return el('div', { class: 'field' }, [
+        el('label', { class: 'field-label' }, gruppe.label),
+        el('div', { class: 'chips' }, optionen.map(option => {
+          const aktiv = Object.entries(option.set || {}).every(([k, v]) => facts[k] === v);
+          return el('button', {
+            class: 'chip' + (aktiv ? ' active' : ''), type: 'button',
+            'aria-pressed': aktiv ? 'true' : 'false',
+            'data-kreisfakt': gruppe.id + '-' + option.id,
+            onClick: () => P.store.patchKreis(job.id, kreis.id, k => {
+              // Noch einmal auf die eigene Auswahl tippen setzt sie zurück —
+              // dann gilt wieder, was der Assistent für die Anlage gesagt hat.
+              if (aktiv && eigen) keys.forEach(key => { delete k.facts[key]; });
+              else Object.assign(k.facts, option.set);
+              k.plan = null; // Der Plan des Kreises hängt an seinen Fakten.
+            }),
+          }, option.label);
+        })),
+        eigen ? el('div', { class: 'hint-text' }, 'Weicht von der Anlage ab — noch einmal tippen setzt zurück.') : null,
+      ]);
+    }).filter(Boolean));
+  }
 
   function subtitleFor(entry, result, verdict) {
     const step = entry.step;
@@ -134,10 +331,13 @@
     ]);
   }
 
-  function stepDetail(job, pack, entries, entry) {
+  function stepDetail(job, pack, entries, entry, kreis) {
     const step = entry.step;
-    const facts = job.session.facts;
-    const result = job.results[step.id] || {};
+    const facts = P.plan.facts(job, kreis);
+    const holder = kreis || job;
+    const result = holder.results[step.id] || {};
+    // Jede Schreiboperation muss wissen, in welchen Beutel sie gehört.
+    const wo = { kreisId: kreis ? kreis.id : null };
     const verdict = P.plan.verdict(pack, step, facts, result);
     const index = entries.indexOf(entry);
     const next = entries[index + 1];
@@ -150,7 +350,7 @@
         verdict ? U.verdictPill(verdict) : null,
       ]),
       el('div', { class: 'q-title' }, step.title),
-      el('div', { class: 'q-hint' }, P.plan.explain(pack, job.session, entry)),
+      el('div', { class: 'q-hint' }, (kreis ? kreisName(kreis) + ' · ' : '') + P.plan.explain(pack, job.session, entry)),
     ]));
 
     if (entry.blockedBy.length) {
@@ -199,11 +399,11 @@
         onValue: v => P.store.setResult(job.id, step.id, {
           values: Object.assign({}, result.values, { [input.id]: v }),
           overrange: Object.assign({}, result.overrange, { [input.id]: false }),
-        }),
+        }, wo),
         onOverrange: v => P.store.setResult(job.id, step.id, {
           values: Object.assign({}, result.values, { [input.id]: v }),
           overrange: Object.assign({}, result.overrange, { [input.id]: v != null }),
-        }),
+        }, wo),
       });
       const inputs = step.measure.inputs || [];
       const gruppen = step.measure.gruppen || [];
@@ -231,9 +431,9 @@
           messstellen,
           punkte: result.punkte || [],
           limit: P.limits.forPunkt(step, messstellen, facts),
-          onAdd: () => P.store.addPunkt(job.id, step.id),
-          onPatch: (punktId, patch) => P.store.patchPunkt(job.id, step.id, punktId, patch),
-          onRemove: punktId => P.store.removePunkt(job.id, step.id, punktId),
+          onAdd: () => P.store.addPunkt(job.id, step.id, null, wo),
+          onPatch: (punktId, patch) => P.store.patchPunkt(job.id, step.id, punktId, patch, wo),
+          onRemove: punktId => P.store.removePunkt(job.id, step.id, punktId, wo),
         }));
       }
       if (entry.limit && entry.limit.tableId) {
@@ -255,11 +455,11 @@
         U.checkRow(item, result.checks ? result.checks[item.id] : undefined, value =>
           P.store.setResult(job.id, step.id, {
             checks: Object.assign({}, result.checks, { [item.id]: value }),
-          })))));
+          }, wo)))));
     }
 
     children.push(U.sectionHead('Bewertung', verdict && !result.verdict ? 'automatisch: ' + U.verdictLabel(verdict) : ''));
-    children.push(U.verdictSwitch(result.verdict || null, v => P.store.setResult(job.id, step.id, { verdict: v })));
+    children.push(U.verdictSwitch(result.verdict || null, v => P.store.setResult(job.id, step.id, { verdict: v }, wo)));
     if (P.plan.overridden(pack, step, facts, result)) {
       children.push(el('div', { class: 'w-warn' }, [
         el('span', { class: 'sym' }, '!'),
@@ -271,7 +471,7 @@
       el('textarea', {
         class: 'input', 'data-fkey': 'note-' + step.id, value: result.note || '',
         placeholder: 'Was ist aufgefallen?',
-        onInput: e => P.store.setResult(job.id, step.id, { note: e.target.value }),
+        onInput: e => P.store.setResult(job.id, step.id, { note: e.target.value }, wo),
       }),
     ]));
 
@@ -283,7 +483,7 @@
     }
 
     const bottom = U.bottomBar([
-      el('button', { class: 'btn btn-ghost back', type: 'button', onClick: () => { P.nav.stepId = null; P.render(); } }, 'Plan'),
+      el('button', { class: 'btn btn-ghost back', type: 'button', onClick: () => { P.nav.stepId = null; P.render(); } }, kreis ? 'Kreis' : 'Plan'),
       next
         ? el('button', { class: 'btn btn-primary', type: 'button', onClick: () => { P.nav.stepId = next.step.id; P.render(); } }, 'Weiter: ' + (next.step.short || next.step.title))
         : el('button', { class: 'btn btn-primary', type: 'button', onClick: () => P.store.set({ tab: 'protokoll' }) }, 'Zum Protokoll'),

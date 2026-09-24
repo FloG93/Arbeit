@@ -8,6 +8,42 @@
   "datenstand": "2026-09",
   "reviewed": { "by": "", "date": "" },
   "note": "Erst- und Wiederholungsprüfung teilen sich Prüfschritte und Grenzwerte. Was sie unterscheidet — Anlass, Umfang, Sicherheitshinweise — steckt in den Varianten und in when-Bedingungen, nicht in zwei gepflegten Dateien.",
+  "kreisFakten": [
+    {
+      "id": "stromkreisart", "label": "Stromkreisart",
+      "optionen": [
+        { "id": "end-tn", "label": "Endstromkreis ≤ 32 A", "when": { "netzform": ["tn-c", "tn-s", "tn-c-s"] }, "set": { "stromkreisart": "endstromkreis", "abschaltzeitFall": "tn-endstromkreis" } },
+        { "id": "vert-tn", "label": "Verteilungsstromkreis", "when": { "netzform": ["tn-c", "tn-s", "tn-c-s"] }, "set": { "stromkreisart": "verteilung", "abschaltzeitFall": "tn-verteilung" } },
+        { "id": "end-tt", "label": "Endstromkreis ≤ 32 A", "when": { "netzform": "tt" }, "set": { "stromkreisart": "endstromkreis", "abschaltzeitFall": "tt-endstromkreis" } },
+        { "id": "vert-tt", "label": "Verteilungsstromkreis", "when": { "netzform": "tt" }, "set": { "stromkreisart": "verteilung", "abschaltzeitFall": "tt-verteilung" } }
+      ]
+    },
+    {
+      "id": "rcd", "label": "Fehlerstrom-Schutzeinrichtung",
+      "optionen": [
+        { "id": "allgemein", "label": "RCD allgemein", "set": { "rcd": "ja", "rcdBauart": "allgemein" } },
+        { "id": "selektiv", "label": "RCD selektiv (S)", "set": { "rcd": "ja", "rcdBauart": "selektiv" } },
+        { "id": "nein", "label": "kein RCD", "set": { "rcd": "nein" } }
+      ]
+    },
+    {
+      "id": "rcdIn", "label": "Nennfehlerstrom IΔn", "when": { "rcd": "ja" },
+      "optionen": [
+        { "id": "30ma", "label": "30 mA", "set": { "rcdIn": "30ma" } },
+        { "id": "100ma", "label": "100 mA", "set": { "rcdIn": "100ma" } },
+        { "id": "300ma", "label": "300 mA", "set": { "rcdIn": "300ma" } },
+        { "id": "500ma", "label": "500 mA", "set": { "rcdIn": "500ma" } }
+      ]
+    },
+    {
+      "id": "nennspannung", "label": "Nennspannung",
+      "optionen": [
+        { "id": "bis500", "label": "bis 500 V", "set": { "nennspannung": "bis500" } },
+        { "id": "selv-pelv", "label": "SELV / PELV", "set": { "nennspannung": "selv-pelv" } },
+        { "id": "ueber500", "label": "über 500 V", "set": { "nennspannung": "ueber500" } }
+      ]
+    }
+  ],
   "factLabels": {
     "rcdBauart": {
       "allgemein": "allgemein",
@@ -94,7 +130,8 @@
       { "id": "nr", "label": "Nr.", "from": { "kreis": "nr" } },
       { "id": "ziel", "label": "Zielbezeichnung", "from": { "kreis": "ziel" }, "breit": true },
       { "id": "typ", "label": "Typ", "from": { "kreis": "leitung.typ" } },
-      { "id": "quer", "label": "Adern × mm²", "from": { "kreis": "leitung.quer" } },
+      { "id": "adern", "label": "Adern", "from": { "kreis": "leitung.adern" } },
+      { "id": "quer", "label": "mm²", "from": { "kreis": "leitung.querschnitt" } },
       { "id": "schutzart", "label": "Art / Char.", "from": { "kreis": "schutz.char" } },
       { "id": "in", "label": "In (A)", "from": { "kreis": "schutz.in" } },
       { "id": "zs", "label": "Zs (Ω)", "from": { "step": "s-schleifenimpedanz", "input": "zs" } },
@@ -203,8 +240,8 @@
     {
       "id": "q-nennspannung",
       "type": "question",
-      "title": "Welche Nennspannung hat der Stromkreis?",
-      "help": "Bestimmt Prüfspannung und Mindest-Isolationswiderstand.",
+      "title": "Welche Nennspannung haben die Stromkreise?",
+      "help": "Bestimmt Prüfspannung und Mindest-Isolationswiderstand. Gilt als Vorbelegung für die Stromkreise dieses Verteilers — am einzelnen Kreis lässt sich alles abweichend einstellen.",
       "wiki": ["grenzwerte-iso"],
       "defaultNext": "q-stromkreisart",
       "options": [
@@ -216,8 +253,8 @@
     {
       "id": "q-stromkreisart",
       "type": "question",
-      "title": "Welcher Stromkreis wird bewertet?",
-      "help": "Endstromkreise müssen schneller abschalten als Verteilungsstromkreise. Die zulässige Abschaltzeit hängt zusätzlich an der Netzform.",
+      "title": "Wie sehen die Stromkreise überwiegend aus?",
+      "help": "Endstromkreise müssen schneller abschalten als Verteilungsstromkreise. Gilt als Vorbelegung für die Stromkreise dieses Verteilers — am einzelnen Kreis lässt sich alles abweichend einstellen. Die zulässige Abschaltzeit hängt zusätzlich an der Netzform.",
       "wiki": ["grenzwerte-abschaltzeit"],
       "defaultNext": "q-drehstrom",
       "options": [
@@ -241,8 +278,8 @@
     {
       "id": "q-rcd",
       "type": "question",
-      "title": "Ist ein RCD (FI) vorgeschaltet?",
-      "help": "Im TT-System ist der RCD praktisch zwingend. Im TN-C-System ist er nicht möglich — dort fehlt der getrennte PE.",
+      "title": "Sind die Stromkreise überwiegend über RCD geschützt?",
+      "help": "Im TT-System ist der RCD praktisch zwingend. Im TN-C-System ist er nicht möglich — dort fehlt der getrennte PE. Gilt als Vorbelegung für die Stromkreise dieses Verteilers — am einzelnen Kreis lässt sich alles abweichend einstellen.",
       "wiki": ["grenzwerte-rcd", "messverfahren-rcd-ausloesezeit"],
       "defaultNext": "q-besonderheiten",
       "options": [
@@ -255,7 +292,7 @@
       "id": "q-rcd-nennfehlerstrom",
       "type": "question",
       "title": "Welcher Nennfehlerstrom IΔn?",
-      "help": "Bestimmt den zulässigen Auslösestrom und im TT-System den höchstzulässigen Erdungswiderstand.",
+      "help": "Bestimmt den zulässigen Auslösestrom und im TT-System den höchstzulässigen Erdungswiderstand. Gilt als Vorbelegung für die Stromkreise dieses Verteilers — am einzelnen Kreis lässt sich alles abweichend einstellen.",
       "when": { "rcd": "ja" },
       "defaultNext": "q-besonderheiten",
       "options": [
@@ -403,6 +440,7 @@
     {
       "id": "s-durchgang-schutzleiter",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 200,
       "title": "Schutzleiter (Niederohmmessung)",
@@ -445,6 +483,7 @@
     {
       "id": "s-iso-widerstand",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 300,
       "title": "Isolationswiderstand messen",
@@ -502,6 +541,7 @@
     {
       "id": "s-w-differenzstrom",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 305,
       "title": "Differenzstrom messen (statt Isolationsmessung)",
@@ -534,6 +574,7 @@
     {
       "id": "s-selv-pelv-trennung",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 310,
       "title": "Trennung der SELV-/PELV-Kreise nachweisen",
@@ -576,6 +617,7 @@
     {
       "id": "s-schleifenimpedanz",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 400,
       "title": "Schleifenimpedanz / Netzinnenwiderstand messen",
@@ -618,8 +660,6 @@
       "order": 210,
       "title": "Durchgängigkeit des Potentialausgleichs",
       "short": "PA",
-      "requires": ["s-durchgang-schutzleiter"],
-      "requiresReason": "Der Schutzleiter ist die Bezugsgröße — erst wenn er stimmt, sagt der Potentialausgleich etwas aus.",
       "instrument": "Niederohmmessgerät, Prüfstrom ≥ 200 mA",
       "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen.",
       "procedure": [
@@ -723,6 +763,7 @@
     {
       "id": "s-beruehrungsspannung",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 420,
       "title": "Berührungsspannung messen",
@@ -763,6 +804,7 @@
     {
       "id": "s-spannungsfall",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "messen",
       "order": 420,
       "title": "Spannungsfall bewerten",
@@ -803,6 +845,7 @@
     {
       "id": "s-rcd-ausloesestrom",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "erproben",
       "order": 600,
       "title": "RCD Auslösestrom messen",
@@ -837,6 +880,7 @@
     {
       "id": "s-rcd-ausloesezeit",
       "type": "messung",
+      "scope": "stromkreis",
       "phase": "erproben",
       "order": 610,
       "title": "RCD Auslösezeit messen",

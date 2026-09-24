@@ -40,7 +40,17 @@
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.schemaVersion === SCHEMA) S.state = Object.assign(defaultState(), parsed);
+        // Nicht verwerfen, sondern migrieren: Ein Hochzählen von SCHEMA würde
+        // sonst jeden gespeicherten Auftrag auf dem Gerät löschen. Unbekannte
+        // Schlüssel eines neueren Standes bleiben dabei erhalten — wer die App
+        // zurückrollt, verliert seine Daten nicht.
+        if (parsed && typeof parsed.schemaVersion === 'number') {
+          if (parsed.schemaVersion > SCHEMA) {
+            console.warn('[Prüfassistent] Gespeicherter Stand stammt aus einer neueren Fassung (Schema '
+              + parsed.schemaVersion + ' > ' + SCHEMA + '). Er wird übernommen, aber diese Fassung kennt nicht alles daraus.');
+          }
+          S.state = Object.assign(defaultState(), parsed, { schemaVersion: SCHEMA });
+        }
       } catch { /* beschädigt — lieber frisch anfangen als abstürzen */ }
     }
     if (!S.state.world || !P.data.worldById.has(S.state.world)) S.state.world = P.data.defaultWorld;
@@ -69,7 +79,8 @@
     if (pack && (!job.variantId || !pack.variantById.has(job.variantId))) {
       job.variantId = pack.variants[0] ? pack.variants[0].id : null;
     }
-    if (job.normId === 'anlage') migrateRpa(job);
+    migrateKreise(job, pack);
+    if (job.normId === 'anlage') migrateRpa(job, pack);
     const variant = pack ? P.data.variant(job.normId, job.variantId) : null;
     if (variant) {
       job.session.entry = job.session.entry || variant.entry;
@@ -81,8 +92,11 @@
   /* Der Potentialausgleich war einmal ein Feld der Schutzleitermessung. Seit
    * er einen eigenen Prüfschritt hat, wandert der Wert dorthin — sonst stünde
    * er in alten Aufträgen an einem Schritt, der ihn nicht mehr anzeigt. */
-  function migrateRpa(job) {
-    const from = job.results['s-durchgang-schutzleiter'];
+  function migrateRpa(job, pack) {
+    // Der Schutzleiter liegt seit den Stromkreisen an deren Beutel — dort
+    // steckt der alte Potentialausgleichswert, wenn es ihn noch gibt.
+    const bag = (job.kreise && job.kreise[0] && job.kreise[0].results) || job.results;
+    const from = bag['s-durchgang-schutzleiter'];
     if (!from || !from.values || from.values.r_pa == null) return job;
     const to = job.results['s-pa-durchgaengigkeit'] || {};
     if (to.values && to.values.r_pa != null) return job;
@@ -92,11 +106,44 @@
     });
     const values = Object.assign({}, from.values);
     delete values.r_pa;
-    job.results['s-durchgang-schutzleiter'] = Object.assign({}, from, { values });
+    bag['s-durchgang-schutzleiter'] = Object.assign({}, from, { values });
     return job;
   }
 
+  /* Vor den Stromkreisen war ein Auftrag genau ein Stromkreis. Seine
+   * Messwerte wandern deshalb in einen ersten Kreis — kein Auftrag muss neu
+   * angelegt werden, keine Messreihe geht verloren. */
+  function migrateKreise(job, pack) {
+    if (!pack || (job.kreise && job.kreise.length)) return job;
+    const kreisSchritte = pack.steps.filter(s => s.scope === 'stromkreis');
+    if (!kreisSchritte.length) return job; // Gerätepaket kennt keine Stromkreise
+    const results = {};
+    for (const step of kreisSchritte) {
+      if (!job.results[step.id]) continue;
+      results[step.id] = job.results[step.id];
+      delete job.results[step.id];
+    }
+    job.kreise = [normalizeKreis({
+      id: nid(),
+      nr: '1',
+      ziel: (job.protocol && job.protocol.anlagenteil) || '',
+      results,
+    })];
+    return job;
+  }
+
+  function normalizeKreis(kreis) {
+    kreis.leitung = kreis.leitung || {};
+    kreis.schutz = kreis.schutz || {};
+    kreis.facts = kreis.facts || {};
+    kreis.results = kreis.results || {};
+    kreis.plan = kreis.plan || null;
+    return kreis;
+  }
+
   function normalizeJob(job) {
+    job.kreise = Array.isArray(job.kreise) ? job.kreise : [];
+    job.kreise.forEach(normalizeKreis);
     job.session = job.session || { cursor: null, facts: {}, history: [], extraSteps: [], tags: [], done: false, resultId: null };
     job.session.facts = job.session.facts || {};
     job.session.history = job.session.history || [];
@@ -167,6 +214,11 @@
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+    // Ein Verteiler hat mindestens einen Stromkreis. Ohne ihn stünde der
+    // Prüfer vor einem Plan, in dem keine einzige Messung Platz hat.
+    if (pack.steps.some(s => s.scope === 'stromkreis')) {
+      job.kreise.push(normalizeKreis({ id: nid(), nr: '1', ziel: '' }));
+    }
     S.state.jobs.unshift(job);
     S.state.activeJobId = job.id;
     S.state.tab = 'wizard';
@@ -195,6 +247,15 @@
       session: JSON.parse(JSON.stringify(src.session)),
       plan: src.plan ? src.plan.slice() : null,
       results: {},
+      // Die Stromkreise bleiben mit Stammdaten und Fakten, die Messwerte
+      // nicht: eine übernommene Messung wäre eine erfundene.
+      kreise: (src.kreise || []).map(k => normalizeKreis({
+        id: nid(), nr: k.nr, ziel: k.ziel,
+        leitung: JSON.parse(JSON.stringify(k.leitung)),
+        schutz: JSON.parse(JSON.stringify(k.schutz)),
+        facts: JSON.parse(JSON.stringify(k.facts)),
+        calcId: k.calcId || null,
+      })),
       interval: { presetId: src.interval.presetId, months: src.interval.months, nextDue: null },
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -304,11 +365,85 @@
     S.patchCalc(id, c => { c.bearbeiter = value; }, { silent: true });
   };
 
+  /* In welchen Beutel ein Ergebnis gehört, sagt der Geltungsbereich des
+   * Schrittes: Anlagen-Schritte liegen am Auftrag, Stromkreis-Schritte am
+   * Kreis. Ohne kreisId trifft es den ersten Kreis — bei einem Verteiler mit
+   * einem Stromkreis gibt es nichts zu verwechseln, und alte Aufrufe bleiben
+   * damit richtig. */
+  function resultsBag(job, stepId, kreisId) {
+    const pack = P.data.packById.get(job.normId);
+    const step = pack && pack.stepById.get(stepId);
+    if (!step || step.scope !== 'stromkreis') return job.results;
+    const kreis = (kreisId != null && S.kreis(job, kreisId)) || job.kreise[0];
+    return kreis ? kreis.results : job.results;
+  }
+  S.resultsBag = resultsBag;
+
   S.setResult = function setResult(jobId, stepId, patch, opts) {
     return S.patchJob(jobId, job => {
-      const prev = job.results[stepId] || {};
-      job.results[stepId] = Object.assign({}, prev, patch, { at: Date.now() });
+      const bag = resultsBag(job, stepId, opts && opts.kreisId);
+      const prev = bag[stepId] || {};
+      bag[stepId] = Object.assign({}, prev, patch, { at: Date.now() });
     }, opts);
+  };
+
+  /* ─── Stromkreise ───
+   * Ein Auftrag ist ein Verteiler mit n Stromkreisen. Die Antworten des
+   * Assistenten sind die Vorbelegung für einen neuen Kreis, kein Zwang: In
+   * einem Verteiler steht ein Endstromkreis mit 30-mA-RCD neben einer
+   * Zuleitung mit 300 mA, und jeder wird gegen seinen eigenen Grenzwert
+   * bewertet. */
+  S.kreis = (job, kreisId) => (job && job.kreise ? job.kreise.find(k => k.id === kreisId) : null) || null;
+
+  S.newKreis = function newKreis(jobId, init) {
+    const job = S.job(jobId);
+    if (!job) return null;
+    const nummern = job.kreise.map(k => parseInt(k.nr, 10)).filter(n => isFinite(n));
+    const naechste = nummern.length ? Math.max.apply(null, nummern) + 1 : 1;
+    const kreis = normalizeKreis(Object.assign({ id: nid(), nr: String(naechste), ziel: '' }, init || {}));
+    job.kreise.push(kreis);
+    job.updatedAt = Date.now();
+    S.save(true);
+    notify();
+    return kreis;
+  };
+
+  S.patchKreis = function patchKreis(jobId, kreisId, fn, opts) {
+    return S.patchJob(jobId, job => {
+      const kreis = S.kreis(job, kreisId);
+      if (kreis) fn(kreis);
+    }, opts);
+  };
+
+  /* Gleichartige Stromkreise gibt es in jedem Verteiler — kopieren spart das
+   * Abtippen von Leitung, Schutzorgan und RCD. Die Messwerte bleiben leer:
+   * Eine kopierte Messung wäre eine erfundene. */
+  S.duplicateKreis = function duplicateKreis(jobId, kreisId) {
+    const job = S.job(jobId);
+    const src = S.kreis(job, kreisId);
+    if (!src) return null;
+    return S.newKreis(jobId, {
+      ziel: src.ziel,
+      leitung: JSON.parse(JSON.stringify(src.leitung)),
+      schutz: JSON.parse(JSON.stringify(src.schutz)),
+      facts: JSON.parse(JSON.stringify(src.facts)),
+      calcId: src.calcId || null,
+    });
+  };
+
+  S.removeKreis = function removeKreis(jobId, kreisId) {
+    return S.patchJob(jobId, job => { job.kreise = job.kreise.filter(k => k.id !== kreisId); });
+  };
+
+  S.moveKreis = function moveKreis(jobId, kreisId, richtung) {
+    return S.patchJob(jobId, job => {
+      const i = job.kreise.findIndex(k => k.id === kreisId);
+      const j = i + richtung;
+      if (i < 0 || j < 0 || j >= job.kreise.length) return;
+      const kreise = job.kreise.slice();
+      kreise.splice(j, 0, kreise.splice(i, 1)[0]);
+      job.kreise = kreise;
+    });
   };
 
   /* Messstellen eines Schrittes: so viele, wie der Stromkreis Messpunkte hat.
@@ -316,14 +451,15 @@
    * Protokoll sie ohne Sonderweg mitnehmen. */
   function patchPunkte(jobId, stepId, fn, opts) {
     return S.patchJob(jobId, job => {
-      const prev = job.results[stepId] || {};
-      job.results[stepId] = Object.assign({}, prev, { punkte: fn(prev.punkte || []), at: Date.now() });
+      const bag = resultsBag(job, stepId, opts && opts.kreisId);
+      const prev = bag[stepId] || {};
+      bag[stepId] = Object.assign({}, prev, { punkte: fn(prev.punkte || []), at: Date.now() });
     }, opts);
   }
 
-  S.addPunkt = function addPunkt(jobId, stepId, init) {
+  S.addPunkt = function addPunkt(jobId, stepId, init, opts) {
     const punkt = Object.assign({ id: nid() }, init || {});
-    patchPunkte(jobId, stepId, list => list.concat([punkt]));
+    patchPunkte(jobId, stepId, list => list.concat([punkt]), opts);
     return punkt;
   };
 
@@ -332,11 +468,14 @@
       list.map(p => (p.id === punktId ? Object.assign({}, p, patch) : p)), opts);
   };
 
-  S.removePunkt = function removePunkt(jobId, stepId, punktId) {
-    return patchPunkte(jobId, stepId, list => list.filter(p => p.id !== punktId));
+  S.removePunkt = function removePunkt(jobId, stepId, punktId, opts) {
+    return patchPunkte(jobId, stepId, list => list.filter(p => p.id !== punktId), opts);
   };
 
-  S.resultOf = (job, stepId) => (job && job.results ? job.results[stepId] : null) || null;
+  S.resultOf = function resultOf(job, stepId, kreisId) {
+    if (!job) return null;
+    return resultsBag(job, stepId, kreisId)[stepId] || null;
+  };
 
   P.store = S;
 })(window.Pruefung);

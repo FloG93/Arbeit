@@ -379,6 +379,17 @@ größten Wert ein. Beide Wege führen zu demselben Protokolleintrag.
 
 ## Paket 3 — Stromkreise
 
+> **Erledigt** in Version 0.5.0. Abweichungen vom Plan beim Bauen:
+> Der Verteilername ist kein neues Feld `job.verteiler` geworden — das
+> vorhandene Protokollfeld `anlagenteil` trägt ihn bereits. Die Frage „wie
+> viele Stromkreise?" am Ende des Assistenten entfiel: Der Assistent kennt nur
+> Auswahlantworten, und die „+"-Fläche im Plan leistet dasselbe; jeder neue
+> Auftrag bringt Stromkreis 1 gleich mit. Die Leiter-Spalte des Bogens wurde
+> in „Adern" und „mm²" geteilt, wie im Formular, daher 18 statt 17 Spalten.
+> Gefunden beim Bauen: `s-pa-durchgaengigkeit` setzte den Schutzleiter voraus
+> — seit der am Stromkreis liegt, wäre der Anlagen-Schritt für immer gesperrt
+> gewesen. Genau die Falle aus 3.5; der Selbsttest verbietet sie jetzt.
+
 Der große Umbau. Berührt Datenmodell, Assistent, Plan, Protokoll, Druckbogen,
 Speicher und Tests.
 

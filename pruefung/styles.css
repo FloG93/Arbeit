@@ -274,7 +274,7 @@ textarea.input{padding:.75rem .875rem;min-height:4.5rem;font:400 .938rem/1.5 var
 .job-open .meta{font:400 .75rem/1.3 var(--font-ui);color:var(--text-tertiary)}
 .job-open .chevron{font:400 1.125rem/1 sans-serif;color:var(--text-muted-2);flex:none}
 .job-actions{display:flex;gap:.375rem;border-top:1px solid var(--border-subtle);padding-top:.625rem}
-.job-actions .mini-btn{flex:1}
+.job-actions .mini-btn{flex:1;min-width:2.75rem}
 .norm-card{display:flex;align-items:center;gap:.75rem;width:100%;cursor:pointer;text-align:left;
   background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:18px;
   padding:.875rem 1rem;min-height:var(--tap-answer)}

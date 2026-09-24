@@ -43,6 +43,13 @@ nächste freigegebene Aufgabe.
 - Ein Bedingungsmechanismus für alles: `when: {fakt: wert | [werte]}`.
   Reihenfolge der Prüfschritte über `requires` (topologisch erzwungen), nicht
   über `order` allein.
+- Ein Auftrag ist ein Verteiler mit n Stromkreisen. `scope: "stromkreis"` am
+  Prüfschritt heißt: je Kreis einmal, mit dessen Fakten und Messwerten. Die
+  Grenzwerte hängen an den zusammengeführten Fakten (`P.plan.facts`) — ein
+  Kreis mit 300-mA-RCD wird anders bewertet als der mit 30 mA daneben.
+- `SCHEMA` in `store.js` **nicht** hochzählen, um Daten zu ändern: `load()`
+  migriert, `migrateJob()` ist die Stelle dafür. Ein Stand aus einer neueren
+  Fassung wird übernommen, nicht verworfen.
 - Jede Grenzwerttabelle trägt `reviewed`; leer heißt „Datenbasis ungeprüft"
   (Badge in der App). Werte prüfen die Betatester über die Prüfliste, siehe
   `werkzeuge/README.md`.

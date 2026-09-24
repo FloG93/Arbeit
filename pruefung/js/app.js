@@ -17,7 +17,7 @@
     { id: 'wiki', label: 'Wiki' },
   ];
 
-  P.nav = { stepId: null, wikiId: null, calcId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
+  P.nav = { stepId: null, wikiId: null, calcId: null, kreisId: null, query: '', kind: null, allWorlds: false, multi: [], multiNode: null };
 
   let toast = null;
   let toastTimer = null;
@@ -140,7 +140,7 @@
       el('div', { class: 'tabbar' }, TABS.map(tab => el('button', {
         class: 'tab-btn' + (activeTab === tab.id ? ' active' : ''), type: 'button',
         onClick: () => {
-          if (tab.id === 'plan') P.nav.stepId = null;
+          if (tab.id === 'plan') { P.nav.stepId = null; P.nav.kreisId = null; }
           if (tab.id === 'wiki') P.nav.wikiId = null;
           if (tab.id === 'leitungen') P.nav.calcId = null;
           P.store.set({ tab: tab.id });
@@ -200,11 +200,12 @@
       tab: state.tab,
       jobId: state.activeJobId,
       stepId: state.tab === 'plan' ? P.nav.stepId : null,
+      kreisId: state.tab === 'plan' ? P.nav.kreisId : null,
       wikiId: state.tab === 'wiki' ? P.nav.wikiId : null,
       calcId: state.tab === 'leitungen' ? P.nav.calcId : null,
     };
   }
-  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId, st.calcId].join('|');
+  const navKey = st => [st.tab, st.jobId, st.stepId, st.wikiId, st.calcId, st.kreisId].join('|');
 
   function syncHistory() {
     if (restoring || !window.history || !history.replaceState) return;
@@ -220,6 +221,7 @@
     restoring = true;
     try {
       P.nav.stepId = st.stepId || null;
+      P.nav.kreisId = st.kreisId != null ? st.kreisId : null;
       P.nav.wikiId = st.wikiId || null;
       P.nav.calcId = st.calcId && P.store.calc(st.calcId) ? st.calcId : null;
       const patch = { tab: st.tab || 'auftraege' };
@@ -299,7 +301,14 @@
         checkWiki(step.wiki, pack.id + '/' + step.id);
         checkWiki(step.pitfalls, pack.id + '/' + step.id + ' (pitfalls)');
         for (const reqId of step.requires || []) {
-          if (!pack.stepById.has(reqId)) note('Schritt', pack.id + '/' + step.id + ': requires → „' + reqId + '“ existiert nicht');
+          if (!pack.stepById.has(reqId)) { note('Schritt', pack.id + '/' + step.id + ': requires → „' + reqId + '“ existiert nicht'); continue; }
+          // Ein Stromkreis-Schritt darf auf die Anlage warten (Freischaltung
+          // vor Isolationsmessung), umgekehrt nie: Der Anlagen-Schritt fände
+          // das Ergebnis in keinem Beutel und bliebe für immer gesperrt.
+          const reqScope = P.plan.scopeOf(pack.stepById.get(reqId));
+          if (P.plan.scopeOf(step) === 'anlage' && reqScope === 'stromkreis') {
+            note('Schritt', pack.id + '/' + step.id + ': setzt den Stromkreis-Schritt „' + reqId + '“ voraus — das ist nie erfüllbar');
+          }
         }
         if (step.phase && !pack.phaseById.has(step.phase)) note('Schritt', pack.id + '/' + step.id + ': Phase „' + step.phase + '“ ist nicht definiert');
         if (step.limitRef && !P.limits.table(step.limitRef)) note('Grenzwert', pack.id + '/' + step.id + ': limitRef → „' + step.limitRef + '“ existiert nicht');
@@ -393,6 +402,29 @@
           }
         }
       }
+      // Die Abweichungen am Stromkreis setzen Fakten — auf die hören
+      // when-Bedingungen und Grenzwertzeilen. Was hier ins Leere greift,
+      // fällt erst im Keller auf.
+      for (const gruppe of pack.kreisFakten || []) {
+        if (!(gruppe.optionen || []).length) note('Stromkreis', pack.id + '/' + gruppe.id + ': Auswahl ohne Optionen');
+        for (const option of gruppe.optionen || []) {
+          if (!Object.keys(option.set || {}).length) {
+            note('Stromkreis', pack.id + '/' + gruppe.id + '/' + option.id + ': Option setzt keinen Fakt');
+          }
+          for (const key of Object.keys(option.set || {})) {
+            if (!settable.has(key)) {
+              note('Stromkreis', pack.id + '/' + gruppe.id + '/' + option.id + ': Fakt „' + key + '“ kennt der Assistent nicht');
+            }
+          }
+        }
+        for (const world of P.data.worlds) {
+          const moeglich = (gruppe.optionen || []).filter(o => !o.when || o.when.netzform == null);
+          if (!moeglich.length && !(gruppe.optionen || []).some(o => o.when && o.when.netzform)) {
+            note('Stromkreis', pack.id + '/' + gruppe.id + ' hat in „' + world.short + '“ keine mögliche Option');
+          }
+        }
+      }
+
       // Doppelte Checklisten-IDs teilen sich einen Zustand: zwei Zeilen, ein
       // Häkchen. Im Feld sieht das aus wie ein Fehler der App.
       for (const step of pack.steps) {
