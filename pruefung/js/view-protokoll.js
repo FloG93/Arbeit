@@ -150,6 +150,45 @@
     return { view: el('div', { class: 'view' }, children), bottom };
   };
 
+  /* Einzeln erfasste Messstellen stehen nicht in der Hauptzeile — dort steht
+   * der maßgebliche Wert. Sie gehen trotzdem nicht verloren: Wer nachvollziehen
+   * will, wo gemessen wurde, findet es im Anhang. */
+  function messstellenAnhang(job, pack) {
+    const bloecke = [];
+    for (const step of pack.steps) {
+      const result = job.results[step.id];
+      const punkte = (result && result.punkte) || [];
+      const messstellen = step.measure && step.measure.messstellen;
+      // Dokumentierende Felder stehen nicht in der Hauptzeile, weil sie nicht
+      // bewertet werden — aufgeschrieben wurden sie trotzdem.
+      const doku = ((step.measure && step.measure.inputs) || []).filter(i => i.role === 'doku').map(input => {
+        const value = result && result.values ? result.values[input.id] : null;
+        if (value == null || !isFinite(value)) return null;
+        const gruppe = ((step.measure.gruppen || []).find(g => g.id === input.gruppe) || {}).label;
+        return { label: (gruppe ? gruppe + ' · ' : '') + input.label, wert: num(value) + (input.unit ? ' ' + input.unit : '') };
+      }).filter(Boolean);
+      if (!doku.length && (!punkte.length || !messstellen)) continue;
+      const felder = messstellen ? (messstellen.felder || []).map(f => f.id) : [];
+      bloecke.push(el('div', {}, [
+        el('div', { class: 'p-row p-row-head p-row-punkt' }, [
+          el('div', {}, step.protocolLabel || step.title),
+          el('div', {}, 'Wert'),
+        ]),
+        doku.map(d => el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, d.label), el('div', {}, d.wert)])),
+        (messstellen ? punkte : []).map((punkt, i) => {
+          const bezeichnung = felder.map(id => punkt[id]).filter(Boolean).join(' · ')
+            || (messstellen.label || 'Messstelle') + ' ' + (i + 1);
+          const wert = punkt.overrange
+            ? 'über Messbereich'
+            : punkt.wert == null || !isFinite(punkt.wert) ? '—' : num(punkt.wert) + ' ' + (messstellen.unit || '');
+          return el('div', { class: 'p-row p-row-punkt' }, [el('div', {}, bezeichnung), el('div', {}, wert)]);
+        }),
+      ]));
+    }
+    if (!bloecke.length) return null;
+    return el('div', {}, [el('div', { class: 'p-section' }, 'Weitere erfasste Werte und Messstellen'), bloecke]);
+  }
+
   /* Der Druckbogen wird erst beim Drucken gebaut — er ist die einzige Stelle,
    * die zwei Layouts derselben Daten braucht, und gehört nicht in jeden
    * Renderdurchlauf. */
@@ -185,6 +224,7 @@
           row.note ? el('div', { class: 'p-note' }, row.note) : null,
         ])),
       ]),
+      messstellenAnhang(job, pack),
       el('div', { class: 'p-section' }, 'Ergebnis'),
       el('p', { class: 'p-note' }, resultSentence(pack, sum)),
       due

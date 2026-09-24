@@ -71,6 +71,17 @@
       ]
     },
     {
+      "id": "beruehrungsspannung",
+      "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
+      "title": "Zulässige Berührungsspannung UL",
+      "source": "DIN VDE 0100-410",
+      "keyLabel": "Fall",
+      "rows": [
+        { "key": "standard", "label": "Allgemein, Wechselspannung", "max": 50, "unit": "V", "default": true },
+        { "key": "erhoeht", "label": "Erhöhte Gefährdung (z. B. landwirtschaftliche Betriebsstätten)", "max": 25, "unit": "V", "note": "Gilt auch dort, wo Körperwiderstand und Standortverhältnisse herabgesetzt sind." }
+      ]
+    },
+    {
       "id": "schutzleiter-durchgang",
       "reviewed": { "by": "", "date": "", "edition": "", "fundstelle": "" },
       "title": "Schutzleiter- und Verbindungswiderstand (Niederohmmessung)",

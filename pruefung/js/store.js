@@ -311,6 +311,31 @@
     }, opts);
   };
 
+  /* Messstellen eines Schrittes: so viele, wie der Stromkreis Messpunkte hat.
+   * Sie liegen im Ergebnis neben den festen Feldern, damit Bewertung und
+   * Protokoll sie ohne Sonderweg mitnehmen. */
+  function patchPunkte(jobId, stepId, fn, opts) {
+    return S.patchJob(jobId, job => {
+      const prev = job.results[stepId] || {};
+      job.results[stepId] = Object.assign({}, prev, { punkte: fn(prev.punkte || []), at: Date.now() });
+    }, opts);
+  }
+
+  S.addPunkt = function addPunkt(jobId, stepId, init) {
+    const punkt = Object.assign({ id: nid() }, init || {});
+    patchPunkte(jobId, stepId, list => list.concat([punkt]));
+    return punkt;
+  };
+
+  S.patchPunkt = function patchPunkt(jobId, stepId, punktId, patch, opts) {
+    return patchPunkte(jobId, stepId, list =>
+      list.map(p => (p.id === punktId ? Object.assign({}, p, patch) : p)), opts);
+  };
+
+  S.removePunkt = function removePunkt(jobId, stepId, punktId) {
+    return patchPunkte(jobId, stepId, list => list.filter(p => p.id !== punktId));
+  };
+
   S.resultOf = (job, stepId) => (job && job.results ? job.results[stepId] : null) || null;
 
   P.store = S;

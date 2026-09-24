@@ -277,6 +277,114 @@ async function runWizard(page) {
     await c4.close();
   }
 
+  console.log('Paket 2 — Ik, Berührungsspannung, Riso, Messstellen');
+  {
+    const c5 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p5 = await c5.newPage();
+    p5.on('pageerror', e => errors.push(e.message));
+    p5.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+    await p5.goto(BASE, { waitUntil: 'networkidle' });
+    await p5.evaluate(() => localStorage.clear());
+    await p5.reload({ waitUntil: 'networkidle' }); await p5.waitForTimeout(400);
+    await p5.locator('.norm-card:not([disabled])').first().click(); await p5.waitForTimeout(120);
+    await runWizard(p5);
+    await p5.locator('.tab-btn', { hasText: /^Plan$/ }).click(); await p5.waitForTimeout(150);
+
+    const typeInto = async (sel, text) => {
+      await p5.locator(sel).click();
+      await p5.keyboard.press('Control+A'); await p5.keyboard.press('Backspace');
+      await p5.keyboard.type(text, { delay: 50 });
+      await p5.waitForTimeout(200);
+    };
+    const bewertung = stepId => p5.evaluate(id => {
+      const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      const step = pack.stepById.get(id);
+      return {
+        verdict: Pruefung.plan.verdict(pack, step, j.session.facts, j.results[id]) || 'offen',
+        key: Pruefung.plan.keyValue(step, j.results[id]),
+      };
+    }, stepId);
+
+    // Riso: sechs Felder in zwei Gruppen
+    await p5.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click(); await p5.waitForTimeout(150);
+    const gruppen = await p5.locator('.field-group').allTextContents();
+    check(gruppen.join(',') === 'Ohne Verbraucher,Mit Verbraucher' && await p5.locator('.measure-line input.input').count() === 6,
+      'Riso: sechs Felder in zwei Gruppen (' + gruppen.join(' | ') + ')');
+
+    // „mit Verbraucher" wird dokumentiert, nicht bewertet
+    await typeInto('[data-fkey="m-s-iso-widerstand-riso_l_pe"]', '150');
+    await typeInto('[data-fkey="m-s-iso-widerstand-riso_n_pe"]', '150');
+    await typeInto('[data-fkey="m-s-iso-widerstand-riso_l_pe_mit"]', '0,4');
+    const mitLast = await bewertung('s-iso-widerstand');
+    check(mitLast.verdict === 'ok' && mitLast.key.value === 150,
+      'Wert mit Verbraucher zählt nicht als Mangel: ' + JSON.stringify(mitLast));
+
+    // Messstellen: „+", Bezeichnung, Wert — und ein Ausreißer schlägt durch
+    await p5.locator('.punkt-add').click(); await p5.waitForTimeout(150);
+    await p5.locator('.punkt-add').click(); await p5.waitForTimeout(150);
+    check(await p5.locator('.punkt-row').count() === 2, 'zwei Messstellen über „+" angelegt');
+    const leer = await bewertung('s-iso-widerstand');
+    check(leer.verdict === 'offen', 'Messstelle ohne Wert hält den Schritt offen');
+    const punkte = p5.locator('.punkt-row');
+    await punkte.nth(0).locator('[data-fkey$="-ort"]').click();
+    await p5.keyboard.type('Abgang Küche', { delay: 10 });
+    await typeInto('.punkt-row:nth-of-type(1) [data-fkey$="-wert"]', '120');
+    await typeInto('.punkt-row:nth-of-type(2) [data-fkey$="-wert"]', '0,4');
+    check(await p5.locator('.punkt-row').nth(1).locator('[data-fkey$="-wert"]').inputValue() === '0,4',
+      'Komma in der Messstelle bleibt beim Tippen stehen');
+    const ausreisser = await bewertung('s-iso-widerstand');
+    check(ausreisser.verdict === 'mangel' && ausreisser.key.value === 0.4,
+      'ein Ausreißer in den Messstellen wird zum Mangel und steht im Protokoll: ' + JSON.stringify(ausreisser));
+
+    // Löschen zieht den maßgeblichen Wert nach
+    await p5.locator('.punkt-row').nth(1).locator('.mini-btn').click(); await p5.waitForTimeout(200);
+    const nachLoeschen = await bewertung('s-iso-widerstand');
+    check(await p5.locator('.punkt-row').count() === 1 && nachLoeschen.verdict === 'ok' && nachLoeschen.key.value === 120,
+      'gelöschte Messstelle zieht den maßgeblichen Wert nach: ' + JSON.stringify(nachLoeschen));
+
+    // Ik neben Zs
+    await p5.locator('.bottom-bar .btn-ghost').click(); await p5.waitForTimeout(150);
+    await p5.locator('.step-card', { hasText: 'Schleifenimpedanz' }).click(); await p5.waitForTimeout(150);
+    await typeInto('[data-fkey="m-s-schleifenimpedanz-zs"]', '0,8');
+    await typeInto('[data-fkey="m-s-schleifenimpedanz-zs_soll"]', '2,87');
+    await typeInto('[data-fkey="m-s-schleifenimpedanz-ik"]', '287');
+    const zsStep = await bewertung('s-schleifenimpedanz');
+    check(zsStep.verdict === 'ok' && zsStep.key.value === 0.8,
+      'Ik wird erfasst, bleibt aber aus der Bewertung heraus: ' + JSON.stringify(zsStep));
+
+    // Berührungsspannung: Schnellwerte aus der Tabelle, Soll schlägt Tabelle
+    await p5.locator('.bottom-bar .btn-ghost').click(); await p5.waitForTimeout(150);
+    await p5.locator('.step-card', { hasText: 'Berührungsspannung' }).click(); await p5.waitForTimeout(150);
+    const schnell = await p5.locator('.quick-chip').allTextContents();
+    check(schnell.join(',') === '50,25', 'UL-Schnellwerte kommen aus der Grenzwerttabelle: ' + schnell.join(' | '));
+    await typeInto('[data-fkey="m-s-beruehrungsspannung-u_mess"]', '30');
+    const ohneSoll = await p5.evaluate(() => {
+      const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      const entry = Pruefung.plan.ensure(j, pack).find(e => e.step.id === 's-beruehrungsspannung');
+      return Pruefung.limits.format(entry.limit);
+    });
+    check(ohneSoll === '≤ 50 V', 'ohne eingetragene Grenze gilt der Tabellenwert: ' + ohneSoll);
+    await p5.locator('.quick-chip', { hasText: '25' }).click(); await p5.waitForTimeout(200);
+    const mitSoll = await p5.evaluate(() => {
+      const j = Pruefung.store.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      const entry = Pruefung.plan.ensure(j, pack).find(e => e.step.id === 's-beruehrungsspannung');
+      return { soll: Pruefung.limits.format(entry.limit),
+               verdict: Pruefung.plan.verdict(pack, pack.stepById.get('s-beruehrungsspannung'), j.session.facts, j.results['s-beruehrungsspannung']) };
+    });
+    check(mitSoll.soll === '≤ 25 V' && mitSoll.verdict === 'mangel',
+      'eingetragene Grenze schlägt die Tabelle, 30 V > 25 V ist ein Mangel: ' + JSON.stringify(mitSoll));
+
+    // Anhang im Druckbogen
+    await p5.evaluate(() => { window.print = () => {}; Pruefung.store.set({ tab: 'protokoll' }); });
+    await p5.waitForTimeout(200);
+    await p5.locator('.bottom-bar .btn-primary').click(); await p5.waitForTimeout(200);
+    const bogen = await p5.locator('#print-root').innerText();
+    check(/Weitere erfasste Werte und Messstellen/.test(bogen) && /Abgang Küche/.test(bogen)
+       && /Mit Verbraucher · L–PE/.test(bogen) && /287 A/.test(bogen),
+      'Anhang nennt Messstellen, dokumentierte Werte und Ik');
+    await c5.close();
+  }
+
   console.log('Leitungsberechnung (360 px)');
   {
     const c3 = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -364,6 +472,12 @@ async function runWizard(page) {
     await p2.waitForTimeout(100);
     const naRow = p2.locator('.check-row').first();
     for (let i = 0; i < 3; i++) { await naRow.click(); await p2.waitForTimeout(40); }
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    // Messstellen und Feldgruppen einmal zeichnen lassen: die „+"-Fläche und
+    // die Punktzeilen müssen Kontrast und Tippziel auch halten.
+    await p2.evaluate(() => { Pruefung.nav.stepId = 's-iso-widerstand'; Pruefung.render(); });
+    await p2.waitForTimeout(100);
+    await p2.locator('.punkt-add').click(); await p2.waitForTimeout(120);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.evaluate(() => { Pruefung.nav.stepId = null; Pruefung.render(); });
     await p2.waitForTimeout(100);

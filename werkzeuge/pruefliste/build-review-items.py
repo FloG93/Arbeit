@@ -44,7 +44,8 @@ GROUPS = [
 TABLE_GROUP = {
     'iso-nach-nennspannung': 'a', 'rcd-ausloesezeit': 'a', 'rcd-ausloesestrom': 'a',
     'rcd-ausloesestrom-abs': 'a', 'abschaltzeit': 'a', 'schutzleiter-durchgang': 'a',
-    'erdungswiderstand-tt': 'a', 'spannungsfall': 'b', 'anlage-differenzstrom': 'c',
+    'erdungswiderstand-tt': 'a', 'beruehrungsspannung': 'a',
+    'spannungsfall': 'b', 'anlage-differenzstrom': 'c',
     'geraet-schutzleiterwiderstand': 'd', 'geraet-iso': 'd',
     'geraet-schutzleiterstrom': 'd', 'geraet-beruehrungsstrom': 'd',
 }

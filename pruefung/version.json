@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "datenstand": "2026-09",
-  "note": "Kopfdaten, Prüfanlass, Potentialausgleich und Erdungswiderstand an den Aufbau des IHK-Prüfprotokolls angeglichen; Checklisten kennen jetzt „nicht zutreffend“."
+  "note": "Berührungsspannung, Kurzschlussstrom Ik und Isolationswiderstand mit und ohne Verbraucher ergänzt; Messstellen lassen sich je Schritt frei anlegen."
 }

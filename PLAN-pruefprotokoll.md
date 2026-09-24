@@ -216,6 +216,15 @@ Der Fakt für das `when` existiert bereits: die Mehrfachauswahl
 
 ## Paket 2 — Fehlende Messgrößen
 
+> **Erledigt** in Version 0.4.1. Abweichung von diesem Abschnitt: Beim Bauen
+> zeigte sich, dass die Werte „mit Verbraucher" die Bewertung bestimmt hätten
+> — ein angeschlossenes Gerät drückt den Isolationswert immer, das wäre bei
+> jeder Anlage ein Fehlalarm gewesen. Eingaben tragen jetzt eine `role`:
+> ohne Rolle wird bewertet, `reference` ist ein Sollwert, `doku` wird nur
+> festgehalten. Ik und die drei „mit"-Felder sind `doku` und stehen im Anhang
+> des Bogens. Dazu kam `quickFromLimit`, damit die 50 V und 25 V nicht ein
+> zweites Mal im Schritt stehen.
+
 ### 2.1 Kurzschlussstrom Ik
 
 Das Formular führt `Ik (A)` direkt neben `Zs (Ω)`. Jeder Installationstester

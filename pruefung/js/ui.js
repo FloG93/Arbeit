@@ -96,7 +96,15 @@
     const limitLine = U.limitText(limit, opts.hint);
     const shown = overrange ? '> ' + num(value) : null;
 
-    const quick = (input.quickValues || []).map(q => el('button', {
+    // Schnellwerte stehen entweder am Feld oder — wenn es Normwerte sind —
+    // in der Grenzwerttabelle. Dann werden sie von dort geholt, damit die
+    // Zahl nicht ein zweites Mal im Repo steht und der Prüfstand für sie gilt.
+    const quellwerte = input.quickFromLimit
+      ? ((P.limits.table(input.quickFromLimit) || {}).rows || [])
+          .filter(row => row.max != null)
+          .map(row => ({ label: num(row.max), value: row.max }))
+      : (input.quickValues || []);
+    const quick = quellwerte.map(q => el('button', {
       class: 'quick-chip', type: 'button',
       onClick: () => (q.overrange ? onOverrange(q.value) : onValue(q.value)),
     }, q.label));
@@ -114,6 +122,58 @@
         input.optional ? el('div', { class: 'limit-badge' }, 'optional') : null,
         quick.length ? el('div', { class: 'chips' }, quick) : null,
       ]),
+    ]);
+  };
+
+  /* Frei angelegte Messstellen: eine Zeile je gemessenem Punkt, per „+"
+   * hinzugefügt. Ein Stromkreis hat so viele Messpunkte, wie er Steckdosen
+   * hat — das weiß keine Datendatei im Voraus.
+   *
+   * Der maßgebliche Wert (größter bzw. kleinster) landet über P.plan.keyValue
+   * im Protokoll; hier stehen die Einzelwerte mit ihrer Bezeichnung. */
+  U.messstellenListe = function messstellenListe(opts) {
+    const { stepId, messstellen, punkte, limit, onAdd, onPatch, onRemove } = opts;
+    const felder = messstellen.felder || [];
+    const einheit = messstellen.unit || '';
+
+    const zeile = (punkt, i) => {
+      const nr = i + 1;
+      const verdict = P.limits.evaluate(punkt.wert, limit, { overrange: !!punkt.overrange });
+      const fkey = f => 'pkt-' + stepId + '-' + punkt.id + '-' + f;
+      return el('div', { class: 'measure-row punkt-row', 'data-punkt': String(punkt.id) }, [
+        el('div', { class: 'punkt-kopf' }, [
+          el('span', { class: 'punkt-nr' }, (messstellen.label || 'Messstelle') + ' ' + nr),
+          el('button', {
+            class: 'mini-btn', type: 'button',
+            'aria-label': (messstellen.label || 'Messstelle') + ' ' + nr + ' löschen',
+            onClick: () => onRemove(punkt.id),
+          }, 'Löschen'),
+        ]),
+        felder.filter(f => f.kind === 'text').map(f => U.textInput(fkey(f.id), punkt[f.id] || '',
+          v => onPatch(punkt.id, { [f.id]: v }),
+          { placeholder: f.placeholder || f.label, 'aria-label': f.label })),
+        felder.filter(f => f.kind === 'auswahl').map(f => el('div', { class: 'chips' },
+          (f.optionen || []).map(option => el('button', {
+            class: 'chip' + (punkt[f.id] === option ? ' active' : ''), type: 'button',
+            'aria-pressed': punkt[f.id] === option ? 'true' : 'false',
+            onClick: () => onPatch(punkt.id, { [f.id]: punkt[f.id] === option ? null : option }),
+          }, option)))),
+        el('div', { class: 'measure-line' }, [
+          el('div', { class: 'lbl' }, 'Wert'),
+          U.numInput(fkey('wert'), punkt.wert, einheit, v => onPatch(punkt.id, { wert: v, overrange: false }),
+            { 'aria-label': 'Messwert' + (einheit ? ' in ' + einheit : '') }),
+          el('div', { class: 'unit' }, einheit),
+        ]),
+        limit
+          ? el('div', { class: 'limit-badge' + (verdict && verdict !== 'unbekannt' ? ' ' + verdict : '') }, U.limitText(limit))
+          : null,
+      ]);
+    };
+
+    return el('div', { class: 'step-list' }, [
+      (punkte || []).map(zeile),
+      el('button', { class: 'btn btn-outline btn-block punkt-add', type: 'button', onClick: onAdd },
+        '+  ' + (messstellen.addLabel || 'Messstelle hinzufügen')),
     ]);
   };
 

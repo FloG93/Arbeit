@@ -98,12 +98,31 @@
   /* Grenzwert eines einzelnen Eingabefeldes — erbt den des Schrittes, kann ihn
    * aber über limitKey oder limitKeySuffix verschieben. */
   L.forInput = function forInput(step, input, facts, values) {
-    if (input && input.limitFromInput) return L.fromInput(step, input, values);
+    // Ein eingetragener Sollwert ist genauer als die Tabelle — er gilt für
+    // genau diese Messung. Fehlt er noch, greift der Tabellenwert; bei der
+    // Berührungsspannung sind das die 50 V, bis jemand 25 V einträgt.
+    if (input && input.limitFromInput) {
+      const entered = L.fromInput(step, input, values);
+      if (entered) return entered;
+    }
     if (!step || !step.limitRef) return null;
     return L.resolve(step.limitRef, facts, {
       limitKey: input.limitKey || step.limitKey,
       keyFrom: input.limitKey ? null : step.limitKeyFrom,
       keySuffix: input.limitKeySuffix,
+    });
+  };
+
+  /* Grenzwert einer frei angelegten Messstelle. Sie erbt den des Schrittes;
+   * messstellen.limitKey verschiebt ihn auf eine andere Zeile derselben
+   * Tabelle — beim Schutzleiter etwa auf den Richtwert statt auf die Zeile
+   * des Potentialausgleichs. */
+  L.forPunkt = function forPunkt(step, messstellen, facts) {
+    if (!step || !step.limitRef) return null;
+    const key = messstellen && messstellen.limitKey;
+    return L.resolve(step.limitRef, facts, {
+      limitKey: key || step.limitKey,
+      keyFrom: key ? null : step.limitKeyFrom,
     });
   };
 

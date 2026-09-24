@@ -382,6 +382,7 @@
         "Anlage freischalten und gegen Wiedereinschalten sichern.",
         "Messleitungen kalibrieren / Eigenwiderstand abgleichen.",
         "Von der Haupterdungsschiene zu jedem Schutzkontakt und zu jedem berührbaren Metallteil messen.",
+        "Jede Messstelle einzeln erfassen oder nur den größten Wert eintragen — beide Wege führen zum selben Protokolleintrag.",
         "Den Potentialausgleich selbst prüft der Schritt „Durchgängigkeit des Potentialausgleichs“.",
         "Ergebnis gegen den aus Querschnitt und Länge erwarteten Wert vergleichen."
       ],
@@ -392,6 +393,16 @@
         "inputs": [
           { "id": "r_pe_max", "label": "größter Messwert", "unit": "Ω", "quickValues": [{ "label": "0,1", "value": 0.1 }, { "label": "0,3", "value": 0.3 }] }
         ],
+        "messstellen": {
+          "label": "Messstelle",
+          "addLabel": "Messstelle hinzufügen",
+          "unit": "Ω",
+          "aggregate": "max",
+          "limitKey": "richtwert",
+          "felder": [
+            { "id": "ort", "label": "Bezeichnung", "kind": "text", "placeholder": "z. B. Steckdose Küche links" }
+          ]
+        },
         "aggregate": "max"
       },
       "limitRef": "schutzleiter-durchgang",
@@ -417,17 +428,36 @@
         "Verbraucher abschalten oder trennen, Leuchtmittel entfernen wo nötig.",
         "Außenleiter und Neutralleiter gegen PE messen.",
         "Bei Bedarf Leiter gegeneinander messen.",
+        "Wo der Verbraucher angeschlossen bleiben muss, zusätzlich mit Verbraucher messen und in der zweiten Gruppe eintragen.",
         "Nach der Messung entladen und alles wieder anklemmen."
       ],
       "measure": {
         "quantity": "Isolationswiderstand",
         "symbol": "Riso",
         "unit": "MΩ",
-        "inputs": [
-          { "id": "riso_l_pe", "label": "L–PE", "unit": "MΩ", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
-          { "id": "riso_n_pe", "label": "N–PE", "unit": "MΩ", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
-          { "id": "riso_l_n", "label": "L–N", "unit": "MΩ", "optional": true }
+        "gruppen": [
+          { "id": "ohne", "label": "Ohne Verbraucher" },
+          { "id": "mit", "label": "Mit Verbraucher", "hint": "Wird dokumentiert, nicht bewertet: ein angeschlossenes Gerät drückt den Wert immer. Maßgeblich ist die Messung ohne Verbraucher." }
         ],
+        "inputs": [
+          { "id": "riso_l_pe", "label": "L–PE", "unit": "MΩ", "gruppe": "ohne", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
+          { "id": "riso_n_pe", "label": "N–PE", "unit": "MΩ", "gruppe": "ohne", "quickValues": [{ "label": "> 300", "value": 300, "overrange": true }] },
+          { "id": "riso_l_n", "label": "L–N", "unit": "MΩ", "gruppe": "ohne", "optional": true },
+          { "id": "riso_l_pe_mit", "label": "L–PE", "unit": "MΩ", "gruppe": "mit", "optional": true, "role": "doku" },
+          { "id": "riso_n_pe_mit", "label": "N–PE", "unit": "MΩ", "gruppe": "mit", "optional": true, "role": "doku" },
+          { "id": "riso_l_n_mit", "label": "L–N", "unit": "MΩ", "gruppe": "mit", "optional": true, "role": "doku" }
+        ],
+        "messstellen": {
+          "label": "Messstelle",
+          "addLabel": "Messstelle hinzufügen",
+          "unit": "MΩ",
+          "aggregate": "min",
+          "felder": [
+            { "id": "ort", "label": "Bezeichnung", "kind": "text", "placeholder": "z. B. Abgang Küche" },
+            { "id": "paar", "label": "Aderpaar", "kind": "auswahl", "optionen": ["L–PE", "N–PE", "L–N"] },
+            { "id": "last", "label": "Verbraucher", "kind": "auswahl", "optionen": ["ohne", "mit"] }
+          ]
+        },
         "aggregate": "min"
       },
       "limitRef": "iso-nach-nennspannung",
@@ -525,7 +555,8 @@
         "Am ungünstigsten Punkt des Stromkreises messen (längste Leitung).",
         "Zs zwischen Außenleiter und PE erfassen.",
         "Sollwert aus der Auslösekennlinie der Schutzeinrichtung bestimmen: Zs ≤ U0 / Ia.",
-        "Bei vorgeschaltetem RCD die Messart ohne Auslösung wählen."
+        "Bei vorgeschaltetem RCD die Messart ohne Auslösung wählen.",
+        "Den vom Messgerät angezeigten Kurzschlussstrom Ik mit erfassen."
       ],
       "measure": {
         "quantity": "Schleifenimpedanz",
@@ -534,7 +565,9 @@
         "inputs": [
           { "id": "zs", "label": "Zs L–PE", "unit": "Ω", "limitFromInput": "zs_soll" },
           { "id": "zs_soll", "label": "Sollwert (aus Ia)", "unit": "Ω", "optional": true, "role": "reference",
-            "hint": "Zs,max = U0 / Ia — Zs wird gegen diesen Wert bewertet" }
+            "hint": "Zs,max = U0 / Ia — Zs wird gegen diesen Wert bewertet" },
+          { "id": "ik", "label": "Ik", "unit": "A", "optional": true, "role": "doku",
+            "hint": "Kurzschlussstrom, den das Messgerät aus Zs errechnet — steht im Protokoll neben Zs" }
         ],
         "aggregate": "max"
       },
@@ -652,6 +685,46 @@
       "wiki": ["messverfahren-erdungswiderstand-ra", "netzform-tt"],
       "protocolLabel": "Erdungswiderstand RA",
       "tags": ["messung", "tt"]
+    },
+    {
+      "id": "s-beruehrungsspannung",
+      "type": "messung",
+      "phase": "messen",
+      "order": 420,
+      "title": "Berührungsspannung messen",
+      "short": "UB",
+      "optional": true,
+      "optionalReason": "Gehört zum Protokollbogen, wird aber nicht in jeder Anlage gemessen: Wo Zs und RCD bewertet sind, ist der Fehlerschutz bereits nachgewiesen. Wenn nicht gemessen, die Bewertung auf „n. a.“ stellen.",
+      "requires": ["s-durchgang-schutzleiter"],
+      "requiresReason": "Die Berührungsspannung entsteht am Schutzleiter — ein unterbrochener PE macht den Messwert bedeutungslos.",
+      "instrument": "Installationstester mit UB-Messung",
+      "safety": "Messung unter Spannung — Messleitungen und Kategorie zur Anlage passend wählen.",
+      "procedure": [
+        "Grenzwert UL festlegen: allgemein 50 V, bei erhöhter Gefährdung 25 V.",
+        "Die zutreffende Stromart unten auf OK setzen, die andere auf „n. a.“.",
+        "Berührungsspannung am ungünstigsten Punkt messen.",
+        "Umess wird gegen den eingetragenen Grenzwert bewertet."
+      ],
+      "measure": {
+        "quantity": "Berührungsspannung",
+        "symbol": "UB",
+        "unit": "V",
+        "inputs": [
+          { "id": "ul_grenze", "label": "Grenze UL", "unit": "V", "role": "reference", "quickFromLimit": "beruehrungsspannung",
+            "hint": "Maßgeblicher Grenzwert — Umess wird dagegen bewertet" },
+          { "id": "u_mess", "label": "Umess", "unit": "V", "limitFromInput": "ul_grenze" }
+        ],
+        "aggregate": "max"
+      },
+      "limitRef": "beruehrungsspannung",
+      "verdict": { "rule": "limit" },
+      "checklist": [
+        { "id": "c-ub-ac", "label": "Gemessen mit Wechselspannung (AC)" },
+        { "id": "c-ub-dc", "label": "Gemessen mit Gleichspannung (DC)" }
+      ],
+      "wiki": ["grenzwerte-abschaltzeit"],
+      "protocolLabel": "Berührungsspannung",
+      "tags": ["messung", "beruehrungsspannung"]
     },
     {
       "id": "s-spannungsfall",

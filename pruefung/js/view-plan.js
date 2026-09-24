@@ -188,10 +188,10 @@
 
     if (step.measure) {
       children.push(U.sectionHead('Messwerte', step.measure.symbol ? step.measure.symbol + ' in ' + step.measure.unit : ''));
-      children.push(el('div', { class: 'step-list' }, (step.measure.inputs || []).map(input => U.measureRow({
+      const zeile = input => U.measureRow({
         input,
-        // Ein Bezugsfeld wird nicht bewertet, es ist selbst der Maßstab.
-        limit: input.role === 'reference' ? null : (entry.inputLimits[input.id] || entry.limit),
+        // Bezugs- und Dokufelder werden nicht bewertet — kein Grenzwertband.
+        limit: input.role ? null : (entry.inputLimits[input.id] || entry.limit),
         hint: input.hint || step.limitHint,
         value: result.values ? result.values[input.id] : null,
         overrange: !!(result.overrange && result.overrange[input.id]),
@@ -204,7 +204,38 @@
           values: Object.assign({}, result.values, { [input.id]: v }),
           overrange: Object.assign({}, result.overrange, { [input.id]: v != null }),
         }),
-      }))));
+      });
+      const inputs = step.measure.inputs || [];
+      const gruppen = step.measure.gruppen || [];
+      if (!gruppen.length) {
+        children.push(el('div', { class: 'step-list' }, inputs.map(zeile)));
+      } else {
+        // Sechs Isolationswerte am Stück sind im Keller nicht zu überblicken.
+        // Die Gruppen des Datenpakets teilen sie in „ohne" und „mit
+        // Verbraucher" — gezeichnet wird nur, was auch Felder hat.
+        const frei = inputs.filter(i => !i.gruppe);
+        if (frei.length) children.push(el('div', { class: 'step-list' }, frei.map(zeile)));
+        for (const gruppe of gruppen) {
+          const mine = inputs.filter(i => i.gruppe === gruppe.id);
+          if (!mine.length) continue;
+          children.push(el('div', { class: 'field-group' }, gruppe.label));
+          if (gruppe.hint) children.push(el('div', { class: 'hint-text' }, gruppe.hint));
+          children.push(el('div', { class: 'step-list' }, mine.map(zeile)));
+        }
+      }
+      if (step.measure.messstellen) {
+        const messstellen = step.measure.messstellen;
+        children.push(U.sectionHead('Messstellen', 'einzeln erfasst — der ' + (messstellen.aggregate === 'min' ? 'kleinste' : 'größte') + ' Wert zählt'));
+        children.push(U.messstellenListe({
+          stepId: step.id,
+          messstellen,
+          punkte: result.punkte || [],
+          limit: P.limits.forPunkt(step, messstellen, facts),
+          onAdd: () => P.store.addPunkt(job.id, step.id),
+          onPatch: (punktId, patch) => P.store.patchPunkt(job.id, step.id, punktId, patch),
+          onRemove: punktId => P.store.removePunkt(job.id, step.id, punktId),
+        }));
+      }
       if (entry.limit && entry.limit.tableId) {
         children.push(el('div', { class: 'wiki-body' }, [U.limitTable(entry.limit.tableId, entry.limit.rowKey)]));
       }

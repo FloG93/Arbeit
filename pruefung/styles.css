@@ -343,6 +343,11 @@ textarea.input{padding:.75rem .875rem;min-height:4.5rem;font:400 .938rem/1.5 var
 .limit-badge.ok{color:var(--status-ok)}
 .limit-badge.mangel{color:var(--status-mangel)}
 .limit-badge.grenzwertig{color:var(--status-grenzwertig)}
+.punkt-row{gap:.5rem}
+.punkt-kopf{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.punkt-nr{font:600 .688rem/1 var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+/* „+" allein ist mit Handschuhen und in der Sonne zu wenig — mit Text. */
+.punkt-add{font:600 .938rem/1 var(--font-ui)}
 .quick-chip{min-height:var(--tap-min);min-width:var(--tap-min);padding:0 1rem;cursor:pointer;border-radius:var(--radius-pill);
   background:var(--surface-control);border:1px solid var(--border-medium);
   color:var(--text-secondary);font:600 .813rem/1 var(--font-display)}
@@ -487,6 +492,8 @@ html.hc .calc-head{box-shadow:0 4px 12px rgba(0,0,0,.12)}
     text-transform:uppercase;color:#8b91a0;padding-bottom:5px}
   .p-row-head>div:not(:first-child){font-family:sans-serif}
   .p-note{font:400 10px/1.5 sans-serif;color:#3c424d;margin:3px 0 0;grid-column:1 / -1}
+  /* Anhang: Bezeichnung links, Wert rechts — zwei Spalten statt vier. */
+  .p-row-punkt{grid-template-columns:3fr 1fr}
   /* Erläuterung unter einer Zeile: linksbündig über die ganze Breite, nicht wie die Zahlenspalten. */
   .p-row>div.p-note{text-align:left;font-family:sans-serif}
   .p-legal{font:400 8px/1.6 sans-serif;color:#8b91a0;margin-top:14px;border-top:1px solid #dcdfe6;padding-top:8px}

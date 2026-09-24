@@ -305,9 +305,43 @@
         if (step.limitRef && !P.limits.table(step.limitRef)) note('Grenzwert', pack.id + '/' + step.id + ': limitRef → „' + step.limitRef + '“ existiert nicht');
         if (step.formulaRef && !P.limits.formula(step.formulaRef)) note('Grenzwert', pack.id + '/' + step.id + ': formulaRef → „' + step.formulaRef + '“ existiert nicht');
         const inputs = (step.measure && step.measure.inputs) || [];
+        const gruppenIds = new Set(((step.measure && step.measure.gruppen) || []).map(g => g.id));
         for (const input of inputs) {
           if (input.limitFromInput && !inputs.some(i => i.id === input.limitFromInput && i.id !== input.id)) {
             note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': limitFromInput → „' + input.limitFromInput + '“ ist kein anderes Feld dieses Schrittes');
+          }
+          if (input.role && !['reference', 'doku'].includes(input.role)) {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': unbekannte Rolle „' + input.role + '“');
+          }
+          if (input.gruppe && !gruppenIds.has(input.gruppe)) {
+            note('Schritt', pack.id + '/' + step.id + '/' + input.id + ': Gruppe „' + input.gruppe + '“ ist nicht definiert');
+          }
+          if (input.quickFromLimit && !P.limits.table(input.quickFromLimit)) {
+            note('Grenzwert', pack.id + '/' + step.id + '/' + input.id + ': quickFromLimit → „' + input.quickFromLimit + '“ existiert nicht');
+          }
+        }
+        // Messstellen: Was hier fehlt, fällt erst im Feld auf — und dann steht
+        // der Prüfer vor einer Liste, die keinen Wert annimmt.
+        const messstellen = step.measure && step.measure.messstellen;
+        if (messstellen) {
+          if (!messstellen.unit) note('Schritt', pack.id + '/' + step.id + ': Messstellen ohne Einheit');
+          if (!['min', 'max'].includes(messstellen.aggregate || (step.measure.aggregate || 'max'))) {
+            note('Schritt', pack.id + '/' + step.id + ': Messstellen mit unbekanntem aggregate');
+          }
+          if (messstellen.limitKey && step.limitRef) {
+            const table = P.limits.table(step.limitRef);
+            if (table && !(table.rows || []).some(r => r.key === messstellen.limitKey)) {
+              note('Grenzwert', pack.id + '/' + step.id + ': Messstellen-limitKey „' + messstellen.limitKey + '“ gibt es in „' + step.limitRef + '“ nicht');
+            }
+          }
+          const seenFeld = new Set();
+          for (const feld of messstellen.felder || []) {
+            if (!feld.id || !feld.label) { note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld ohne id oder label'); continue; }
+            if (seenFeld.has(feld.id)) note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld „' + feld.id + '“ kommt doppelt vor');
+            seenFeld.add(feld.id);
+            if (feld.id === 'wert' || feld.id === 'id') note('Schritt', pack.id + '/' + step.id + ': Messstellen-Feld „' + feld.id + '“ überschreibt ein Pflichtfeld');
+            if (!['text', 'auswahl'].includes(feld.kind)) note('Schritt', pack.id + '/' + step.id + '/' + feld.id + ': unbekannte Feldart „' + feld.kind + '“');
+            if (feld.kind === 'auswahl' && !(feld.optionen || []).length) note('Schritt', pack.id + '/' + step.id + '/' + feld.id + ': Auswahl ohne Optionen');
           }
         }
         // Zyklen in requires.

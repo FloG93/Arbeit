@@ -551,6 +551,8 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Checklisten mit vier Zuständen (offen / OK / Mangel / n. a.), Bewertung je Schritt überschreibbar | fertig |
 | Kopfdaten im Aufbau des IHK-Prüfprotokolls, nach Auftrag, Anlage, Netz und Prüfung gruppiert | fertig |
 | Durchgängigkeit des Potentialausgleichs mit den 14 Zielen des Protokolls | fertig |
+| Messstellen je Schritt frei anlegen („+"), der maßgebliche Wert zählt | fertig |
+| Berührungsspannung, Kurzschlussstrom Ik, Isolationswiderstand mit und ohne Verbraucher | fertig |
 | Prüffristen: Richtwert wählen, Fälligkeit im Auftrag und im Protokoll | fertig |
 | Serienprüfung: „Nächstes Gerät" übernimmt die Kopfdaten | fertig |
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
@@ -608,6 +610,17 @@ Selbsttest der App ebenso.
 Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
 
+* **Messwert ergänzen** — Eingabe unter `measure.inputs` anlegen. `role` sagt,
+  wie die App damit umgeht: ohne Rolle wird bewertet, `"reference"` ist ein
+  Sollwert (der Grenzwert, gegen den ein anderes Feld über `limitFromInput`
+  bewertet wird), `"doku"` wird festgehalten, aber nicht bewertet. Über
+  `measure.gruppen` und `gruppe` bekommen viele Felder Zwischenüberschriften,
+  über `quickFromLimit` holt ein Feld seine Schnellwerte aus einer
+  Grenzwerttabelle, statt die Zahlen ein zweites Mal zu führen.
+* **Messstellen zulassen** — `measure.messstellen` mit `unit`, `aggregate`
+  (`min` oder `max`), optionalem `limitKey` und `felder`. Dann kann der Prüfer
+  im Feld beliebig viele benannte Messpunkte anlegen; der maßgebliche Wert geht
+  ins Protokoll, die Einzelwerte in den Anhang.
 * **Protokollfeld ergänzen** — Eintrag unter `protocol.fields` anlegen und
   einer Gruppe aus `protocol.groups` zuordnen. `"kind": "fact"` übernimmt eine
   Antwort aus dem Assistenten, statt sie zweimal abzufragen; `"default"` gibt

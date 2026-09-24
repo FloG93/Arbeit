@@ -77,8 +77,10 @@
       }
       // Ohne Tabellenwert gilt der aus einem Bezugsfeld (Zs-Sollwert) — so
       // steht im Plan und im Protokoll der eingetragene Sollwert.
-      const limit = P.limits.forStep(step, facts)
-        || Object.values(inputLimits).find(l => l && l.fromInput) || null;
+      // Der eingetragene Sollwert geht der Tabelle vor: er gilt für diese
+      // eine Messung, die Tabelle nur allgemein.
+      const limit = Object.values(inputLimits).find(l => l && l.fromInput)
+        || P.limits.forStep(step, facts) || null;
       const blockedBy = (step.requires || []).filter(reqId => {
         if (!picked.has(reqId)) return false;
         return PL.verdict(pack, picked.get(reqId).step, facts, results && results[reqId]) == null;
@@ -173,11 +175,23 @@
     let best = null;
     let overrange = false;
     for (const input of measure.inputs || []) {
-      // Ein Bezugsfeld (Sollwert) ist kein Messwert — sonst stünde bei Zs der
-      // Sollwert als Istwert im Protokoll, sobald er größer ist.
-      if (input.role === 'reference') continue;
+      // Felder mit Rolle sind keine bewerteten Messwerte: „reference" ist der
+      // Sollwert selbst (sonst stünde er bei Zs als Istwert im Protokoll),
+      // „doku" wird festgehalten, aber nicht bewertet — der Wert mit
+      // angeschlossenem Verbraucher ist immer kleiner und wäre sonst bei
+      // jeder Anlage ein Mangel.
+      if (input.role) continue;
       const value = result.values ? result.values[input.id] : null;
       if (result.overrange && result.overrange[input.id]) { overrange = true; continue; }
+      if (value == null || !isFinite(value)) continue;
+      if (best == null) best = value;
+      else best = agg === 'min' ? Math.min(best, value) : Math.max(best, value);
+    }
+    // Frei angelegte Messstellen zählen wie feste Felder — sonst stünde im
+    // Protokoll ein Wert, der den schlechtesten Messpunkt nicht kennt.
+    for (const punkt of result.punkte || []) {
+      if (punkt.overrange) { overrange = true; continue; }
+      const value = punkt.wert;
       if (value == null || !isFinite(value)) continue;
       if (best == null) best = value;
       else best = agg === 'min' ? Math.min(best, value) : Math.max(best, value);
@@ -193,7 +207,7 @@
     let out = null;
     let missing = false;
     for (const input of measure.inputs || []) {
-      if (input.role === 'reference') continue;
+      if (input.role) continue; // siehe keyValue: Bezugs- und Dokufelder
       const value = result.values ? result.values[input.id] : null;
       const over = !!(result.overrange && result.overrange[input.id]);
       if (!over && (value == null || !isFinite(value))) {
@@ -202,6 +216,15 @@
       }
       const limit = P.limits.forInput(step, input, facts, result.values) || P.limits.forStep(step, facts);
       out = worse(out, P.limits.evaluate(value, limit, { overrange: over }));
+    }
+    // Eine Messstelle ohne Wert ist eine angefangene Messung: der Schritt
+    // bleibt offen, bis sie einen Wert hat oder wieder gelöscht ist.
+    const punktLimit = P.limits.forPunkt(step, measure.messstellen, facts);
+    for (const punkt of result.punkte || []) {
+      const value = punkt.wert;
+      const over = !!punkt.overrange;
+      if (!over && (value == null || !isFinite(value))) { missing = true; continue; }
+      out = worse(out, P.limits.evaluate(value, punktLimit, { overrange: over }));
     }
     if (out === 'unbekannt') out = null;
     // Ein Mangel steht auch dann fest, wenn noch Felder leer sind.
