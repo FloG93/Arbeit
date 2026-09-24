@@ -1,5 +1,5 @@
 {
-  "version": "0.4.1",
+  "version": "0.4.2",
   "datenstand": "2026-09",
-  "note": "Berührungsspannung, Kurzschlussstrom Ik und Isolationswiderstand mit und ohne Verbraucher ergänzt; Messstellen lassen sich je Schritt frei anlegen."
+  "note": "Druckbogen im Aufbau des IHK-Prüfprotokolls: Besichtigen, Erproben, Messtabelle, Potentialausgleich, Prüfergebnis und die Erklärung des Prüfers zum Abhaken."
 }

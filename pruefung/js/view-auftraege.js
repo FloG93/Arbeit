@@ -85,7 +85,9 @@
   };
 
   P.views.protocolFields = function protocolFields(job, pack) {
-    const fields = (pack.protocol && pack.protocol.fields) || [];
+    // Felder mit place gehören woanders hin: die Messgeräte und die Erklärung
+    // des Prüfers stehen im Bogen am Ende, nicht bei den Kopfdaten.
+    const fields = ((pack.protocol && pack.protocol.fields) || []).filter(f => !f.place || f.place === 'messgeraete');
     const groups = (pack.protocol && pack.protocol.groups) || [];
     const missing = new Set(P.data.missingFields(job, pack).map(f => f.id));
 

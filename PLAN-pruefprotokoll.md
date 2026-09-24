@@ -492,6 +492,13 @@ das erzwingen, sonst entsteht eine Vorbedingung, die nie erfüllbar ist.
 
 ### 3.6 Druckbogen
 
+> **Erledigt** in Version 0.4.2, noch mit einem Stromkreis. Die Spalten stehen
+> als `protocol.messtabelle` im Datenpaket, die Blockzuordnung über
+> `protocolBlock` am Schritt. Zwei Dinge kamen beim Bauen dazu: ein Block
+> „Weitere Prüfschritte" für Messungen ohne eigene Spalte (der Spannungsfall
+> wäre sonst lautlos aus dem Bogen gefallen) und die Entdupelung des Anhangs
+> gegen die Tabellenspalten. Der Leitsatz (3.8) ist mit umgesetzt.
+
 Aufbau in der Reihenfolge des Formulars:
 
 1. Kopf: Prüfung nach / Anlass / Netz / Netzsystem / Netzbetreiber, Kopfdaten

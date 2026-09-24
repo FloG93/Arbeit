@@ -9,6 +9,16 @@
   "reviewed": { "by": "", "date": "" },
   "note": "Erst- und Wiederholungsprüfung teilen sich Prüfschritte und Grenzwerte. Was sie unterscheidet — Anlass, Umfang, Sicherheitshinweise — steckt in den Varianten und in when-Bedingungen, nicht in zwei gepflegten Dateien.",
   "factLabels": {
+    "rcdBauart": {
+      "allgemein": "allgemein",
+      "selektiv": "selektiv (S)"
+    },
+    "rcdIn": {
+      "30ma": "30 mA",
+      "100ma": "100 mA",
+      "300ma": "300 mA",
+      "500ma": "500 mA"
+    },
     "anlass": {
       "neuanlage": "Neuanlage",
       "erweiterung": "Erweiterung",
@@ -74,9 +84,30 @@
       { "id": "netzbetreiber", "label": "Verteilungsnetzbetreiber", "kind": "text", "sticky": true, "gruppe": "netz" },
       { "id": "pruefer", "label": "Prüfer", "required": true, "kind": "text", "sticky": true, "gruppe": "pruefung" },
       { "id": "datum", "label": "Prüfdatum", "required": true, "kind": "date", "default": "today", "gruppe": "pruefung" },
-      { "id": "messgeraet", "label": "Messgerät 1 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" },
-      { "id": "messgeraet2", "label": "Messgerät 2 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" },
-      { "id": "messgeraet3", "label": "Messgerät 3 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" }
+      { "id": "messgeraet", "label": "Messgerät 1 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung", "place": "messgeraete" },
+      { "id": "messgeraet2", "label": "Messgerät 2 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung", "place": "messgeraete" },
+      { "id": "messgeraet3", "label": "Messgerät 3 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung", "place": "messgeraete" },
+      { "id": "konformitaet", "label": "Erklärung des Prüfers", "kind": "janein", "required": true, "place": "abschluss" }
+    ],
+    "leitsatz": "Die elektrische Anlage entspricht den anerkannten Regeln der Elektrotechnik. Ein sicherer Gebrauch bei bestimmungsgemäßer Anwendung ist gewährleistet.",
+    "messtabelle": [
+      { "id": "nr", "label": "Nr.", "from": { "kreis": "nr" } },
+      { "id": "ziel", "label": "Zielbezeichnung", "from": { "kreis": "ziel" }, "breit": true },
+      { "id": "typ", "label": "Typ", "from": { "kreis": "leitung.typ" } },
+      { "id": "quer", "label": "Adern × mm²", "from": { "kreis": "leitung.quer" } },
+      { "id": "schutzart", "label": "Art / Char.", "from": { "kreis": "schutz.char" } },
+      { "id": "in", "label": "In (A)", "from": { "kreis": "schutz.in" } },
+      { "id": "zs", "label": "Zs (Ω)", "from": { "step": "s-schleifenimpedanz", "input": "zs" } },
+      { "id": "ik", "label": "Ik (A)", "from": { "step": "s-schleifenimpedanz", "input": "ik" } },
+      { "id": "riso_ohne", "label": "Riso ohne (MΩ)", "from": { "step": "s-iso-widerstand", "gruppe": "ohne" } },
+      { "id": "riso_mit", "label": "Riso mit (MΩ)", "from": { "step": "s-iso-widerstand", "gruppe": "mit" } },
+      { "id": "rcd_art", "label": "RCD Art", "from": { "fact": "rcdBauart" } },
+      { "id": "rcd_in", "label": "IΔn", "from": { "fact": "rcdIn" } },
+      { "id": "i_mess", "label": "Imess (mA)", "from": { "step": "s-rcd-ausloesestrom" } },
+      { "id": "t_a", "label": "tA (ms)", "from": { "step": "s-rcd-ausloesezeit" } },
+      { "id": "ul", "label": "UL (V)", "from": { "step": "s-beruehrungsspannung", "input": "ul_grenze" } },
+      { "id": "u_mess", "label": "Umess (V)", "from": { "step": "s-beruehrungsspannung", "input": "u_mess" } },
+      { "id": "r_pe", "label": "RPE (Ω)", "from": { "step": "s-durchgang-schutzleiter" } }
     ],
     "resultText": {
       "mangel": "{n} festgestellt. Die Anlage entspricht in diesem Zustand nicht den Anforderungen; die Mängel sind zu beseitigen, bei unmittelbarer Gefahr vor der weiteren Nutzung.",
@@ -623,6 +654,7 @@
         { "id": "c-pa-gebaeude", "label": "Gebäudekonstruktion" }
       ],
       "wiki": ["messverfahren-durchgang-schutzleiter"],
+      "protocolBlock": "potentialausgleich",
       "protocolLabel": "Potentialausgleich",
       "tags": ["messung", "niederohm", "potentialausgleich"]
     },
@@ -653,6 +685,7 @@
       "limitHint": "Kein Grenzwert: Außerhalb des TT-Systems hängt die Abschaltung nicht am Erder. Der Wert belegt, dass der Erder vorhanden und wirksam ist, und wird über die Jahre verglichen — ein deutlich gestiegener Wert ist ein Befund.",
       "protocolSoll": "—",
       "wiki": ["messverfahren-erdungswiderstand-ra"],
+      "protocolBlock": "erder",
       "protocolLabel": "Erdungswiderstand RE",
       "tags": ["messung", "erder"]
     },
@@ -683,6 +716,7 @@
       "formulaRef": "ra-max",
       "pitfalls": ["fehler-tt-ra-sonde"],
       "wiki": ["messverfahren-erdungswiderstand-ra", "netzform-tt"],
+      "protocolBlock": "erder",
       "protocolLabel": "Erdungswiderstand RA",
       "tags": ["messung", "tt"]
     },

@@ -129,6 +129,9 @@ async function runWizard(page) {
   const pv = await page.locator('[data-fkey="prot-pruefer"]').inputValue();
   check(pv === 'F. Prüfer', 'Feldwechsel behält den Fokus, Prüfer = „' + pv + '“');
   await page.waitForTimeout(150);
+  check(await page.locator('[data-missing-note]').isVisible(), 'Erklärung fehlt noch — Warnung bleibt stehen');
+  await page.locator('[data-fkey="konform-ja"]').click();
+  await page.waitForTimeout(200);
   check(!(await page.locator('[data-missing-note]').isVisible()), 'Warnung verschwindet, wenn alles eingetragen ist');
   await page.evaluate(() => { const S = Pruefung.store; const j = S.activeJob(); S.setResult(j.id, 's-drehfeld', { verdict: 'mangel' }); });
   await page.waitForTimeout(150);
@@ -379,10 +382,89 @@ async function runWizard(page) {
     await p5.waitForTimeout(200);
     await p5.locator('.bottom-bar .btn-primary').click(); await p5.waitForTimeout(200);
     const bogen = await p5.locator('#print-root').innerText();
-    check(/Weitere erfasste Werte und Messstellen/.test(bogen) && /Abgang Küche/.test(bogen)
-       && /Mit Verbraucher · L–PE/.test(bogen) && /287 A/.test(bogen),
-      'Anhang nennt Messstellen, dokumentierte Werte und Ik');
+    const anhang = bogen.split('Weitere erfasste Werte und Messstellen')[1] || '';
+    check(/Abgang Küche/.test(anhang) && !/287/.test(anhang) && !/Mit Verbraucher/.test(anhang),
+      'Anhang nennt die Messstellen; Ik und Riso mit Verbraucher stehen in der Tabelle');
     await c5.close();
+  }
+
+  console.log('Druckbogen im Aufbau des IHK-Protokolls');
+  {
+    const c6 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const p6 = await c6.newPage();
+    p6.on('pageerror', e => errors.push(e.message));
+    p6.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+    await p6.goto(BASE, { waitUntil: 'networkidle' });
+    await p6.evaluate(() => localStorage.clear());
+    await p6.reload({ waitUntil: 'networkidle' }); await p6.waitForTimeout(400);
+    await p6.locator('.norm-card:not([disabled])').first().click(); await p6.waitForTimeout(120);
+    await runWizard(p6);
+    // Ein vollständig gefüllter Auftrag, damit jeder Block des Bogens etwas hat.
+    await p6.evaluate(() => {
+      const S = Pruefung.store, j = S.activeJob(), pack = Pruefung.data.packById.get(j.normId);
+      S.setProtocolField(j.id, pack, 'objekt', 'Musterstraße 5');
+      S.setProtocolField(j.id, pack, 'anlagenteil', 'UV Keller');
+      S.setProtocolField(j.id, pack, 'auftragnehmer', 'Elektro Muster GmbH');
+      S.setProtocolField(j.id, pack, 'netzbetreiber', 'Stadtwerke');
+      S.setProtocolField(j.id, pack, 'pruefer', 'F. Prüfer');
+      S.setProtocolField(j.id, pack, 'messgeraet', 'Profitest');
+      S.setResult(j.id, 's-durchgang-schutzleiter', { values: { r_pe_max: 0.28 } });
+      S.addPunkt(j.id, 's-durchgang-schutzleiter', { ort: 'Steckdose Bad', wert: 0.28 });
+      S.setResult(j.id, 's-iso-widerstand', { values: { riso_l_pe: 220, riso_n_pe: 185, riso_l_pe_mit: 1.8 } });
+      S.setResult(j.id, 's-schleifenimpedanz', { values: { zs: 0.82, zs_soll: 2.87, ik: 280 } });
+      S.setResult(j.id, 's-rcd-ausloesezeit', { values: { t_1x_0: 28, t_1x_180: 31, t_5x_0: 12 } });
+      S.setResult(j.id, 's-beruehrungsspannung', { values: { ul_grenze: 50, u_mess: 12 } });
+      S.setResult(j.id, 's-spannungsfall', { values: { du: 2.1 } });
+      S.setResult(j.id, 's-erder-re', { values: { re: 8.4 } });
+      const pa = pack.stepById.get('s-pa-durchgaengigkeit');
+      const checks = {}; pa.checklist.forEach((c, i) => { checks[c.id] = i < 5 ? true : 'na'; });
+      S.setResult(j.id, 's-pa-durchgaengigkeit', { checks, values: { r_pa: 0.15 } });
+      S.setResult(j.id, 's-sicht-anlage', { verdict: 'mangel', note: 'Klemme L2 lose' });
+      S.set({ tab: 'protokoll' });
+      window.print = () => {};
+    });
+    await p6.waitForTimeout(250);
+
+    // Erklärung ist Pflicht und nie vorbelegt
+    check(await p6.locator('.card', { hasText: 'Erklärung' }).locator('.verdict-btn').count() === 2
+       && await p6.evaluate(() => Pruefung.store.activeJob().protocol.konformitaet) === undefined,
+      'Erklärung steht als eigene Karte am Ende und ist nicht vorbelegt');
+    check(/Erklärung des Prüfers/.test(await p6.locator('[data-missing-note]').textContent()),
+      'fehlende Erklärung wird als Pflichtangabe angemahnt');
+    await p6.locator('[data-fkey="konform-ja"]').click(); await p6.waitForTimeout(200);
+    check(await p6.locator('.card', { hasText: 'Erklärung' }).locator('.w-warn').count() === 1,
+      '„ja" trotz Mangel erzeugt einen sichtbaren Hinweis');
+
+    await p6.locator('.bottom-bar .btn-primary').click(); await p6.waitForTimeout(250);
+    const bogen = await p6.locator('#print-root').innerText();
+    const kopf = await p6.locator('table.p-mess th').allTextContents();
+
+    const bloecke = ['Besichtigen', 'Erproben', 'Messen', 'Durchgängigkeit des Potentialausgleichs',
+      'Weitere Prüfschritte', 'Verwendete Messgeräte', 'Prüfergebnis', 'Mängel und Bemerkungen'];
+    check(bloecke.every(t => bogen.includes(t)), 'Bogen hat alle Blöcke des Formulars: '
+      + bloecke.filter(t => !bogen.includes(t)).join(', ') || 'alle da');
+    check(kopf.length === 17 && kopf[0] === 'Nr.' && kopf.includes('Zs (Ω)') && kopf.includes('Ik (A)')
+       && kopf.includes('Riso ohne (MΩ)') && kopf.includes('Riso mit (MΩ)') && kopf.includes('Umess (V)') && kopf.includes('RPE (Ω)'),
+      'Messtabelle hat die 17 Spalten des Formulars');
+    const zellen = await p6.locator('table.p-mess tbody td').allTextContents();
+    check(zellen[6] === '0,82' && zellen[7] === '280' && zellen[8] === '185' && zellen[9] === '1,8'
+       && zellen[16] === '0,28',
+      'Werte stehen in den richtigen Spalten: ' + JSON.stringify(zellen.slice(6, 11)) + ' … RPE ' + zellen[16]);
+    check(zellen[10] === 'allgemein',
+      'RCD-Spalte zeigt den Kurztext, nicht den Antwortsatz: „' + zellen[10] + '“');
+    check(/Die elektrische Anlage entspricht den anerkannten Regeln/.test(bogen) && /☒ ja/.test(bogen)
+       && /Erklärung steht auf „ja", obwohl/.test(bogen),
+      'Leitsatz steht im Bogen, angekreuzt, mit Vermerk zum Widerspruch');
+    check(/Auftraggeber — Ort, Datum, Unterschrift/.test(bogen) && /Prüfer\/-in — Ort, Datum, Unterschrift/.test(bogen),
+      'Unterschriften mit Ort und Datum');
+    // Nichts doppelt, nichts verloren
+    check((bogen.match(/8,4 Ω/g) || []).length === 1, 'Erdungswiderstand steht genau einmal im Bogen');
+    check(!/280 A/.test(bogen.split('Weitere erfasste Werte')[1] || ''),
+      'Ik steht in der Tabelle, nicht noch einmal im Anhang');
+    check(/Spannungsfall/.test(bogen) && /2,1 %/.test(bogen),
+      'Spannungsfall fällt nicht aus dem Bogen, obwohl er keine Tabellenspalte hat');
+    check(/Steckdose Bad/.test(bogen), 'Messstellen stehen im Anhang');
+    await c6.close();
   }
 
   console.log('Leitungsberechnung (360 px)');

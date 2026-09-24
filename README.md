@@ -556,7 +556,7 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Prüffristen: Richtwert wählen, Fälligkeit im Auftrag und im Protokoll | fertig |
 | Serienprüfung: „Nächstes Gerät" übernimmt die Kopfdaten | fertig |
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
-| Protokoll als A4-Bogen über den Druckdialog (auch „Als PDF speichern") | fertig |
+| Protokoll als A4-Bogen im Aufbau des IHK-Prüfprotokolls, über den Druckdialog (auch „Als PDF speichern") | fertig |
 | Tageslicht-Modus und größere Schrift für den Einsatz draußen | fertig |
 | Speicherung auf dem Gerät, Prüfer und Messgerät werden gemerkt | fertig |
 | Leitungsberechnung: Querschnitt vorschlagen, vier Nachweise, Nachweisblatt | fertig |
@@ -610,6 +610,13 @@ Selbsttest der App ebenso.
 Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
 
+* **Spalte im Druckbogen ergänzen** — Eintrag unter `protocol.messtabelle`.
+  `from` sagt, woher der Wert kommt: `{ "step", "input" }` ein einzelnes Feld,
+  `{ "step", "gruppe" }` der maßgebliche Wert einer Feldgruppe, `{ "step" }`
+  der maßgebliche Wert des Schrittes samt Messstellen, `{ "fact" }` eine
+  Antwort aus dem Assistenten, `{ "kreis" }` eine Angabe des Stromkreises.
+  Was eine Spalte hat, lässt der Anhang weg; was keine hat, landet unter
+  „Weitere Prüfschritte" — aus dem Bogen fällt nichts heraus.
 * **Messwert ergänzen** — Eingabe unter `measure.inputs` anlegen. `role` sagt,
   wie die App damit umgeht: ohne Rolle wird bewertet, `"reference"` ist ein
   Sollwert (der Grenzwert, gegen den ein anderes Feld über `limitFromInput`

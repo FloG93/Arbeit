@@ -334,16 +334,16 @@
       const world = P.data.world(session.facts.world);
       return world ? world.label : null;
     }
-    const hits = optionsFromHistory(pack, session).filter(o => o.set && o.set[factKey] != null);
-    const hit = hits[hits.length - 1];
-    if (hit) return hit.label;
-    // Ein Fakt kann auch aus presetFacts einer Variante stammen — dann wurde
-    // er nie gewählt und hat keine Antwortkarte, aus der ein Klartext käme.
-    // factLabels im Paket liefert ihn nach, damit das Protokollfeld nicht
-    // leer bleibt.
+    // factLabels zuerst: Das Antwortlabel ist für die Auswahl geschrieben
+    // („Ja, allgemeiner RCD"), nicht für eine Protokollspalte von 14 mm.
+    // Es fängt außerdem Fakten ab, die aus presetFacts einer Variante
+    // stammen und deshalb gar keine Antwortkarte haben.
     const value = session.facts ? session.facts[factKey] : null;
     const table = pack.factLabels && pack.factLabels[factKey];
-    return (value != null && table && table[value]) || null;
+    if (value != null && table && table[value]) return table[value];
+    const hits = optionsFromHistory(pack, session).filter(o => o.set && o.set[factKey] != null);
+    const hit = hits[hits.length - 1];
+    return hit ? hit.label : null;
   }
 
   P.plan = PL;
