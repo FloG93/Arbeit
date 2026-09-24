@@ -92,6 +92,13 @@ Schritt ihn nutzen kann.
 
 ## Paket 1 — Kopfdaten, Anlass, Erder, Sichtprüfung
 
+> **Erledigt** in Version 0.4.0. Abweichungen von diesem Abschnitt beim Bauen:
+> Das Protokollfeld `netzsystem` kam dazu (im Plan nur im Druckbogen-Aufbau
+> erwähnt, nicht in der Feldtabelle), die Kopfdaten bekamen Gruppen, weil
+> sechzehn Felder am Stück unbedienbar sind, und `s-durchgang-schutzleiter`
+> heißt jetzt „Schutzleiter (Niederohmmessung)" — der alte Titel nannte den
+> Potentialausgleich, der ausgezogen ist.
+
 Additiv, keine Strukturänderung. Alles davon ist auch ohne Paket 3 sinnvoll.
 
 ### 1.1 Kopfdaten vervollständigen

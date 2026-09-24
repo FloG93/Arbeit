@@ -209,18 +209,21 @@
     return out;
   }
 
+  /* „n. a." zählt wie beantwortet, aber nicht als Mangel: ein Schritt, dessen
+   * Punkte alle nicht zutreffen (kein Gas, kein Aufzug), ist bewertet und
+   * nicht offen. Sonst würde das Protokoll nie vollständig. */
   function checklistVerdict(pack, step, facts, result) {
     const items = PL.visibleChecklist(step, facts);
     if (!items.length) return null;
     let anyFalse = false;
-    let allTrue = true;
+    let allAnswered = true;
     for (const item of items) {
       const value = result && result.checks ? result.checks[item.id] : undefined;
       if (value === false) anyFalse = true;
-      if (value !== true) allTrue = false;
+      else if (!P.util.checkAnswered(value)) allAnswered = false;
     }
     if (anyFalse) return 'mangel';
-    return allTrue ? 'ok' : null;
+    return allAnswered ? 'ok' : null;
   }
 
   /* Eine von Hand gesetzte Bewertung gewinnt immer: die Anlage kennt die Norm
@@ -310,7 +313,14 @@
     }
     const hits = optionsFromHistory(pack, session).filter(o => o.set && o.set[factKey] != null);
     const hit = hits[hits.length - 1];
-    return hit ? hit.label : null;
+    if (hit) return hit.label;
+    // Ein Fakt kann auch aus presetFacts einer Variante stammen — dann wurde
+    // er nie gewählt und hat keine Antwortkarte, aus der ein Klartext käme.
+    // factLabels im Paket liefert ihn nach, damit das Protokollfeld nicht
+    // leer bleibt.
+    const value = session.facts ? session.facts[factKey] : null;
+    const table = pack.factLabels && pack.factLabels[factKey];
+    return (value != null && table && table[value]) || null;
   }
 
   P.plan = PL;

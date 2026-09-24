@@ -8,6 +8,15 @@
   "datenstand": "2026-09",
   "reviewed": { "by": "", "date": "" },
   "note": "Erst- und Wiederholungsprüfung teilen sich Prüfschritte und Grenzwerte. Was sie unterscheidet — Anlass, Umfang, Sicherheitshinweise — steckt in den Varianten und in when-Bedingungen, nicht in zwei gepflegten Dateien.",
+  "factLabels": {
+    "anlass": {
+      "neuanlage": "Neuanlage",
+      "erweiterung": "Erweiterung",
+      "aenderung": "Änderung",
+      "instandsetzung": "Instandsetzung",
+      "wiederholung": "Wiederholungsprüfung"
+    }
+  },
   "variants": [
     {
       "id": "erstpruefung",
@@ -17,7 +26,7 @@
       "edition": "2017-06",
       "status": "aktiv",
       "worlds": ["efh", "industrie"],
-      "entry": "q-anlagenart",
+      "entry": "q-anlass",
       "presetFacts": { "pruefanlass": "erstpruefung", "freischaltung": "ja" }
     },
     {
@@ -29,7 +38,7 @@
       "status": "aktiv",
       "worlds": ["efh", "industrie"],
       "entry": "q-w-freischaltung",
-      "presetFacts": { "pruefanlass": "wiederholung" }
+      "presetFacts": { "pruefanlass": "wiederholung", "anlass": "wiederholung" }
     }
   ],
   "sources": [
@@ -45,13 +54,29 @@
     { "id": "dokumentieren", "label": "Dokumentieren", "order": 900, "hint": "Protokoll, Übergabe, Plakette." }
   ],
   "protocol": {
+    "groups": [
+      { "id": "auftrag", "label": "Auftrag" },
+      { "id": "anlage", "label": "Anlage" },
+      { "id": "netz", "label": "Netz" },
+      { "id": "pruefung", "label": "Prüfung" }
+    ],
     "fields": [
-      { "id": "objekt", "label": "Objekt", "termKey": "objekt", "kind": "text", "required": true },
-      { "id": "anlagenteil", "label": "Anlagenteil", "termKey": "verteiler", "kind": "text" },
-      { "id": "auftraggeber", "label": "Auftraggeber", "termKey": "auftraggeber", "kind": "text" },
-      { "id": "pruefer", "label": "Prüfer", "required": true, "kind": "text", "sticky": true },
-      { "id": "messgeraet", "label": "Messgerät / Kalibrierung", "kind": "text", "sticky": true },
-      { "id": "datum", "label": "Prüfdatum", "required": true, "kind": "date", "default": "today" }
+      { "id": "auftraggeber", "label": "Auftraggeber", "termKey": "auftraggeber", "kind": "text", "gruppe": "auftrag" },
+      { "id": "auftragsnr", "label": "Auftrags-Nr.", "kind": "text", "gruppe": "auftrag" },
+      { "id": "kundennr", "label": "Kunden-Nr.", "kind": "text", "gruppe": "auftrag" },
+      { "id": "auftragnehmer", "label": "Auftragnehmer (ausführende Firma)", "kind": "text", "sticky": true, "gruppe": "auftrag", "hint": "Die Firma, die prüft — nicht die Person. Wird gemerkt." },
+      { "id": "objekt", "label": "Objekt", "termKey": "objekt", "kind": "text", "required": true, "gruppe": "anlage" },
+      { "id": "anlagenteil", "label": "Anlagenteil", "termKey": "verteiler", "kind": "text", "gruppe": "anlage" },
+      { "id": "anlass", "label": "Prüfanlass", "kind": "fact", "factKey": "anlass", "gruppe": "anlage" },
+      { "id": "netzsystem", "label": "Netzsystem", "kind": "fact", "factKey": "netzform", "gruppe": "netz" },
+      { "id": "netz_spannung", "label": "Netzspannung (V)", "kind": "text", "default": "230/400", "gruppe": "netz" },
+      { "id": "netz_frequenz", "label": "Frequenz (Hz)", "kind": "text", "default": "50", "gruppe": "netz" },
+      { "id": "netzbetreiber", "label": "Verteilungsnetzbetreiber", "kind": "text", "sticky": true, "gruppe": "netz" },
+      { "id": "pruefer", "label": "Prüfer", "required": true, "kind": "text", "sticky": true, "gruppe": "pruefung" },
+      { "id": "datum", "label": "Prüfdatum", "required": true, "kind": "date", "default": "today", "gruppe": "pruefung" },
+      { "id": "messgeraet", "label": "Messgerät 1 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" },
+      { "id": "messgeraet2", "label": "Messgerät 2 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" },
+      { "id": "messgeraet3", "label": "Messgerät 3 (Fabrikat, Typ)", "kind": "text", "sticky": true, "gruppe": "pruefung" }
     ],
     "resultText": {
       "mangel": "{n} festgestellt. Die Anlage entspricht in diesem Zustand nicht den Anforderungen; die Mängel sind zu beseitigen, bei unmittelbarer Gefahr vor der weiteren Nutzung.",
@@ -100,6 +125,20 @@
       "options": [
         { "id": "o-w-unveraendert", "label": "Nein, unverändert", "sub": "Nur Alterung und Betrieb", "set": { "erweiterung": "nein" }, "next": "q-anlagenart" },
         { "id": "o-w-erweitert", "label": "Ja, erweitert oder geändert", "sub": "Neue Stromkreise, Umbau, Nachrüstung", "set": { "erweiterung": "ja" }, "addTags": ["erweiterung"], "next": "r-w-erweiterung" }
+      ]
+    },
+    {
+      "id": "q-anlass",
+      "type": "question",
+      "title": "Was ist der Anlass der Prüfung?",
+      "help": "Steht so im Protokoll. Am Prüfumfang ändert es nichts: Für einen neuen, erweiterten oder geänderten Teil gilt in jedem Fall die Erstprüfung.",
+      "when": { "pruefanlass": "erstpruefung" },
+      "defaultNext": "q-anlagenart",
+      "options": [
+        { "id": "o-anlass-neuanlage", "label": "Neuanlage", "sub": "Erstmalige Errichtung", "set": { "anlass": "neuanlage" }, "next": "q-anlagenart" },
+        { "id": "o-anlass-erweiterung", "label": "Erweiterung", "sub": "Bestehende Anlage vergrößert", "set": { "anlass": "erweiterung" }, "next": "q-anlagenart" },
+        { "id": "o-anlass-aenderung", "label": "Änderung", "sub": "Bestehender Teil umgebaut", "set": { "anlass": "aenderung" }, "next": "q-anlagenart" },
+        { "id": "o-anlass-instandsetzung", "label": "Instandsetzung", "sub": "Nach Reparatur oder Schadensbeseitigung", "set": { "anlass": "instandsetzung" }, "next": "q-anlagenart" }
       ]
     },
     {
@@ -273,6 +312,9 @@
         { "id": "c-leitungsschutz", "label": "Leitungsschutz passend zum Querschnitt" },
         { "id": "c-schutzmassnahme", "label": "Schutzmaßnahme durchgehend umgesetzt (PE, Trennstelle, Potentialausgleich)" },
         { "id": "c-kennzeichnung", "label": "Kennzeichnung, Stromlaufplan und Verteilerbeschriftung vorhanden" },
+        { "id": "c-kennzeichnung-n-pe", "label": "N- und PE-Leiter durchgehend richtig gekennzeichnet" },
+        { "id": "c-trenn-schaltgeraete", "label": "Trenn- und Schaltgeräte vorhanden, zugeordnet und bedienbar" },
+        { "id": "c-gebaeudesystemtechnik", "label": "Gebäudesystemtechnik: Aktoren zugänglich, dokumentiert, Handbedienung möglich", "when": { "smarthome": "ja" } },
         { "id": "c-klemmstellen", "label": "Klemmstellen fest, keine blanken Leiter, Zugentlastung vorhanden" },
         { "id": "c-ip-schutz", "label": "IP-Schutzart am Einbauort erreicht" },
         { "id": "c-brandabschottung", "label": "Brandabschottungen und Leitungsführung dicht", "when": { "world": "industrie" } },
@@ -332,7 +374,7 @@
       "type": "messung",
       "phase": "messen",
       "order": 200,
-      "title": "Schutzleiter und Potentialausgleich (Niederohmmessung)",
+      "title": "Schutzleiter (Niederohmmessung)",
       "short": "R-PE",
       "instrument": "Niederohmmessgerät, Prüfstrom ≥ 200 mA",
       "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen. Bei einer Anlage im Betrieb die Freischaltung vorher mit dem Betreiber abstimmen.",
@@ -340,6 +382,7 @@
         "Anlage freischalten und gegen Wiedereinschalten sichern.",
         "Messleitungen kalibrieren / Eigenwiderstand abgleichen.",
         "Von der Haupterdungsschiene zu jedem Schutzkontakt und zu jedem berührbaren Metallteil messen.",
+        "Den Potentialausgleich selbst prüft der Schritt „Durchgängigkeit des Potentialausgleichs“.",
         "Ergebnis gegen den aus Querschnitt und Länge erwarteten Wert vergleichen."
       ],
       "measure": {
@@ -347,8 +390,7 @@
         "symbol": "R",
         "unit": "Ω",
         "inputs": [
-          { "id": "r_pe_max", "label": "größter Messwert", "unit": "Ω", "quickValues": [{ "label": "0,1", "value": 0.1 }, { "label": "0,3", "value": 0.3 }] },
-          { "id": "r_pa", "label": "Potentialausgleich", "unit": "Ω", "limitKey": "schutzpotentialausgleich" }
+          { "id": "r_pe_max", "label": "größter Messwert", "unit": "Ω", "quickValues": [{ "label": "0,1", "value": 0.1 }, { "label": "0,3", "value": 0.3 }] }
         ],
         "aggregate": "max"
       },
@@ -504,6 +546,82 @@
       "wiki": ["messverfahren-schleifenimpedanz", "grenzwerte-abschaltzeit"],
       "protocolLabel": "Schleifenimpedanz Zs",
       "tags": ["messung", "zs"]
+    },
+    {
+      "id": "s-pa-durchgaengigkeit",
+      "type": "messung",
+      "phase": "messen",
+      "order": 210,
+      "title": "Durchgängigkeit des Potentialausgleichs",
+      "short": "PA",
+      "requires": ["s-durchgang-schutzleiter"],
+      "requiresReason": "Der Schutzleiter ist die Bezugsgröße — erst wenn er stimmt, sagt der Potentialausgleich etwas aus.",
+      "instrument": "Niederohmmessgerät, Prüfstrom ≥ 200 mA",
+      "safety": "Anlage freischalten, sichern, Spannungsfreiheit feststellen.",
+      "procedure": [
+        "Von der Haupterdungsschiene zu jedem angebundenen Teil messen.",
+        "Was im Objekt nicht vorhanden ist, auf „nicht zutreffend“ stellen — nicht offen lassen.",
+        "Größten gemessenen Wert eintragen."
+      ],
+      "measure": {
+        "quantity": "Verbindungswiderstand",
+        "symbol": "R",
+        "unit": "Ω",
+        "inputs": [
+          { "id": "r_pa", "label": "größter Messwert", "unit": "Ω", "limitKey": "schutzpotentialausgleich" }
+        ],
+        "aggregate": "max"
+      },
+      "limitRef": "schutzleiter-durchgang",
+      "checklist": [
+        { "id": "c-pa-fundamenterder", "label": "Fundamenterder" },
+        { "id": "c-pa-schiene", "label": "Potentialausgleichsschiene" },
+        { "id": "c-pa-wasserzwischenzaehler", "label": "Wasserzwischenzähler" },
+        { "id": "c-pa-hauptwasser", "label": "Hauptwasserleitung" },
+        { "id": "c-pa-hauptschutzleiter", "label": "Hauptschutzleiter" },
+        { "id": "c-pa-gas", "label": "Gasinnenleitung" },
+        { "id": "c-pa-heizung", "label": "Heizungsanlage" },
+        { "id": "c-pa-klima", "label": "Klimaanlage" },
+        { "id": "c-pa-aufzug", "label": "Aufzugsanlage" },
+        { "id": "c-pa-edv", "label": "EDV-Anlage" },
+        { "id": "c-pa-telefon", "label": "Telefonanlage" },
+        { "id": "c-pa-blitzschutz", "label": "Blitzschutzanlage" },
+        { "id": "c-pa-antenne", "label": "Antennenanlage / BK" },
+        { "id": "c-pa-gebaeude", "label": "Gebäudekonstruktion" }
+      ],
+      "wiki": ["messverfahren-durchgang-schutzleiter"],
+      "protocolLabel": "Potentialausgleich",
+      "tags": ["messung", "niederohm", "potentialausgleich"]
+    },
+    {
+      "id": "s-erder-re",
+      "type": "messung",
+      "phase": "messen",
+      "order": 411,
+      "title": "Erdungswiderstand RE dokumentieren",
+      "short": "RE",
+      "when": { "netzform": ["tn-c", "tn-s", "tn-c-s", "it"] },
+      "optional": true,
+      "optionalReason": "Ohne eigenen Erder in der Anlage entfällt der Schritt — dann von Hand auf „n. a.“ stellen.",
+      "instrument": "Erdungsmessgerät",
+      "procedure": [
+        "Erdungswiderstand des Fundamenterders oder Anlagenerders messen.",
+        "Wert dokumentieren und mit dem Wert der letzten Prüfung vergleichen."
+      ],
+      "measure": {
+        "quantity": "Erdungswiderstand",
+        "symbol": "RE",
+        "unit": "Ω",
+        "inputs": [
+          { "id": "re", "label": "RE", "unit": "Ω" }
+        ],
+        "aggregate": "max"
+      },
+      "limitHint": "Kein Grenzwert: Außerhalb des TT-Systems hängt die Abschaltung nicht am Erder. Der Wert belegt, dass der Erder vorhanden und wirksam ist, und wird über die Jahre verglichen — ein deutlich gestiegener Wert ist ein Befund.",
+      "protocolSoll": "—",
+      "wiki": ["messverfahren-erdungswiderstand-ra"],
+      "protocolLabel": "Erdungswiderstand RE",
+      "tags": ["messung", "erder"]
     },
     {
       "id": "s-erdungswiderstand-ra",
@@ -730,6 +848,7 @@
         { "id": "c-schalter", "label": "Schalter, Steuerungen und Verriegelungen arbeiten wie geplant" },
         { "id": "c-drehrichtung", "label": "Motoren laufen in der vorgesehenen Richtung an", "when": { "drehstrom": "ja" } },
         { "id": "c-beleuchtung", "label": "Beleuchtung und Steckdosen stromkreisweise geprüft" },
+        { "id": "c-gst-funktion", "label": "Gebäudesystemtechnik: Szenen und Aktoren schalten wie vorgesehen", "when": { "smarthome": "ja" } },
         { "id": "c-isolationsueberwachung", "label": "Isolationsüberwachungseinrichtung meldet und wird quittiert", "when": { "netzform": "it" } }
       ],
       "wiki": ["messverfahren-sichtpruefung"],

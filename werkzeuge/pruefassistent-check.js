@@ -181,6 +181,102 @@ async function runWizard(page) {
   check(await page.locator('.w-warn', { hasText: 'Gerät' }).count() === 1, 'Pflichtangabe „Gerät“ angemahnt');
   await ctx.close();
 
+  console.log('Paket 1 — Kopfdaten, Anlass, Potentialausgleich, RE');
+  {
+    const c4 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p4 = await c4.newPage();
+    p4.on('pageerror', e => errors.push(e.message));
+    p4.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') errors.push('[' + m.type() + '] ' + m.text()); });
+    await p4.goto(BASE, { waitUntil: 'networkidle' });
+    await p4.evaluate(() => localStorage.clear());
+    await p4.reload({ waitUntil: 'networkidle' }); await p4.waitForTimeout(400);
+
+    // Der Anlass steht am Anfang der Erstprüfung und landet im Protokoll.
+    await p4.locator('.norm-card:not([disabled])').first().click(); await p4.waitForTimeout(150);
+    const erste = await p4.locator('.q-title').first().textContent();
+    const anlassOptionen = await p4.locator('.answer .t').allTextContents();
+    check(/Anlass der Prüfung/.test(erste) && anlassOptionen.length === 4,
+      'Erstprüfung fragt zuerst den Anlass: ' + anlassOptionen.join(', '));
+    await p4.locator('.answer', { hasText: 'Instandsetzung' }).click(); await p4.waitForTimeout(100);
+    await runWizard(p4);
+    await p4.locator('.tab-btn', { hasText: 'Aufträge' }).click(); await p4.waitForTimeout(150);
+    const anlassFeld = await p4.locator('.field', { hasText: 'Prüfanlass' }).locator('.input').textContent();
+    check(anlassFeld === 'Instandsetzung', 'Anlass steht im Protokoll: „' + anlassFeld + '“');
+
+    // Kopfdaten: Gruppen, Vorbelegung, gemerkte Felder
+    const gruppen = await p4.locator('.field-group').allTextContents();
+    check(gruppen.join(',') === 'Auftrag,Anlage,Netz,Prüfung', 'Kopfdaten in vier Gruppen: ' + gruppen.join(' | '));
+    check(await p4.locator('[data-fkey="prot-netz_spannung"]').inputValue() === '230/400'
+       && await p4.locator('[data-fkey="prot-netz_frequenz"]').inputValue() === '50',
+      'Netzspannung und Frequenz sind vorbelegt');
+    await p4.locator('[data-fkey="prot-auftragnehmer"]').click();
+    await p4.keyboard.type('Elektro Muster GmbH', { delay: 10 });
+    await p4.waitForTimeout(400);
+    check(await p4.evaluate(() => Pruefung.store.state.sticky.auftragnehmer) === 'Elektro Muster GmbH',
+      'Auftragnehmer wird für weitere Prüfungen gemerkt');
+
+    // Potentialausgleich: eigener Schritt mit den Zielen des Formulars
+    await p4.locator('.tab-btn', { hasText: /^Plan$/ }).click(); await p4.waitForTimeout(150);
+    await p4.locator('.step-card', { hasText: 'Durchgängigkeit des Potentialausgleichs' }).click();
+    await p4.waitForTimeout(150);
+    check(await p4.locator('.check-row').count() === 14, 'Potentialausgleich listet 14 Ziele');
+
+    // Vierter Zustand: offen → OK → Mangel → n. a. → offen
+    const gas = p4.locator('.check-row', { hasText: 'Gasinnenleitung' });
+    const folge = [];
+    for (let i = 0; i < 5; i++) {
+      folge.push((await gas.getAttribute('aria-label')).split('— ')[1]);
+      await gas.click(); await p4.waitForTimeout(60);
+    }
+    check(folge.join(' → ') === 'offen → in Ordnung → Mangel → nicht zutreffend → offen',
+      'Checkliste kennt vier Zustände: ' + folge.join(' → '));
+
+    // Alles „n. a." heißt bewertet, nicht offen — und kein Mangel.
+    await p4.evaluate(() => {
+      const S = Pruefung.store, j = S.activeJob();
+      const pack = Pruefung.data.packById.get(j.normId);
+      const step = pack.stepById.get('s-pa-durchgaengigkeit');
+      const checks = {};
+      for (const item of step.checklist) checks[item.id] = 'na';
+      S.setResult(j.id, 's-pa-durchgaengigkeit', { checks, values: { r_pa: 0.2 } });
+    });
+    await p4.waitForTimeout(150);
+    const urteil = await p4.evaluate(() => {
+      const j = Pruefung.store.activeJob();
+      const pack = Pruefung.data.packById.get(j.normId);
+      return Pruefung.plan.verdict(pack, pack.stepById.get('s-pa-durchgaengigkeit'),
+        j.session.facts, j.results['s-pa-durchgaengigkeit']);
+    });
+    check(urteil === 'ok', 'lauter „n. a." gilt als bewertet, nicht als offen (Bewertung: ' + urteil + ')');
+
+    // RE außerhalb von TT: TN-C-S wurde im Assistenten gewählt
+    await p4.locator('.bottom-bar .btn-ghost').click(); await p4.waitForTimeout(150);
+    const schritte = await p4.locator('.step-card .t').allTextContents();
+    check(schritte.some(t => /Erdungswiderstand RE/.test(t)),
+      'Erdungswiderstand RE steht auch im TN-System im Plan');
+
+    // Alter Auftrag: r_pa wandert zum neuen Schritt
+    await p4.evaluate(() => {
+      const raw = JSON.parse(localStorage.getItem('pruefung.v1'));
+      const job = raw.jobs[0];
+      job.results['s-durchgang-schutzleiter'] = { values: { r_pe_max: 0.3, r_pa: 0.42 }, at: 1 };
+      delete job.results['s-pa-durchgaengigkeit'];
+      localStorage.setItem('pruefung.v1', JSON.stringify(raw));
+    });
+    await p4.reload({ waitUntil: 'networkidle' }); await p4.waitForTimeout(500);
+    const gewandert = await p4.evaluate(() => {
+      const j = Pruefung.store.state.jobs[0];
+      return {
+        neu: j.results['s-pa-durchgaengigkeit'] && j.results['s-pa-durchgaengigkeit'].values.r_pa,
+        alt: j.results['s-durchgang-schutzleiter'].values.r_pa,
+        rpe: j.results['s-durchgang-schutzleiter'].values.r_pe_max,
+      };
+    });
+    check(gewandert.neu === 0.42 && gewandert.alt === undefined && gewandert.rpe === 0.3,
+      'alter Potentialausgleichswert wandert mit, der Schutzleiterwert bleibt: ' + JSON.stringify(gewandert));
+    await c4.close();
+  }
+
   console.log('Leitungsberechnung (360 px)');
   {
     const c3 = await browser.newContext({ viewport: { width: 360, height: 740 } });
@@ -262,6 +358,15 @@ async function runWizard(page) {
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.locator('.step-card', { hasText: 'Isolationswiderstand' }).first().click(); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    // Potentialausgleich: lange Checkliste, und alle vier Zustände einmal
+    // gezeichnet — „n. a." muss im Kontrast-Audit vorkommen.
+    await p2.evaluate(() => { Pruefung.nav.stepId = 's-pa-durchgaengigkeit'; Pruefung.render(); });
+    await p2.waitForTimeout(100);
+    const naRow = p2.locator('.check-row').first();
+    for (let i = 0; i < 3; i++) { await naRow.click(); await p2.waitForTimeout(40); }
+    found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
+    await p2.evaluate(() => { Pruefung.nav.stepId = null; Pruefung.render(); });
+    await p2.waitForTimeout(100);
     await p2.evaluate(() => Pruefung.store.set({ tab: 'protokoll' })); await p2.waitForTimeout(100);
     found.push(...await p2.evaluate(AUDIT)); taps.push(...await p2.evaluate(TAPS));
     await p2.evaluate(() => Pruefung.openWiki('grenzwerte-iso')); await p2.waitForTimeout(100);

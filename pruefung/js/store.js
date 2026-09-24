@@ -69,11 +69,30 @@
     if (pack && (!job.variantId || !pack.variantById.has(job.variantId))) {
       job.variantId = pack.variants[0] ? pack.variants[0].id : null;
     }
+    if (job.normId === 'anlage') migrateRpa(job);
     const variant = pack ? P.data.variant(job.normId, job.variantId) : null;
     if (variant) {
       job.session.entry = job.session.entry || variant.entry;
       job.session.presetFacts = job.session.presetFacts || variant.presetFacts;
     }
+    return job;
+  }
+
+  /* Der Potentialausgleich war einmal ein Feld der Schutzleitermessung. Seit
+   * er einen eigenen Prüfschritt hat, wandert der Wert dorthin — sonst stünde
+   * er in alten Aufträgen an einem Schritt, der ihn nicht mehr anzeigt. */
+  function migrateRpa(job) {
+    const from = job.results['s-durchgang-schutzleiter'];
+    if (!from || !from.values || from.values.r_pa == null) return job;
+    const to = job.results['s-pa-durchgaengigkeit'] || {};
+    if (to.values && to.values.r_pa != null) return job;
+    job.results['s-pa-durchgaengigkeit'] = Object.assign({}, to, {
+      values: Object.assign({}, to.values, { r_pa: from.values.r_pa }),
+      at: from.at || Date.now(),
+    });
+    const values = Object.assign({}, from.values);
+    delete values.r_pa;
+    job.results['s-durchgang-schutzleiter'] = Object.assign({}, from, { values });
     return job;
   }
 
@@ -131,6 +150,10 @@
     for (const field of (pack.protocol && pack.protocol.fields) || []) {
       if (field.sticky && sticky[field.id]) protocol[field.id] = sticky[field.id];
       else if (field.default === 'today') protocol[field.id] = P.util.todayISO();
+      // Jede andere Vorbelegung steht wörtlich in den Daten (Netzspannung,
+      // Frequenz) — sie ist ein Vorschlag, kein fester Wert, und bleibt im
+      // Feld änderbar.
+      else if (field.default != null) protocol[field.id] = field.default;
     }
     const job = normalizeJob({
       id: nid(),

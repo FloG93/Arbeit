@@ -117,18 +117,33 @@
     ]);
   };
 
-  /* Dreizustands-Zeile: unbeantwortet → in Ordnung → Mangel → unbeantwortet.
-   * Ein Tippziel statt zwei, weil eine Hand oft schon das Messgerät hält. */
+  /* Vierzustands-Zeile: offen → in Ordnung → Mangel → nicht zutreffend →
+   * offen. Ein Tippziel statt vier, weil eine Hand oft schon das Messgerät
+   * hält.
+   *
+   * „n. a." ist kein Schönheitszustand: In der Liste des Potentialausgleichs
+   * ist „Gasinnenleitung nicht vorhanden" der Normalfall, und ohne eigenen
+   * Zustand sähe er im Protokoll aus wie ein übersehener Punkt. */
+  const CHECK_STATES = [
+    { value: null, cls: '', sym: '', label: 'offen' },
+    { value: true, cls: ' ok', sym: '✓', label: 'in Ordnung' },
+    { value: false, cls: ' mangel', sym: '!', label: 'Mangel' },
+    { value: 'na', cls: ' na', sym: '–', label: 'nicht zutreffend' },
+  ];
+  const checkState = value => CHECK_STATES.find(s => s.value === value) || CHECK_STATES[0];
+
+  U.checkStateLabel = value => checkState(value).label;
+  U.checkStateSym = value => checkState(value).sym;
+
   U.checkRow = function checkRow(item, state, onToggle) {
-    const cls = state === true ? ' ok' : state === false ? ' mangel' : '';
-    const next = state === true ? false : state === false ? null : true;
-    const sym = state === true ? '✓' : state === false ? '!' : '';
+    const current = checkState(state);
+    const next = CHECK_STATES[(CHECK_STATES.indexOf(current) + 1) % CHECK_STATES.length].value;
     return el('button', {
-      class: 'check-row' + cls, type: 'button',
-      'aria-label': item.label + ' — ' + (state === true ? 'in Ordnung' : state === false ? 'Mangel' : 'offen'),
+      class: 'check-row' + current.cls, type: 'button',
+      'aria-label': item.label + ' — ' + current.label,
       onClick: () => onToggle(next),
     }, [
-      el('span', { class: 'box' }, sym),
+      el('span', { class: 'box' }, current.sym),
       el('span', { class: 't' }, item.label),
     ]);
   };

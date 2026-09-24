@@ -248,6 +248,9 @@ button{-webkit-appearance:none;appearance:none;background:none;border:none;color
 .field{display:flex;flex-direction:column;gap:.375rem}
 .field-label{font:400 .75rem/1.2 var(--font-ui);color:var(--text-tertiary)}
 .field-label.missing{color:var(--status-mangel);font-weight:600}
+.field-group{font:600 .688rem/1 var(--font-ui);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-muted);padding-top:.5rem;border-top:1px solid var(--border-subtle);margin-top:.25rem}
+.card-body>.field-group:first-child{padding-top:0;border-top:none;margin-top:0}
 .input{min-height:var(--tap-min);background:var(--surface-input);border:1px solid var(--border-medium);
   border-radius:var(--radius-control-lg);color:var(--text-primary);
   font:500 1rem/1.2 var(--font-ui);padding:0 .875rem;outline:none;width:100%}
@@ -352,6 +355,9 @@ textarea.input{padding:.75rem .875rem;min-height:4.5rem;font:400 .938rem/1.5 var
 .check-row.ok .box{background:var(--status-ok);border-color:var(--status-ok);color:var(--text-on-accent)}
 .check-row.mangel .box{background:var(--status-mangel);border-color:var(--status-mangel);color:#fff}
 .check-row.mangel{border-color:color-mix(in srgb, var(--status-mangel) 45%, transparent)}
+/* „n. a." bleibt ruhig: beantwortet, aber ohne Aussage über die Anlage. */
+.check-row.na .box{background:var(--surface-control);border-color:var(--border-strong);color:var(--text-tertiary)}
+.check-row.na .t{color:var(--text-tertiary)}
 .check-row .t{flex:1;min-width:0;font:400 .938rem/1.35 var(--font-ui);color:var(--text-secondary)}
 
 .step-meta{display:flex;flex-direction:column;gap:.5rem}

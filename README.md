@@ -548,7 +548,9 @@ stimmen. Von Hand ist er jederzeit über `Pruefung.selftest()` aufrufbar.
 | Zwei-Welten-Modus EFH / Industrie: Fragen, Schritte, Wiki und Begriffe | fertig |
 | Prüfplan mit verbindlicher Reihenfolge (`requires`) und Sperrhinweis | fertig |
 | Messwerte mit Live-Bewertung gegen den passenden Grenzwert | fertig |
-| Checklisten mit drei Zuständen, Bewertung je Schritt überschreibbar | fertig |
+| Checklisten mit vier Zuständen (offen / OK / Mangel / n. a.), Bewertung je Schritt überschreibbar | fertig |
+| Kopfdaten im Aufbau des IHK-Prüfprotokolls, nach Auftrag, Anlage, Netz und Prüfung gruppiert | fertig |
+| Durchgängigkeit des Potentialausgleichs mit den 14 Zielen des Protokolls | fertig |
 | Prüffristen: Richtwert wählen, Fälligkeit im Auftrag und im Protokoll | fertig |
 | Serienprüfung: „Nächstes Gerät" übernimmt die Kopfdaten | fertig |
 | Wissensdatenbank: Messverfahren, Netzformen, Fehlerquellen, Grenzwerte | fertig |
@@ -606,6 +608,13 @@ Selbsttest der App ebenso.
 Normen, Grenzwerte und Wiki-Inhalte stehen als JSON unter `pruefung/data/`. Eine
 Änderung an der Norm ist damit ein Datei-Austausch, kein Eingriff in den Code:
 
+* **Protokollfeld ergänzen** — Eintrag unter `protocol.fields` anlegen und
+  einer Gruppe aus `protocol.groups` zuordnen. `"kind": "fact"` übernimmt eine
+  Antwort aus dem Assistenten, statt sie zweimal abzufragen; `"default"` gibt
+  eine Vorbelegung vor, `"sticky"` merkt den Wert für weitere Prüfungen. Ein
+  Fakt, der aus `presetFacts` einer Variante stammt, braucht seinen Klartext
+  in `factLabels` — sonst bleibt das Feld im Bogen leer, und der Selbsttest
+  sagt es.
 * **Grenzwert ändern** — Zeile in `data/grenzwerte.json` anpassen. Jeder
   Grenzwert steht genau einmal im Repo; Prüfschritt, Wiki und Protokoll lesen
   dieselbe Zeile.

@@ -84,6 +84,12 @@ window.Pruefung = window.Pruefung || {};
       .replace(/[\u0300-\u036f]/g, '');
   }
 
+  /* Ein Checklistenpunkt ist beantwortet, wenn er in Ordnung ist, ein Mangel
+   * ist oder ausdrücklich nicht zutrifft. Nur „offen“ fehlt noch. Steht hier
+   * und nicht in der Oberfläche, weil auch die Bewertung im Prüfplan davon
+   * abhängt — eine Wahrheit, eine Stelle. */
+  const checkAnswered = v => v === true || v === false || v === 'na';
+
   /* „1 Mangel“, „2 Mängel“ — Zahl und Wort in einem Zug, damit keine Stelle
    * der App wieder „2 Mangel“ schreibt. */
   const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
@@ -120,5 +126,5 @@ window.Pruefung = window.Pruefung || {};
     }
   }
 
-  P.util = { el, nf, num, inputNum, parseNum, matches, byId, fold, plural, todayISO, formatDateDE, captureFocus, restoreFocus };
+  P.util = { el, nf, num, inputNum, parseNum, matches, byId, fold, plural, checkAnswered, todayISO, formatDateDE, captureFocus, restoreFocus };
 })(window.Pruefung);

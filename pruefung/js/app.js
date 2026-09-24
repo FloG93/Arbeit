@@ -323,6 +323,53 @@
       }
     }
 
+    // Protokollfelder: Ein Feld, das eine Antwort übernimmt, ist nur so gut
+    // wie der Fakt dahinter. Steht der nirgends, bleibt das Feld im Bogen
+    // für immer leer — und niemand merkt es, bis er unterschreiben soll.
+    for (const pack of P.data.activePacks()) {
+      const groupIds = new Set(((pack.protocol && pack.protocol.groups) || []).map(g => g.id));
+      const settable = new Set();
+      for (const node of pack.nodes) {
+        for (const opt of node.options || []) {
+          for (const key of Object.keys(opt.set || {})) settable.add(key);
+        }
+      }
+      for (const variant of pack.variants) {
+        for (const key of Object.keys(variant.presetFacts || {})) settable.add(key);
+      }
+      for (const field of (pack.protocol && pack.protocol.fields) || []) {
+        if (field.gruppe && !groupIds.has(field.gruppe)) {
+          note('Protokoll', pack.id + '/' + field.id + ': Gruppe „' + field.gruppe + '“ ist nicht definiert');
+        }
+        if (field.kind !== 'fact') continue;
+        if (!field.factKey) { note('Protokoll', pack.id + '/' + field.id + ': kind „fact“ ohne factKey'); continue; }
+        if (!settable.has(field.factKey)) {
+          note('Protokoll', pack.id + '/' + field.id + ': Fakt „' + field.factKey + '“ wird nirgends gesetzt');
+        }
+      }
+      // Ein vorbelegter Fakt hat keine Antwortkarte, aus der ein Klartext
+      // käme — dafür ist factLabels da. Fehlt er dort, bleibt das Feld leer.
+      for (const variant of pack.variants) {
+        for (const [key, value] of Object.entries(variant.presetFacts || {})) {
+          const used = ((pack.protocol && pack.protocol.fields) || []).some(f => f.kind === 'fact' && f.factKey === key);
+          if (!used) continue;
+          const table = pack.factLabels && pack.factLabels[key];
+          if (!table || !table[value]) {
+            note('Protokoll', pack.id + '/' + variant.id + ': factLabels fehlt für ' + key + ' = „' + value + '“');
+          }
+        }
+      }
+      // Doppelte Checklisten-IDs teilen sich einen Zustand: zwei Zeilen, ein
+      // Häkchen. Im Feld sieht das aus wie ein Fehler der App.
+      for (const step of pack.steps) {
+        const seen = new Set();
+        for (const item of step.checklist || []) {
+          if (seen.has(item.id)) note('Schritt', pack.id + '/' + step.id + ': Checklisten-ID „' + item.id + '“ kommt doppelt vor');
+          seen.add(item.id);
+        }
+      }
+    }
+
     // Ungeprüfte Grenzwerte sind kein Defekt, sondern ein Zustand — aber einer,
     // den man sehen muss. Deshalb Statuszeile statt Befund.
     const alleTabellen = (P.data.limits.tables || []).concat(P.data.cables ? P.cable.reviewTables(P.data.cables) : []);
