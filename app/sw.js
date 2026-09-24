@@ -1,6 +1,8 @@
 'use strict';
-// v6 löscht v5 mit: darin lagen fälschlich auch Dateien der Poster-App.
-const CACHE = 'raumrechner-v6';
+// v6 löschte v5 mit: darin lagen fälschlich auch Dateien der Poster-App.
+// v7: Die App liegt jetzt unter /raum/ statt an der Wurzel, alle Pfade des
+// Caches ändern sich damit.
+const CACHE = 'raumrechner-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -15,9 +17,8 @@ const ASSETS = [
   './icons/icon-512-maskable.png',
 ];
 
-// Der Scope dieses Workers ist die ganze Site, seit unter /poster/ eine zweite
-// App auf derselben Herkunft liegt. Gecacht wird deshalb ausschließlich der
-// eigene App-Shell — vorher schluckte der Worker jede Anfrage im Scope und
+// Der Scope dieses Workers ist seit dem Umzug nach /raum/ nur noch die eigene
+// App. Gecacht wird trotzdem ausschließlich der eigene App-Shell — vorher schluckte der Worker jede Anfrage im Scope und
 // lieferte der Poster-App eingefrorene Dateien aus, bis hin zu neuem HTML mit
 // altem JavaScript.
 const SHELL = new Set(ASSETS.map((p) => new URL(p, self.location).pathname));
@@ -31,7 +32,10 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      // Nur eigene Altstände: „alles außer meinem Cache" hat bisher auch die
+      // Caches der anderen Apps auf dieser Herkunft gelöscht und ihnen bei
+      // jeder Aktualisierung dieser App den Offline-Betrieb genommen.
+      .then(keys => Promise.all(keys.filter(k => k.indexOf('raumrechner-') === 0 && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

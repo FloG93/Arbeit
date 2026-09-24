@@ -5,7 +5,7 @@
 //
 // Bei jeder Änderung an Dateien oder Daten die CACHE-Version hochzählen:
 // install() lädt dann alles neu, activate() räumt die alte Fassung weg.
-const CACHE = 'pruefung-v10';
+const CACHE = 'pruefung-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -64,7 +64,10 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      // Nur eigene Altstände: „alles außer meinem Cache" hat bisher auch die
+      // Caches der anderen Apps auf dieser Herkunft gelöscht und ihnen bei
+      // jeder Aktualisierung dieser App den Offline-Betrieb genommen.
+      .then(keys => Promise.all(keys.filter(k => k.indexOf('pruefung-') === 0 && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

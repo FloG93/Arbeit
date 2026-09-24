@@ -5,12 +5,14 @@ Login, jede läuft für sich.
 
 | App | Pfad | Kurzbeschreibung |
 | --- | --- | --- |
-| [Raumrechner](#raumrechner) | `/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
+| [Übersicht](#übersicht) | `/` | Kacheln zu allen Apps, Einstieg der Seite |
+| [Raumrechner](#raumrechner) | `/raum/` | Wand-/Decken-/Bodenflächen berechnen, Angebot exportieren |
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 | [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
 
-Live: https://flog93.github.io/Arbeit/ (Raumrechner),
+Live: https://flog93.github.io/Arbeit/ (Übersicht),
+https://flog93.github.io/Arbeit/raum/ (Raumrechner),
 https://flog93.github.io/Arbeit/poster/ (Poster-Generator,
 freigegebene Fassung),
 https://flog93.github.io/Arbeit/poster/beta/ (derselbe
@@ -21,8 +23,9 @@ https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter).
 ## Hosting
 
 `.github/workflows/pages.yml` veröffentlicht bei jedem Push auf GitHub Pages:
-`app/` an die Wurzel, den Poster-Generator in zwei Kanälen (siehe
-[Kanäle und Freigabe](#kanäle-und-freigabe)) und `pruefung/` nach `/pruefung/`.
+`start/` an die Wurzel, `app/` nach `/raum/`, den Poster-Generator in zwei
+Kanälen (siehe [Kanäle und Freigabe](#kanäle-und-freigabe)), `pruefung/` nach
+`/pruefung/` und `ppt/` nach `/ppt/`.
 Ohne Build-Schritt — die Ordner werden nebeneinander in ein Artefakt kopiert;
 erzeugt wird nur je Poster-Kanal eine `build.js` mit Version, Commit und Datum.
 
@@ -40,6 +43,21 @@ aktiv wird. Ohne echtes Hosting gibt es dort weder Offline-Betrieb noch
 Installation auf dem Startbildschirm.
 
 ---
+
+## Übersicht
+
+Die Startseite an der Wurzel: eine Kachel je App, mit Symbol, einem Satz zur
+Funktion und dem Pfad. Mehr macht sie nicht — sie wird angetippt und wieder
+verlassen. Quelle ist `start/`, veröffentlicht an der Seitenwurzel.
+
+- Folgt der Hell-/Dunkel-Einstellung des Geräts, ohne eigenen Umschalter.
+- Offline wie die Apps, über einen eigenen Service Worker.
+- Dieser Worker liegt nach dem Deploy unter `/sw.js` — genau dort, wo vorher
+  der des Raumrechners lag. Das ist Absicht: So löst er die alte Registrierung
+  ab. Ohne diese Ablösung bekämen Besucher an der Wurzel weiter die
+  zwischengespeicherte Fassung des Raumrechners.
+- Kein eigenes Manifest: Wer eine App auf den Startbildschirm legt, tut das
+  aus der App heraus.
 
 ## Raumrechner
 

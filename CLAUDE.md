@@ -1,10 +1,12 @@
 # CLAUDE.md
 
-Drei eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
-(`.github/workflows/pages.yml`): Raumrechner (`app/`, Seitenwurzel),
-Musik-Poster-Generator (`poster/`, Kanäle `/poster/` und `/poster/beta/`),
-Prüfassistent für VDE-Prüfungen (`pruefung/`), dazu der PPT-Konverter
-(`ppt/`). Beschreibung aller Apps in `README.md`.
+Vier eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
+(`.github/workflows/pages.yml`): Übersicht (`start/`, Seitenwurzel) mit
+Kacheln zu Raumrechner (`app/` → `/raum/`), Musik-Poster-Generator
+(`poster/`, Kanäle `/poster/` und `/poster/beta/`), Prüfassistent für
+VDE-Prüfungen (`pruefung/`) und PPT-Konverter (`ppt/`). Beschreibung aller
+Apps in `README.md`. Quellordner und veröffentlichter Pfad sind nicht
+überall gleich — maßgeblich ist der Schritt „Assemble site" im Workflow.
 
 **Nach einem Umzug oder Sitzungswechsel zuerst `UEBERGABE.md` lesen**, falls
 vorhanden — dort stehen Projektstand, getroffene Entscheidungen und die
@@ -16,8 +18,10 @@ nächste freigegebene Aufgabe.
   im Repo**. Hilfsskripte liegen in `werkzeuge/` und installieren, was sie
   brauchen, außerhalb.
 - Jede App läuft offline über ihren eigenen Service Worker. Der Worker
-  beantwortet nur die eigenen Pfade (`SHELL`), weil drei Apps auf derselben
-  Herkunft liegen. Ausnahme ist der PPT-Konverter: Sein Service Worker
+  beantwortet nur die eigenen Pfade (`SHELL`) und löscht beim Aktivieren nur
+  Caches mit dem eigenen Namenspräfix, weil alle Apps auf derselben Herkunft
+  liegen — ein „alles außer meinem Cache" nimmt den anderen den
+  Offline-Betrieb. Ausnahme ist der PPT-Konverter: Sein Service Worker
   (`coi-serviceworker`) setzt nur die COOP/COEP-Header, offline geht er nicht.
   **Bei jeder Dateiänderung die `CACHE`-Version im `sw.js` der
   App hochzählen** und neue Dateien in `ASSETS` eintragen.
