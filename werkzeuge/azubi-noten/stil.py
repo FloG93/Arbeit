@@ -12,7 +12,7 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 
 # ---------------------------------------------------------------- Grundmaße --
 MAX_AZUBIS = 25          # Zeilen je Übungsblatt
-MAX_PARAM = 8            # Bewertungsparameter je Übung
+MAX_PARAM = 25           # Bewertungskriterien je Übung (Zeilen)
 N_UEBUNGEN = 20          # vorbereitete Übungsblätter
 MAX_HJ = 8               # dargestellte Halbjahre (3,5 Jahre Ausbildung = 7)
 N_WARN = 10              # Zeilen der Warnübersicht auf der Startseite

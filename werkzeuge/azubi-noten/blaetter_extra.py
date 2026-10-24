@@ -258,10 +258,12 @@ SCHRITTE = [
     ("h", "1. Eine Note eintragen"),
     ("s", "Auf der Startseite in der Liste „Übungen“ auf den Namen der "
           "Übung klicken."),
-    ("s", "In der Zeile des Azubis für jeden Bewertungsparameter die Punkte "
-          "eintragen."),
-    ("s", "Summe, Prozent und IHK-Note erscheinen automatisch rechts "
-          "daneben, farbig hinterlegt."),
+    ("s", "Der Azubi steht in einer Spalte, die Bewertungsparameter stehen "
+          "untereinander. In seiner Spalte für jeden Parameter die Punkte "
+          "eintragen – bei vielen Parametern einfach nach unten scrollen."),
+    ("s", "Punkte, Prozent und IHK-Note stehen oben über der Spalte, farbig "
+          "hinterlegt. Der Kopfbereich bleibt beim Scrollen stehen, Sie "
+          "sehen die Note also immer mitlaufen."),
     ("s", "Ist die Übung fertig bewertet, oben im Kopf den Status auf "
           "„abgeschlossen“ stellen. Erst dann zählt sie für das Halbjahr."),
     ("h", "2. Eine neue Übung anlegen"),
@@ -271,10 +273,11 @@ SCHRITTE = [
     ("s", "Links in der Zeile auf den Blattnamen klicken."),
     ("s", "Im Kopf des Blattes eintragen: Art (Praxis oder Theorie), Datum, "
           "Status und Ihr Kürzel bei „Bewertet von“."),
-    ("s", "In der Zeile „Bewertungsparameter“ die Prüfpunkte eintragen, "
-          "darunter den Bewertungshorizont (zum Beispiel „10 von 10 "
-          "Bohrungen korrekt“). Die Höchstpunktzahl steht automatisch auf "
-          "dem Wert aus den Einstellungen und kann überschrieben werden."),
+    ("s", "Untereinander in der Spalte „Bewertungsparameter“ die Prüfpunkte "
+          "eintragen, daneben den Bewertungshorizont (zum Beispiel „10 von "
+          "10 Bohrungen korrekt“). Die Höchstpunktzahl in Spalte D steht "
+          "automatisch auf dem Wert aus den Einstellungen und kann "
+          "überschrieben werden. Platz ist für 25 Parameter."),
     ("h", "3. Einen Azubi aufnehmen"),
     ("s", "Startseite > „Stammdaten“ öffnen."),
     ("s", "In der ersten freien Zeile Name, Vorname, Beruf und "
@@ -289,9 +292,10 @@ SCHRITTE = [
           "Punktefeld „n.b.“ schreiben. Dieser Punkt fällt dann aus Summe "
           "und Höchstpunktzahl heraus."),
     ("s", "War er bei der ganzen Übung nicht dabei: in alle Punktefelder "
-          "der Zeile „n.b.“ schreiben."),
-    ("s", "In der Spalte „Grund (n.b.)“ krank, Urlaub, Berufsschule oder "
-          "sonstiges wählen; in „Bemerkung“ kann eine Notiz stehen."),
+          "seiner Spalte „n.b.“ schreiben."),
+    ("s", "Unter dem Parameterblock in der Zeile „Grund (n.b.)“ krank, "
+          "Urlaub, Berufsschule oder sonstiges wählen; eine Zeile tiefer "
+          "steht „Bemerkung“ für eine Notiz."),
     ("s", "Die Übung zählt für diesen Azubi dann nirgends mit – weder als "
           "0 Punkte noch im Durchschnitt, in der Halbjahresnote oder in der "
           "Warnübersicht."),
@@ -310,8 +314,8 @@ SCHRITTE = [
           "Übung auswählen."),
     ("s", "Standardmäßig zählt die letzte Wertung. Soll bei einem einzelnen "
           "Azubi die beste zählen oder gar keine Wiederholungswertung, in "
-          "seiner Zeile in der Spalte „Wertung Wdh.“ beste oder keine "
-          "wählen."),
+          "seiner Spalte unten in der Zeile „Wertung bei Wiederholung“ "
+          "beste oder keine wählen."),
     ("s", "In der Azubi-Ansicht zeigt die Spalte „zählt?“, welcher Versuch "
           "gewertet wird."),
     ("h", "7. Das Halbjahresgespräch vorbereiten"),

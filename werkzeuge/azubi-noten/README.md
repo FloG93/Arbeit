@@ -38,6 +38,25 @@ Mappe: Excel rechnet beim Öffnen einmal alles durch.
 | `build.py` | setzt alles zusammen, legt die Beispieldaten an |
 | `test_varianten.py` | ändert je eine Stellschraube und prüft das Ergebnis |
 
+## Das Übungsblatt
+
+Bewertungsparameter stehen untereinander (Zeilen 11–35, bis zu 25 Stück),
+Azubis nebeneinander (Spalten E–AC, fest an die Stammdaten-Zeile gebunden).
+Bei vielen Parametern scrollt man damit nach unten statt zur Seite, und der
+Bewertungshorizont bekommt eine eigene, lesbare Spalte.
+
+Fixiert ist alles bis Zeile 10 (`E11`): Name, Punkte, Prozent und IHK-Note
+bleiben stehen, während unten eingetragen wird — rund 253 px hoch und 463 px
+breit, damit auf einem normalen Notebook noch genug Kriterienzeilen sichtbar
+bleiben. Jede Adresse des Blattes steht genau einmal in `blaetter_basis.py`
+(`U_*` für Zeilen, `Z_*` für die Kopffelder, `az_sp(i)` für die Azubi-Spalte);
+alle anderen Module greifen nur darüber zu.
+
+Die Zeile `U_STAT` unter dem Parameterblock hält den Status jedes Azubis.
+Sie ist nur für die bedingte Formatierung da: quer über Spalten verschiebt
+sich ein Bezug auf die Stammdaten nicht mit, ein direkter Verweis träfe also
+die falsche Zeile.
+
 ## Der Rechenkern
 
 Das ausgeblendete Blatt `Daten` spiegelt jede Übung als Spalte (C–V) und jeden
@@ -64,8 +83,8 @@ Zwei Zählflaggen, weil zwei Fragen zu beantworten sind:
   Zelle. Ohne Makros lässt sich eine Füllfarbe nicht aus einem Zellwert
   steuern. Die *Prozentgrenzen* dagegen kommen über `INDEX(NGrenze,k)` aus dem
   Einstellungsblatt — eine geänderte Grenze färbt die ganze Mappe sofort um.
-* **25 Azubis, 20 Übungen, 8 Parameter** stecken als Konstanten in `stil.py`.
-  Mehr heißt: Konstante erhöhen und neu bauen.
+* **25 Azubis, 20 Übungen, 25 Bewertungsparameter** stecken als Konstanten in
+  `stil.py`. Mehr heißt: Konstante erhöhen und neu bauen.
 * **Das Diagramm** verwendet `NV()` für nicht belegte Punkte. Excel lässt die
   Linie dort eine Lücke; LibreOffice zeichnet sie auf 0. Das ist eine
   Eigenheit der LibreOffice-Diagramme, kein Formelfehler.

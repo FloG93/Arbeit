@@ -37,9 +37,20 @@ def finde_recalc():
 
 RECALC = None
 
-# Zellen, die in den Varianten angefasst werden
-R_DAT0 = 13          # erste Azubi-Zeile auf einem Übungsblatt
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import blaetter_basis as bb                                   # noqa: E402
+
 HJ_G = 590           # Band „Gesamtprozent je Halbjahr“ im Blatt Daten
+BERGER, NOVAK = bb.az_sp(0), bb.az_sp(3)      # Spalten der beiden Azubis
+
+
+def krit(k):
+    """Zeile des k-ten Bewertungskriteriums (0-basiert)."""
+    return bb.U_P0 + k
+
+
+def ohne_dollar(adr):
+    return adr.replace("$", "")
 
 
 def rechne(pfad):
@@ -98,8 +109,7 @@ def main():
 
     # Berger bekommt im Nachholtermin (Übung 04) einen schlechteren Wert,
     # damit sich letzte / beste / keine unterscheiden lassen.
-    berger_wdh = [("Übung 04", f"{c}{R_DAT0}", v)
-                  for c, v in zip("DEFGHIJK"[:5], [6, 6, 6, 6, 6])]
+    berger_wdh = [("Übung 04", f"{BERGER}{krit(k)}", 6) for k in range(5)]
     # 30 von 50 Punkten = 60 %, das Original hatte 88 %.
 
     faelle = [
@@ -108,15 +118,15 @@ def main():
          {"hj4": ("Daten", f"F{HJ_G}")},                 # HJ4 Gesamt, Azubi 1
          lambda w: nah(w["hj4"], (0.60 + 0.78) / 2)),
         ("Wiederholung: beste zählt",
-         berger_wdh + [("Übung 04", f"R{R_DAT0}", "beste")],
+         berger_wdh + [("Übung 04", f"{BERGER}{bb.U_WERT}", "beste")],
          {"hj4": ("Daten", f"F{HJ_G}")},
          lambda w: nah(w["hj4"], (0.88 + 0.78) / 2)),
         ("Wiederholung: keine Wiederholungswertung",
-         berger_wdh + [("Übung 04", f"R{R_DAT0}", "keine")],
+         berger_wdh + [("Übung 04", f"{BERGER}{bb.U_WERT}", "keine")],
          {"hj4": ("Daten", f"F{HJ_G}")},
          lambda w: nah(w["hj4"], (0.88 + 0.78) / 2)),
         ("Gewicht 3 für den Theorietest",
-         [("Übung 02", "N5", 3)],
+         [("Übung 02", ohne_dollar(bb.Z_GEWICHT), 3)],
          {"hj4": ("Daten", f"F{HJ_G}")},
          lambda w: nah(w["hj4"], (0.88 * 1 + 0.78 * 3) / 4)),
         ("Gewichtung Praxis 70 / Theorie 30 eingeschaltet",
@@ -141,12 +151,12 @@ def main():
           "uebung1": ("Übungen", "L6")},                 # bewertete Azubis
          lambda w: w["anzahl"] == 3 and w["uebung1"] == 2),
         ("Ganze Zeile n.b. ohne Grund",
-         [("Übung 03", f"{c}{R_DAT0}", "n.b.") for c in "DEFG"]
-         + [("Übung 03", "C5", "abgeschlossen")],
+         [("Übung 03", f"{BERGER}{krit(k)}", "n.b.") for k in range(4)]
+         + [("Übung 03", ohne_dollar(bb.Z_STATUS), "abgeschlossen")],
          {"pruef": ("Start", "M16"), "ampel": ("Start", "J6")},
          lambda w: w["pruef"] == 1 and str(w["ampel"]).startswith("GELB")),
         ("Unvollständig ausgefüllte Zeile",
-         [("Übung 03", f"D{R_DAT0 + 3}", 5)],
+         [("Übung 03", f"{NOVAK}{krit(0)}", 5)],
          {"pruef": ("Start", "M15"), "ampel": ("Start", "J6")},
          lambda w: w["pruef"] == 1 and str(w["ampel"]).startswith("ROT")),
         ("Gesprächsseite bleibt vom Filter der Azubi-Ansicht unabhängig",
@@ -160,7 +170,7 @@ def main():
          {"pruef": ("Start", "M18"), "ampel": ("Start", "J6")},
          lambda w: w["pruef"] == 2 and str(w["ampel"]).startswith("ROT")),
         ("Übung ohne Datum",
-         [("Übung 03", "N4", None)],
+         [("Übung 03", ohne_dollar(bb.Z_DATUM), None)],
          {"pruef": ("Start", "M12"), "ampel": ("Start", "J6")},
          lambda w: w["pruef"] == 1 and str(w["ampel"]).startswith("ROT")),
     ]
