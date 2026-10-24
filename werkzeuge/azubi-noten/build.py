@@ -145,29 +145,31 @@ def beispieldaten(wb):
     for ue in BEISPIEL_UEBUNGEN:
         uv[f"C{bb.UV0 + ue['nr'] - 1}"] = ue["name"]
         ws = wb[UEB_BLATT.format(ue["nr"])]
-        ws[f"J{bb.R_K1}"] = ue["art"]
-        ws[f"N{bb.R_K1}"] = ue["datum"]
-        ws[f"N{bb.R_K1}"].number_format = FMT_DATUM
-        ws[f"C{bb.R_K2}"] = ue["status"]
-        ws[f"J{bb.R_K2}"] = ue["wer"]
+        zelle = lambda adr: adr.replace("$", "")      # noqa: E731
+        ws[zelle(bb.Z_ART)] = ue["art"]
+        ws[zelle(bb.Z_DATUM)] = ue["datum"]
+        ws[zelle(bb.Z_DATUM)].number_format = FMT_DATUM
+        ws[zelle(bb.Z_STATUS)] = ue["status"]
+        ws[zelle(bb.Z_WER)] = ue["wer"]
         if ue.get("wdh_von"):
-            ws[f"C{bb.R_K3}"] = ue["wdh_von"]
+            ws[zelle(bb.Z_WDH)] = ue["wdh_von"]
+        # Kriterien stehen untereinander, Azubis nebeneinander
         for j, (pname, phor, pmax) in enumerate(ue["params"]):
-            sp = bb.PARAM_SPALTEN[j]
-            ws[f"{sp}{bb.R_PNAME}"] = pname
-            ws[f"{sp}{bb.R_PHOR}"] = phor
+            r = bb.U_P0 + j
+            ws[f"B{r}"] = pname
+            ws[f"C{r}"] = phor
             if pmax != 10:
                 # abweichende Höchstpunktzahl überschreibt den Vorschlag
-                ws[f"{sp}{bb.R_PMAX}"] = pmax
-        for i, zeile in enumerate(ue["werte"]):
-            r = bb.R_DAT0 + i
-            for j, wert in enumerate(zeile):
+                ws[f"D{r}"] = pmax
+        for i, werte_des_azubis in enumerate(ue["werte"]):
+            c = bb.az_sp(i)
+            for j, wert in enumerate(werte_des_azubis):
                 if wert is not None and wert != "":
-                    ws[f"{bb.PARAM_SPALTEN[j]}{r}"] = wert
+                    ws[f"{c}{bb.U_P0 + j}"] = wert
             if ue["gruende"][i]:
-                ws[f"P{r}"] = ue["gruende"][i]
+                ws[f"{c}{bb.U_GRUND}"] = ue["gruende"][i]
             if ue["bemerkungen"][i]:
-                ws[f"Q{r}"] = ue["bemerkungen"][i]
+                ws[f"{c}{bb.U_BEM}"] = ue["bemerkungen"][i]
 
     # Startauswahl, damit Azubi-Ansicht und Diagramm nicht leer wirken
     wb["Azubi-Ansicht"]["C5"] = f"{AZUBIS[0][0]}, {AZUBIS[0][1]}"

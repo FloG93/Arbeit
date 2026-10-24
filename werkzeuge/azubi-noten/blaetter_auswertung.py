@@ -130,19 +130,19 @@ def baue_daten(ws):
         setze(ws, f"{c}{M_BELEGT}", f'=IF({c}{M_NAME}="",0,1)', font=f(9),
               align=MITTE)
         setze(ws, f"{c}{M_ART}",
-              f'=IF({c}{M_BELEGT}=0,"",{q}!$J${bb.R_K1})', font=f(9),
+              f'=IF({c}{M_BELEGT}=0,"",{q}!{bb.Z_ART})', font=f(9),
               align=MITTE)
         setze(ws, f"{c}{M_DATUM}",
-              f'=IF(OR({c}{M_BELEGT}=0,{q}!$N${bb.R_K1}=""),0,'
-              f'{q}!$N${bb.R_K1})', font=f(9), align=MITTE, fmt=FMT_DATUM)
+              f'=IF(OR({c}{M_BELEGT}=0,{q}!{bb.Z_DATUM}=""),0,'
+              f'{q}!{bb.Z_DATUM})', font=f(9), align=MITTE, fmt=FMT_DATUM)
         setze(ws, f"{c}{M_STATUS}",
-              f'=IF({c}{M_BELEGT}=0,"",{q}!$C${bb.R_K2})', font=f(9),
+              f'=IF({c}{M_BELEGT}=0,"",{q}!{bb.Z_STATUS})', font=f(9),
               align=MITTE)
         setze(ws, f"{c}{M_GEW}",
-              f'=IF({c}{M_BELEGT}=0,0,IF({q}!$N${bb.R_K2}="",1,'
-              f'{q}!$N${bb.R_K2}))', font=f(9), align=MITTE)
+              f'=IF({c}{M_BELEGT}=0,0,IF({q}!{bb.Z_GEWICHT}="",1,'
+              f'{q}!{bb.Z_GEWICHT}))', font=f(9), align=MITTE)
         setze(ws, f"{c}{M_WDHN}",
-              f'=IF({c}{M_BELEGT}=0,"",{q}!$C${bb.R_K3})', font=f(9),
+              f'=IF({c}{M_BELEGT}=0,"",{q}!{bb.Z_WDH})', font=f(9),
               align=LINKS)
         setze(ws, f"{c}{M_WDHI}",
               f'=IF({c}{M_WDHN}="",0,IFERROR(MATCH({c}{M_WDHN},'
@@ -153,8 +153,8 @@ def baue_daten(ws):
               f'{c}{M_WDHI})=0,{c}{M_WDHI},INDEX({meta(M_WDHI)},'
               f'{c}{M_WDHI})))', font=f(9), align=MITTE)
         setze(ws, f"{c}{M_NPARAM}",
-              f'=IF({c}{M_BELEGT}=0,0,COUNTIF({q}!$D${bb.R_PMAX}:'
-              f'$K${bb.R_PMAX},">0"))', font=f(9), align=MITTE)
+              f'=IF({c}{M_BELEGT}=0,0,COUNTIF({q}!{bb.Z_PMAX},">0"))',
+              font=f(9), align=MITTE)
         setze(ws, f"{c}{M_LASTREP}",
               f'=SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
               f'({meta(M_WDHI)}>0)*{meta(M_NR)}))', font=f(9), align=MITTE)
@@ -171,7 +171,7 @@ def baue_daten(ws):
               f'=SUMPRODUCT(({c}${M_NPARAM}>0)*({ent}={c}${M_NPARAM})*'
               f'({ev}=0)*({gr}="")*{AKTIV_VEK})', font=f(9), align=MITTE)
         setze(ws, f"{c}{M_OHNEKUERZEL}",
-              f'=IF({c}{M_BELEGT}=0,0,IF({q}!$J${bb.R_K2}="",1,0))',
+              f'=IF({c}{M_BELEGT}=0,0,IF({q}!{bb.Z_WER}="",1,0))',
               font=f(9), align=MITTE)
 
     # ---- Hilfsvektoren je Azubi --------------------------------------------
@@ -201,22 +201,29 @@ def baue_daten(ws):
               align=LINKS)
 
     for i in range(MAX_AZUBIS):
-        rr = bb.R_DAT0 + i
+        ca = bb.az_sp(i)          # Spalte dieses Azubis im Übungsblatt
         for j in range(1, N_UEBUNGEN + 1):
             c = sp(j)
             q = f"'{UEB_BLATT.format(j)}'"
             put = lambda base, form: setze(      # noqa: E731
                 ws, f"{c}{base + i}", form, font=f(9), align=MITTE)
-            put(B_PCT, f'=IF(ISNUMBER({q}!$N{rr}),{q}!$N{rr},0)')
+            put(B_PCT, f'=IF(ISNUMBER({q}!{ca}${bb.U_PROZ}),'
+                       f'{q}!{ca}${bb.U_PROZ},0)')
             ws[f"{c}{B_PCT + i}"].number_format = FMT_PROZ
-            put(B_EVAL, f'=IF(ISNUMBER({q}!$N{rr}),1,0)')
-            put(B_HJ, f'=IF(ISNUMBER({q}!$S{rr}),{q}!$S{rr},0)')
-            put(B_PKT, f'=IF(ISNUMBER({q}!$L{rr}),{q}!$L{rr},0)')
-            put(B_MAX, f'=IF(ISNUMBER({q}!$M{rr}),{q}!$M{rr},0)')
-            put(B_GRUND, f'=IF({q}!$P{rr}="","",{q}!$P{rr})')
-            put(B_RULEIN, f'=IF({q}!$R{rr}="","",{q}!$R{rr})')
+            put(B_EVAL, f'=IF(ISNUMBER({q}!{ca}${bb.U_PROZ}),1,0)')
+            put(B_HJ, f'=IF(ISNUMBER({q}!{ca}${bb.U_HJ}),'
+                      f'{q}!{ca}${bb.U_HJ},0)')
+            put(B_PKT, f'=IF(ISNUMBER({q}!{ca}${bb.U_SUMME}),'
+                       f'{q}!{ca}${bb.U_SUMME},0)')
+            put(B_MAX, f'=IF(ISNUMBER({q}!{ca}${bb.U_MAX}),'
+                       f'{q}!{ca}${bb.U_MAX},0)')
+            put(B_GRUND, f'=IF({q}!{ca}${bb.U_GRUND}="","",'
+                         f'{q}!{ca}${bb.U_GRUND})')
+            put(B_RULEIN, f'=IF({q}!{ca}${bb.U_WERT}="","",'
+                          f'{q}!{ca}${bb.U_WERT})')
             put(B_ENTERED,
-                f'=COUNT({q}!$D{rr}:$K{rr})+COUNTIF({q}!$D{rr}:$K{rr},"n.b.")')
+                f'=COUNT({q}!{ca}${bb.U_P0}:{ca}${bb.U_P1})'
+                f'+COUNTIF({q}!{ca}${bb.U_P0}:{ca}${bb.U_P1},"n.b.")')
             put(B_GLAST,
                 f'=SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
                 f'({zeile(B_EVAL, i)})*{meta(M_NR)}))')
@@ -239,7 +246,8 @@ def baue_daten(ws):
                 f'IF({c}${M_NR}={c}{B_GBESTNR + i},1,0),'
                 f'IF({c}${M_NR}={c}{B_GLAST + i},1,0)))))')
             put(B_CNTA, f'={c}{B_CNT + i}*$A${B_PCT + i}')
-            put(B_BEM, f'=IF({q}!$Q{rr}="","",{q}!$Q{rr})')
+            put(B_BEM, f'=IF({q}!{ca}${bb.U_BEM}="","",'
+                       f'{q}!{ca}${bb.U_BEM})')
             # Eine laufende Übung ist ein Zwischenstand – sie darf
             # die Halbjahresnote nicht nach unten ziehen.
             put(B_CNTV,
