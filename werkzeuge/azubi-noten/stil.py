@@ -208,9 +208,8 @@ def legende_eingabe(ws, rng):
     """Kurze Erklärung der Zellfarben — steht auf jedem Blatt."""
     verbinde(
         ws, rng,
-        "Farben:  gelb hinterlegt = hier eintragen   ·   grau-blau = rechnet "
-        "die Datei selbst (bitte nicht überschreiben)   ·   „n.b.“ = nicht "
-        "bewertet",
+        "Farben:  gelb = hier eintragen   ·   grau-blau = rechnet die Datei "
+        "selbst   ·   „n.b.“ = nicht bewertet",
         font=f(9.5, color=TXT_HELL), bg=BG, align=LINKS_UM)
 
 

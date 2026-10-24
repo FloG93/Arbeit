@@ -8,6 +8,7 @@ Aufruf:  python3 test_varianten.py <gebaute-datei.xlsx> <arbeitsordner>
 """
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -15,9 +16,26 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-RECALC = ("/root/.claude/skills/synced/"
-          "d4cd3bac-bd6d-4de5-be51-e5eb36869bb7_e2ab26a3-f5d6-470f-9fb0-"
-          "dcaf9d04a882/xlsx/scripts/recalc.py")
+def finde_recalc():
+    """recalc.py rechnet die Mappe mit LibreOffice durch.
+
+    Der Pfad steckt nicht fest im Skript: er kommt aus XLSX_RECALC oder wird
+    unter ~/.claude/skills gesucht, damit das Skript auch in einer anderen
+    Sitzung läuft.
+    """
+    aus_umgebung = os.environ.get("XLSX_RECALC")
+    if aus_umgebung and Path(aus_umgebung).is_file():
+        return aus_umgebung
+    for wurzel in (Path.home() / ".claude" / "skills", Path("/root/.claude")):
+        if wurzel.is_dir():
+            treffer = sorted(wurzel.glob("**/xlsx/scripts/recalc.py"))
+            if treffer:
+                return str(treffer[0])
+    sys.exit("recalc.py nicht gefunden. Bitte XLSX_RECALC auf den Pfad "
+             "setzen (Teil der xlsx-Skill, braucht LibreOffice).")
+
+
+RECALC = None
 
 # Zellen, die in den Varianten angefasst werden
 R_DAT0 = 13          # erste Azubi-Zeile auf einem Übungsblatt
@@ -71,6 +89,8 @@ def nah(a, b, eps=0.0005):
 
 
 def main():
+    global RECALC
+    RECALC = finde_recalc()
     quelle = Path(sys.argv[1])
     arbeit = Path(sys.argv[2])
     arbeit.mkdir(parents=True, exist_ok=True)
@@ -129,6 +149,16 @@ def main():
          [("Übung 03", f"D{R_DAT0 + 3}", 5)],
          {"pruef": ("Start", "M15"), "ampel": ("Start", "J6")},
          lambda w: w["pruef"] == 1 and str(w["ampel"]).startswith("ROT")),
+        ("Gesprächsseite bleibt vom Filter der Azubi-Ansicht unabhängig",
+         [("Azubi-Ansicht", "C4", "Industriemechaniker/-in")],
+         {"gefiltert": ("Daten", "B623"), "alle": ("Daten", "B819"),
+          "erster_alle": ("Daten", "D820")},
+         lambda w: w["gefiltert"] == 2 and w["alle"] == 4
+         and w["erster_alle"] == "Berger, Lukas"),
+        ("Zwei Azubis mit gleichem Namen",
+         [("Stammdaten", "B9", "Berger"), ("Stammdaten", "C9", "Lukas")],
+         {"pruef": ("Start", "M18"), "ampel": ("Start", "J6")},
+         lambda w: w["pruef"] == 2 and str(w["ampel"]).startswith("ROT")),
         ("Übung ohne Datum",
          [("Übung 03", "N4", None)],
          {"pruef": ("Start", "M12"), "ampel": ("Start", "J6")},

@@ -266,6 +266,14 @@ def baue_stammdaten(ws):
         f"F{SD0}:F{SD1}",
         FormulaRule(formula=[f'AND($B{SD0}<>"",$F{SD0}="")'],
                     fill=fill("FDE3E1"), font=f(11, bold=True, color="C0392B")))
+    # Zwei gleiche Anzeigenamen: die Auswahl trifft sonst immer den ersten
+    ws.conditional_formatting.add(
+        f"J{SD0}:J{SD1}",
+        FormulaRule(formula=[f'AND($J{SD0}<>"",COUNTIF($J${SD0}:$J${SD1},'
+                             f'$J{SD0}&"")>1)'],
+                    fill=fill("FDE3E1"), font=f(11, bold=True,
+                                                color="C0392B"),
+                    stopIfTrue=True))
     ws.conditional_formatting.add(
         f"A{SD0}:K{SD1}",
         FormulaRule(formula=[f'$G{SD0}="ausgeschieden"'],

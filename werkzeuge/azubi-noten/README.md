@@ -12,8 +12,15 @@ python3 build.py Azubi-Leistungen.xlsx          # baut die Mappe neu
 python3 test_varianten.py Azubi-Leistungen.xlsx /tmp/az   # 12 Rechenfälle
 ```
 
-`build.py` braucht nur `openpyxl`, `test_varianten.py` zusätzlich LibreOffice
-(`soffice`) zum Nachrechnen. Beides wird außerhalb des Repos installiert.
+`build.py` braucht nur `openpyxl`. `test_varianten.py` braucht zusätzlich
+`recalc.py` aus der xlsx-Skill und LibreOffice (`soffice`); der Pfad kommt aus
+`XLSX_RECALC` oder wird unter `~/.claude/skills` gesucht. Beides wird außerhalb
+des Repos installiert.
+
+**Vor dem Einbetten in SharePoint** die Datei einmal in Excel öffnen und
+speichern. Sie enthält keine zwischengespeicherten Formelergebnisse; Vorschau
+und Webpart können sonst leere Zellen zeigen, bis sie jemand im Excel geöffnet
+hat.
 
 Die ausgelieferte Datei ist die von `openpyxl` geschriebene — **nicht** die von
 LibreOffice neu gerechnete. LibreOffice verändert beim Speichern Formate,
@@ -62,6 +69,18 @@ Zwei Zählflaggen, weil zwei Fragen zu beantworten sind:
 * **Das Diagramm** verwendet `NV()` für nicht belegte Punkte. Excel lässt die
   Linie dort eine Lücke; LibreOffice zeichnet sie auf 0. Das ist eine
   Eigenheit der LibreOffice-Diagramme, kein Formelfehler.
+* **Die Auswahlfelder sind gemeinsame Zellen.** Azubi-Ansicht C4/C5/H4,
+  Gesprächsseite C6/F6 und Halbjahr C4 gelten für alle gleichzeitig. Wer beim
+  Co-Authoring dort etwas umstellt, ändert die Ansicht der Kollegen mit. Ohne
+  Makros ist das nicht zu trennen — Excels „Blattansichten“ speichern keine
+  abweichenden Zellwerte. Die Anleitung weist darauf hin, vor dem Drucken den
+  Namen oben zu prüfen. Die Auswahlliste der Gesprächsseite hängt bewusst
+  **nicht** an den Filtern der Azubi-Ansicht (`AzubiAktiv` statt
+  `AzubiAuswahl`).
+* **Lange Übungsnamen** werden auf der Startseite abgeschnitten (ab etwa
+  30 Zeichen). Die Spalte kann nicht breiter werden, ohne die 1200-px-Grenze
+  für das SharePoint-Webpart zu reißen; der volle Name steht auf dem
+  Übungsblatt und in der Übungsliste.
 * **Wiederholungsketten** werden zwei Ebenen tief aufgelöst (Wiederholung
   einer Wiederholung). Tiefer verschachtelt wäre ohne Makro nicht mehr
   nachvollziehbar.
