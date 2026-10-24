@@ -9,7 +9,7 @@ Seite eingebettet und von mehreren Kollegen gleichzeitig bearbeitet.
 ```bash
 cd werkzeuge/azubi-noten
 python3 build.py Azubi-Leistungen.xlsx          # baut die Mappe neu
-python3 test_varianten.py Azubi-Leistungen.xlsx /tmp/az   # 12 Rechenfälle
+python3 test_varianten.py Azubi-Leistungen.xlsx /tmp/az   # 14 Rechenfälle
 ```
 
 `build.py` braucht nur `openpyxl`. `test_varianten.py` braucht zusätzlich
