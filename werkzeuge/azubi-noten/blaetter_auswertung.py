@@ -55,6 +55,7 @@ AKT = 630
 LST_AZ, LST_JAHR, LST_BERUF = 660, 690, 720
 B_BEM = 760          # Bemerkung je Azubi und Übung
 B_CNTV = 790         # zählt für die Halbjahreswertung (nur abgeschlossen)
+LST_AZA = 820        # alle aktiven Azubis, ohne Filter
 
 ERSTE_SP, LETZTE_SP = "C", "V"      # 20 Übungsspalten
 
@@ -380,6 +381,25 @@ def baue_daten(ws):
               f'SMALL($C${LST_AZ}:$C${LST_AZ + MAX_AZUBIS - 1},'
               f'ROW()-{LST_AZ - 1})),"")', font=f(9), align=LINKS)
 
+    # Zweite Liste ohne Filter: die Gesprächsseite darf nicht davon abhängen,
+    # was jemand anders gerade in der Azubi-Ansicht gefiltert hat.
+    setze(ws, f"A{LST_AZA - 1}", "Auswahlliste Azubis (alle aktiven)",
+          font=f(9, bold=True, color=NAVY_700), align=LINKS)
+    setze(ws, f"B{LST_AZA - 1}",
+          f'=COUNT($C${LST_AZA}:$C${LST_AZA + MAX_AZUBIS - 1})', font=f(9),
+          align=MITTE)
+    for i in range(MAX_AZUBIS):
+        r = LST_AZA + i
+        sd = bb.SD0 + i
+        setze(ws, f"C{r}",
+              f'=IF(AND(\'Stammdaten\'!$B{sd}<>"",'
+              f'\'Stammdaten\'!$G{sd}="aktiv"),{i + 1},"")',
+              font=f(9), align=MITTE)
+        setze(ws, f"D{r}",
+              f'=IFERROR(INDEX(\'Stammdaten\'!$J${bb.SD0}:$J${bb.SD1},'
+              f'SMALL($C${LST_AZA}:$C${LST_AZA + MAX_AZUBIS - 1},'
+              f'ROW()-{LST_AZA - 1})),"")', font=f(9), align=LINKS)
+
     setze(ws, f"A{LST_JAHR - 1}", "Auswahlliste Jahrgänge",
           font=f(9, bold=True, color=NAVY_700), align=LINKS)
     setze(ws, f"C{LST_JAHR}", "(alle)", font=f(9), align=MITTE)
@@ -410,6 +430,9 @@ def daten_namen(wb):
     namen = {
         "AzubiAuswahl":
             f"OFFSET(Daten!$D${LST_AZ},0,0,MAX(1,Daten!$B${R_NFILTER}),1)",
+        "AzubiAktiv":
+            f"OFFSET(Daten!$D${LST_AZA},0,0,"
+            f"MAX(1,Daten!$B${LST_AZA - 1}),1)",
         "JahrAuswahl":
             f"OFFSET(Daten!$C${LST_JAHR},0,0,1+COUNT(Daten!$B${LST_JAHR + 1}:"
             f"$B${LST_JAHR + MAX_AZUBIS}),1)",
@@ -437,8 +460,14 @@ def patch_uebungsliste(ws):
 
 
 # =============================================================== Startseite ==
+# Breiten so gewählt, dass die Seite in das SharePoint-Webpart passt:
+# je Spalte rund 7*Breite+5 px, dazu ~30 px Zeilenkopf -> zusammen 1199 px.
+DOPPELT = (f"=SUMPRODUCT(('Stammdaten'!$J${bb.SD0}:$J${bb.SD1}<>\"\")*"
+           f"(COUNTIF('Stammdaten'!$J${bb.SD0}:$J${bb.SD1},"
+           f"'Stammdaten'!$J${bb.SD0}:$J${bb.SD1}&\"\")>1))")
+
 SP_START = {"A": 5, "B": 26, "C": 10, "D": 11, "E": 14, "F": 10, "G": 10,
-            "H": 18, "I": 2, "J": 20, "K": 10, "L": 10, "M": 22, "N": 2}
+            "H": 16, "I": 2, "J": 16, "K": 9, "L": 9, "M": 17, "N": 2}
 
 
 def baue_start(ws):
@@ -491,7 +520,8 @@ def baue_start(ws):
             f'SUMPRODUCT(({D}{meta(M_BELEGT)}=1)*({D}{meta(M_ART)}=""))+'
             f'SUMPRODUCT(({D}{meta(M_BELEGT)}=1)*({D}{meta(M_NPARAM)}=0))+'
             f'SUMPRODUCT((\'Stammdaten\'!$B${bb.SD0}:$B${bb.SD1}<>"")*'
-            f'(\'Stammdaten\'!$F${bb.SD0}:$F${bb.SD1}=""))')
+            f'(\'Stammdaten\'!$F${bb.SD0}:$F${bb.SD1}=""))'
+            f'+{DOPPELT[1:]}')
     weich = (f'SUM({D}$C${M_OHNEGRUND}:$V${M_OHNEGRUND})+'
              f'SUM({D}$C${M_OHNEKUERZEL}:$V${M_OHNEKUERZEL})+'
              f'SUMPRODUCT((\'Stammdaten\'!$B${bb.SD0}:$B${bb.SD1}<>"")*'
@@ -579,6 +609,9 @@ def baue_start(ws):
          f'=SUM({D}$C${M_OHNEGRUND}:$V${M_OHNEGRUND})', False),
         ("Übungen ohne Kürzel „Bewertet von“",
          f'=SUM({D}$C${M_OHNEKUERZEL}:$V${M_OHNEKUERZEL})', False),
+        # Zwei gleiche Anzeigenamen wären gefährlich: die Auswahl greift dann
+        # immer den ersten – auf der Gesprächsseite stünde der falsche Name.
+        ("Azubis mit gleichem Namen", DOPPELT, True),
     ]
     for i, (text, form, hart) in enumerate(pruef):
         r = 10 + i
@@ -586,7 +619,7 @@ def baue_start(ws):
                  border=RAHMEN_ZART)
         setze(ws, f"M{r}", form, font=f(10, bold=True), bg=PANEL,
               align=MITTE, border=RAHMEN_ZART,
-              fmt='0" Fälle";;"in Ordnung"')
+              fmt='[=1]"1 Fall";[=0]"in Ordnung";0" Fälle"')
         ws.conditional_formatting.add(
             f"M{r}", FormulaRule(formula=[f"$M{r}>0"],
                                  fill=fill(AMPEL_ROT if hart else AMPEL_GELB),
@@ -599,7 +632,7 @@ def baue_start(ws):
 
     # ---- Warnübersicht ------------------------------------------------------
     verbinde(ws, "J19:N19",
-             '=" Warnübersicht – letztes bewertetes Halbjahr, Note "&WarnNote&" oder schlechter"',
+             '=" Warnübersicht – zuletzt Note "&WarnNote&" oder schlechter"',
              font=f(11, bold=True, color=NAVY_700), align=LINKS)
     for s, t in (("J", "Azubi"), ("K", "LJ / HJ"), ("L", "Prozent"),
                  ("M", "IHK-Note")):
@@ -643,7 +676,8 @@ def baue_start(ws):
              "stehen im Blatt „Einstellungen“; wer sie dort ändert, ändert "
              "die Einfärbung überall mit. Die Datei liegt auf SharePoint: "
              "frühere Stände holt man über Datei > Informationen > "
-             "Versionsverlauf zurück.",
+             "Versionsverlauf zurück. Die Warnübersicht rechts bezieht sich "
+             "auf das zuletzt bewertete Halbjahr des jeweiligen Azubis.",
              font=f(10, color=TXT), bg=BG, align=LINKS_UM)
     aussenrahmen(ws, "A34:N35", LINIE_STARK, "thin")
     hoehen(ws, {34: 22, 35: 22})

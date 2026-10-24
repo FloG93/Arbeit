@@ -7,7 +7,7 @@ from openpyxl.worksheet.properties import PageSetupProperties
 
 import blaetter_auswertung as ba
 import blaetter_basis as bb
-from stil import (BG, EINGABE_BG, FMT_DATUM, FMT_PROZ, FORMEL_BG, FORMEL_TXT,
+from stil import (BG, EINGABE_BG, legende_eingabe, FMT_DATUM, FMT_PROZ, FORMEL_BG, FORMEL_TXT,
                   LINIE_STARK, LINKS, LINKS_OBEN, LINKS_UM, MAX_HJ, MITTE,
                   MITTE_UM, NAVY_100, NAVY_500, NAVY_700, PANEL,
                   RAHMEN_EINGABE, RAHMEN_ZART, TEAL, TXT, TXT_HELL,
@@ -26,7 +26,7 @@ def baue_gespraech(ws):
     ws.sheet_view.showGridLines = False
     breiten(ws, {"A": 3, "B": 18, "C": 16, "D": 12, "E": 17, "F": 13,
                  "G": 12, "H": 3})
-    hoehen(ws, {1: 22, 2: 8})
+    hoehen(ws, {1: 22, 2: 20})
 
     link_zelle(ws, "A1", "Start!A1", "«  Zurück zur Startseite",
                align=LINKS)
@@ -35,6 +35,7 @@ def baue_gespraech(ws):
              "Diese Seite ist für den Ausdruck gedacht: A4 hochkant, eine "
              "Seite.", font=f(9, color=TXT_HELL), align=LINKS)
 
+    legende_eingabe(ws, "A2:H2")
     verbinde(ws, "A3:H3", "Beurteilungsgespräch",
              font=f(20, bold=True, color=TXT_WEISS), bg=NAVY_700,
              align=MITTE)
@@ -60,7 +61,9 @@ def baue_gespraech(ws):
              font=f(10, color="C0392B"), align=LINKS)
     hoehen(ws, {6: 26, 7: 10})
 
-    dv_a = DataValidation(type="list", formula1="AzubiAuswahl",
+    # Bewusst AzubiAktiv statt AzubiAuswahl: diese Seite darf nicht davon
+    # abhängen, was jemand anders gerade in der Azubi-Ansicht filtert.
+    dv_a = DataValidation(type="list", formula1="AzubiAktiv",
                           allow_blank=True, showErrorMessage=True,
                           errorTitle="Azubi nicht in der Liste",
                           error="Bitte einen aktiven Azubi aus der Liste "
@@ -316,6 +319,11 @@ SCHRITTE = [
           "wählen."),
     ("s", "Die Seite ist für A4 hochkant eingerichtet: Datei > Drucken "
           "genügt."),
+    ("s", "Wichtig beim gleichzeitigen Arbeiten: Die Auswahlfelder oben auf "
+          "der Gesprächsseite, in der Azubi-Ansicht und im Blatt „Halbjahr“ "
+          "sind für alle dieselben Zellen. Stellt ein Kollege dort gerade "
+          "jemand anderen ein, ändert sich Ihre Ansicht mit. Vor dem Drucken "
+          "deshalb bitte kurz prüfen, ob oben noch der richtige Name steht."),
     ("s", "Ein Überblick über alle Azubis eines Halbjahres steht auf dem "
           "Blatt „Halbjahr“."),
     ("h", "8. Wenn der Platz nicht reicht"),
@@ -341,7 +349,7 @@ def baue_anleitung(ws):
     ws.sheet_properties.tabColor = NAVY_500
     ws.sheet_view.showGridLines = False
     breiten(ws, {"A": 3, "B": 5, "C": 86, "D": 3})
-    hoehen(ws, {1: 22, 2: 8})
+    hoehen(ws, {1: 22, 2: 20})
     link_zelle(ws, "A1", "Start!A1", "«  Zurück zur Startseite", align=LINKS)
     ws.merge_cells("A1:D1")
 
