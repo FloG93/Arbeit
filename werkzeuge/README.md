@@ -1,8 +1,8 @@
 # Werkzeuge
 
 Hilfsskripte für die Entwicklung. Sie gehören nicht zu den Apps und werden
-nicht veröffentlicht (der Pages-Workflow kopiert nur `app/`, `poster/` und
-`pruefung/`). Das Repo selbst bleibt ohne npm-Abhängigkeiten; was ein Skript
+nicht veröffentlicht (der Pages-Workflow kopiert nur `start/`, `pruefung/` und
+`ppt/`). Das Repo selbst bleibt ohne npm-Abhängigkeiten; was ein Skript
 braucht, wird außerhalb installiert.
 
 ## `pruefassistent-check.js` — Regressionstest im Browser

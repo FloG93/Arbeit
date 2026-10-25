@@ -1,12 +1,16 @@
 # CLAUDE.md
 
-Vier eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
-(`.github/workflows/pages.yml`): Übersicht (`start/`, Seitenwurzel) mit
-Kacheln zu Raumrechner (`app/` → `/raum/`), Musik-Poster-Generator
-(`poster/`, Kanäle `/poster/` und `/poster/beta/`), Prüfassistent für
-VDE-Prüfungen (`pruefung/`) und PPT-Konverter (`ppt/`). Beschreibung aller
-Apps in `README.md`. Quellordner und veröffentlichter Pfad sind nicht
-überall gleich — maßgeblich ist der Schritt „Assemble site" im Workflow.
+Zwei eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
+(`.github/workflows/pages.yml`): Prüfassistent für VDE-Prüfungen (`pruefung/`)
+und PPT-Konverter (`ppt/`), dazu die Übersicht (`start/`, Seitenwurzel). Beschreibung
+aller Apps in `README.md`.
+
+**Raumrechner und Musik-Poster-Generator sind nach `FloG93/Privat-Projekte`
+umgezogen** (Adressen `/raum/` und `/poster/` dort, mit Release- und Beta-Kanal).
+Hier gibt es sie nicht mehr; ihre Kacheln in `start/` verweisen dorthin. Änderungen
+an ihnen gehören in das andere Repo. Geblieben ist `project/`, der Design-Entwurf
+des Raumrechners. Quellordner und veröffentlichter Pfad sind nicht überall
+gleich — maßgeblich ist der Schritt „Assemble site" im Workflow.
 
 **Nach einem Umzug oder Sitzungswechsel zuerst `UEBERGABE.md` lesen**, falls
 vorhanden — dort stehen Projektstand, getroffene Entscheidungen und die

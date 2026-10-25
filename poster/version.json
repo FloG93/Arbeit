@@ -1,4 +1,0 @@
-{
-  "version": "1.2.0-beta",
-  "note": "Stand des Beta-Kanals. Beim Freigeben wird daraus der Eintrag in release.json ohne -beta."
-}

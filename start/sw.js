@@ -9,7 +9,7 @@
 // Raumrechners aus, obwohl dort jetzt die Übersicht liegt.
 //
 // Bei jeder Dateiänderung die Version hochzählen und neue Dateien eintragen.
-const CACHE = 'start-v1';
+const CACHE = 'start-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -20,7 +20,7 @@ const ASSETS = [
 
 // Nur die eigenen Pfade beantworten: auf derselben Herkunft liegen vier Apps,
 // und dieser Worker hat sie alle im Scope. Ein Worker, der hier alles
-// schluckt, liefert ihnen eingefrorene Dateien aus (siehe app/sw.js).
+// schluckt, liefert ihnen eingefrorene Dateien aus (siehe raum/sw.js in Privat-Projekte).
 const SHELL = new Set(ASSETS.map(p => new URL(p, self.location).pathname));
 
 self.addEventListener('install', e => {
