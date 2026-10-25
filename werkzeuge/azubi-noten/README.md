@@ -48,6 +48,11 @@ mehrere Jahrgänge in einer Liste führen, ohne die Spalten zu verwechseln.
 Bei vielen Parametern scrollt man damit nach unten statt zur Seite, und der
 Bewertungshorizont bekommt eine eigene, lesbare Spalte.
 
+Der Druckbereich deckt bewusst nur die ersten 25 Azubi-Spalten ab, also einen
+Jahrgangsblock: alle 100 zu drucken ergäbe rund 40 Seiten. Für einen anderen
+Jahrgang markiert man die Spalten und druckt die Auswahl; der Hinweis steht
+auch auf dem Blatt.
+
 Fixiert ist alles bis Zeile 10 (`E11`): Name, Punkte, Prozent und IHK-Note
 bleiben stehen, während unten eingetragen wird — rund 253 px hoch und 463 px
 breit, damit auf einem normalen Notebook noch genug Kriterienzeilen sichtbar
@@ -59,6 +64,19 @@ Die Zeile `U_STAT` unter dem Parameterblock hält den Status jedes Azubis.
 Sie ist nur für die bedingte Formatierung da: quer über Spalten verschiebt
 sich ein Bezug auf die Stammdaten nicht mit, ein direkter Verweis träfe also
 die falsche Zeile.
+
+## Größe
+
+Mit 100 Azubis hat die Mappe rund 62.000 Formeln und knapp 1 MB. Das ist
+tragbar, aber nicht gratis: `fullCalcOnLoad` steht gesetzt, Excel rechnet beim
+Öffnen also einmal alles durch. LibreOffice braucht dafür etwa 10 Sekunden,
+Excel ist deutlich schneller — spürbar bleibt es trotzdem, besonders im
+Browser. Wer die Datei einmal aus Excel heraus speichert, legt damit die
+Zwischenergebnisse ab.
+
+Der Löwenanteil sind die Bänder im Rechenblatt (16 × 100 × 20 ≈ 32.000) und
+die Kopfzeilen der Übungsblätter (21 × 100 × 9 ≈ 19.000). Beides wächst linear
+mit der Azubi-Zahl; wer kürzen muss, kürzt bei `N_UEBUNGEN`.
 
 ## Der Rechenkern
 
@@ -86,8 +104,10 @@ Zwei Zählflaggen, weil zwei Fragen zu beantworten sind:
   Zelle. Ohne Makros lässt sich eine Füllfarbe nicht aus einem Zellwert
   steuern. Die *Prozentgrenzen* dagegen kommen über `INDEX(NGrenze,k)` aus dem
   Einstellungsblatt — eine geänderte Grenze färbt die ganze Mappe sofort um.
-* **25 Azubis, 20 Übungen, 25 Bewertungsparameter** stecken als Konstanten in
-  `stil.py`. Mehr heißt: Konstante erhöhen und neu bauen.
+* **100 Azubis, 20 Übungen, 25 Bewertungsparameter** stecken als Konstanten in
+  `stil.py` — vier Jahrgänge zu je 25 Einstellungen. Alle Rasterzeilen des
+  Rechenblattes werden daraus gerechnet, Erhöhen heißt also: Konstante ändern
+  und neu bauen. Der Preis dafür steht unten unter „Größe“.
 * **Das Diagramm** verwendet `NV()` für nicht belegte Punkte. Excel lässt die
   Linie dort eine Lücke; LibreOffice zeichnet sie auf 0. Das ist eine
   Eigenheit der LibreOffice-Diagramme, kein Formelfehler.

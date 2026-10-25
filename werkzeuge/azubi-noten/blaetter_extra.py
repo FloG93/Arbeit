@@ -336,8 +336,9 @@ SCHRITTE = [
           "Maustaste anklicken > Verschieben oder kopieren > Kopie "
           "erstellen. Auf dem kopierten Blatt wird der Übungsname von Hand "
           "eingetragen; in den Auswertungen erscheint es nicht automatisch."),
-    ("s", "Mehr als 25 Azubis: bitte kurz Bescheid geben – dafür muss die "
-          "Datei einmal neu erzeugt werden."),
+    ("s", "Platz ist für 100 Azubis, also vier Jahrgänge zu je 25. Wird es "
+          "mehr, bitte kurz Bescheid geben – dafür muss die Datei einmal "
+          "neu erzeugt werden, die Daten bleiben erhalten."),
     ("h", "9. Was die Farben bedeuten"),
     ("s", "Die Einfärbung folgt dem IHK-Notenschlüssel: dunkelgrün = Note 1, "
           "hellgrün = 2, gelb = 3, orange = 4, rot = 5, dunkelrot = 6."),

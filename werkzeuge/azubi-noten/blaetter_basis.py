@@ -70,6 +70,7 @@ def az_sp(i):
 
 AZ_ERSTE = az_sp(0)
 AZ_LETZTE = az_sp(MAX_AZUBIS - 1)
+DRUCK_SPALTEN = min(MAX_AZUBIS, 25)         # ein Jahrgangsblock je Ausdruck
 
 
 # ============================================================ Einstellungen ==
@@ -317,7 +318,7 @@ def baue_stammdaten(ws):
     "nächste freie Zeile; wer die Ausbildung verlässt, behält seine Zeile und "
     "bekommt nur einen anderen Status. Mehrere Jahrgänge dürfen gemischt in "
     "dieser Liste stehen – auf den Übungsblättern steht über jeder Spalte das "
-    "Lehrjahr zum Zeitpunkt der Übung. Mehr als 25 Azubis: siehe Blatt "
+    "Lehrjahr zum Zeitpunkt der Übung. Mehr als 100 Azubis: siehe Blatt "
     "„Anleitung“, Abschnitt 7.",
     font=f(10, color=TXT), bg=BG, align=LINKS_UM)
     aussenrahmen(ws, f"A{SD1 + 2}:K{SD1 + 4}", LINIE_STARK, "thin")
@@ -458,7 +459,10 @@ def baue_uebungsblatt(ws, nr):
     # Fixiert bleibt alles bis zum Tabellenkopf: Namen und Ergebnis stehen
     # still, während unten die Kriterien durchgescrollt werden.
     ws.freeze_panes = f"{AZ_ERSTE}{U_P0}"
-    ws.print_area = f"A1:{AZ_LETZTE}{U_HINW + 1}"
+    # Der Druckbereich deckt bewusst nur den ersten Jahrgangsblock ab:
+    # alle 100 Spalten zu drucken ergäbe rund 40 Seiten. Für einen anderen
+    # Jahrgang markiert man die Spalten und druckt die Auswahl.
+    ws.print_area = f"A1:{az_sp(DRUCK_SPALTEN - 1)}{U_HINW + 1}"
     ws.print_title_rows = f"1:{U_THEAD}"
     ws.print_title_cols = "A:D"
     ws.page_setup.orientation = "landscape"
@@ -680,8 +684,11 @@ def _uebung_fuss(ws, vorlage):
              f"G{U_FARB}:H{U_FARB}", f"I{U_FARB}:J{U_FARB}",
              f"K{U_FARB}:L{U_FARB}", f"M{U_FARB}:N{U_FARB}"])
     verbinde(ws, f"O{U_FARB}:{AZ_LETZTE}{U_FARB}",
-             "Farbe und Zahl sagen dasselbe – der Ausdruck in Schwarz-Weiß "
-             "bleibt lesbar.", font=f(9, color=TXT_HELL), align=LINKS)
+             f"Farbe und Zahl sagen dasselbe – der Ausdruck in Schwarz-Weiß "
+             f"bleibt lesbar. Gedruckt werden die ersten {DRUCK_SPALTEN} "
+             f"Azubi-Spalten; für einen anderen Jahrgang die Spalten "
+             f"markieren und „Auswahl drucken“ wählen.",
+             font=f(9, color=TXT_HELL), align=LINKS_UM)
     verbinde(
         ws, f"A{U_HINW}:{AZ_LETZTE}{U_HINW + 1}",
         "Nicht bewertet: Einzelne Punktefelder mit „n.b.“ fallen aus Summe "

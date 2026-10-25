@@ -39,8 +39,11 @@ RECALC = None
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import blaetter_basis as bb                                   # noqa: E402
+import blaetter_auswertung as ba                              # noqa: E402
 
-HJ_G = 590           # Band „Gesamtprozent je Halbjahr“ im Blatt Daten
+# Adressen im Rechenblatt kommen aus dem Modul, nicht aus dem Gedächtnis:
+# die Bänder verschieben sich, sobald sich die Azubi-Zahl ändert.
+HJ_G = ba.HJ_G       # Band „Gesamtprozent je Halbjahr“
 BERGER, NOVAK = bb.az_sp(0), bb.az_sp(3)      # Spalten der beiden Azubis
 
 
@@ -143,11 +146,12 @@ def main():
          lambda w: (w["hinweis"] or "") == ""),
         ("Filter auf Industriemechaniker/-in",
          [("Azubi-Ansicht", "C4", "Industriemechaniker/-in")],
-         {"anzahl": ("Daten", "B623"), "erster": ("Daten", "D660")},
+         {"anzahl": ("Daten", f"B{ba.R_NFILTER}"),
+          "erster": ("Daten", f"D{ba.LST_AZ}")},
          lambda w: w["anzahl"] == 2 and w["erster"] == "Hoffmann, Jonas"),
         ("Azubi auf ausgeschieden gesetzt",
          [("Stammdaten", "G6", "ausgeschieden")],
-         {"anzahl": ("Daten", "B623"),
+         {"anzahl": ("Daten", f"B{ba.R_NFILTER}"),
           "uebung1": ("Übungen", "L6")},                 # bewertete Azubis
          lambda w: w["anzahl"] == 3 and w["uebung1"] == 2),
         ("Ganze Zeile n.b. ohne Grund",
@@ -161,8 +165,9 @@ def main():
          lambda w: w["pruef"] == 1 and str(w["ampel"]).startswith("ROT")),
         ("Gesprächsseite bleibt vom Filter der Azubi-Ansicht unabhängig",
          [("Azubi-Ansicht", "C4", "Industriemechaniker/-in")],
-         {"gefiltert": ("Daten", "B623"), "alle": ("Daten", "B819"),
-          "erster_alle": ("Daten", "D820")},
+         {"gefiltert": ("Daten", f"B{ba.R_NFILTER}"),
+          "alle": ("Daten", f"B{ba.LST_AZA - 1}"),
+          "erster_alle": ("Daten", f"D{ba.LST_AZA}")},
          lambda w: w["gefiltert"] == 2 and w["alle"] == 4
          and w["erster_alle"] == "Berger, Lukas"),
         ("Zwei Azubis mit gleichem Namen",

@@ -11,7 +11,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.hyperlink import Hyperlink
 
 # ---------------------------------------------------------------- Grundmaße --
-MAX_AZUBIS = 25          # Zeilen je Übungsblatt
+MAX_AZUBIS = 100         # 4 Jahrgänge à 25 Einstellungen je 01.09.
 MAX_PARAM = 25           # Bewertungskriterien je Übung (Zeilen)
 N_UEBUNGEN = 20          # vorbereitete Übungsblätter
 MAX_HJ = 8               # dargestellte Halbjahre (3,5 Jahre Ausbildung = 7)
