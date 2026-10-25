@@ -215,8 +215,8 @@ def einstellungen_namen(wb):
 # =============================================================== Stammdaten ==
 def baue_stammdaten(ws):
     blattkopf(ws, "L", "Azubi-Stammdaten",
-              "Eine Zeile je Azubi – hier werden keine Daten gelöscht, "
-              "ausgeschiedene Azubis bekommen nur einen anderen Status")
+              "Eine Zeile je Azubi, fest mit den Übungsblättern verbunden – "
+              "nicht sortieren, nichts löschen, nur den Status ändern")
     breiten(ws, {"A": 6, "B": 18, "C": 16, "D": 32, "E": 10, "F": 16,
                  "G": 15, "H": 10, "I": 10, "J": 26, "K": 30, "L": 3})
     legende_eingabe(ws, "A3:L3")
@@ -309,12 +309,19 @@ def baue_stammdaten(ws):
         FormulaRule(formula=[f'$G{SD0}="ausgeschieden"'],
                     font=f(11, italic=True, color=TXT_HELL)))
 
-    verbinde(ws, f"A{SD1 + 2}:K{SD1 + 3}",
-             "Mehr als 25 Azubis? Dann müssen die Übungsblätter mitwachsen – "
-             "siehe Blatt „Anleitung“, Abschnitt 5. Ausgeschiedene Azubis "
-             "bitte nicht löschen, sondern den Status ändern: alte "
-             "Bewertungen bleiben so erhalten.",
-             font=f(10, color=TXT_HELL), bg=BG, align=LINKS_UM)
+    verbinde(
+    ws, f"A{SD1 + 2}:K{SD1 + 4}",
+    "Wichtig: Jede Zeile ist fest mit einer Spalte auf den Übungsblättern "
+    "verbunden. Bitte keine Zeilen sortieren, einfügen oder löschen – sonst "
+    "wandern vorhandene Noten zum falschen Azubi. Neue Azubis kommen in die "
+    "nächste freie Zeile; wer die Ausbildung verlässt, behält seine Zeile und "
+    "bekommt nur einen anderen Status. Mehrere Jahrgänge dürfen gemischt in "
+    "dieser Liste stehen – auf den Übungsblättern steht über jeder Spalte das "
+    "Lehrjahr zum Zeitpunkt der Übung. Mehr als 25 Azubis: siehe Blatt "
+    "„Anleitung“, Abschnitt 7.",
+    font=f(10, color=TXT), bg=BG, align=LINKS_UM)
+    aussenrahmen(ws, f"A{SD1 + 2}:K{SD1 + 4}", LINIE_STARK, "thin")
+    hoehen(ws, {SD1 + 2: 20, SD1 + 3: 20, SD1 + 4: 20})
     druck(ws, f"A1:K{SD1 + 3}", quer=True, kopfzeilen="1:5")
     ws.freeze_panes = "B6"
 
@@ -540,7 +547,7 @@ def _uebung_kopf(ws, nr, vorlage, vr):
 
 def _uebung_azubispalten(ws):
     """Kopfzeilen je Azubi: Name, Vorname und das laufende Ergebnis."""
-    zeilen = [(U_NAME, " Name"), (U_VORNAME, " Vorname"),
+    zeilen = [(U_NAME, " Name"), (U_VORNAME, " Vorname · Lehrjahr"),
               (U_PUNKTE, " Punkte"), (U_PROZ, " Prozent"),
               (U_NOTE, " IHK-Note")]
     for r, text in zeilen:
@@ -556,7 +563,12 @@ def _uebung_azubispalten(ws):
         setze(ws, f"{c}{U_NAME}", f"={leer}'Stammdaten'!$B{sd})",
               font=f(11, bold=True, color=FORMEL_TXT), bg=FORMEL_BG,
               align=MITTE_UM, border=RAHMEN_ZART)
-        setze(ws, f"{c}{U_VORNAME}", f"={leer}'Stammdaten'!$C{sd})",
+        # Vorname und das Lehrjahr, in dem der Azubi zum Zeitpunkt DIESER
+        # Übung stand – nicht das heutige. So lassen sich mehrere Jahrgänge
+        # in einer Liste führen, ohne die Spalten zu verwechseln.
+        setze(ws, f"{c}{U_VORNAME}",
+              f'={leer}\'Stammdaten\'!$C{sd}&IF({c}${U_HJ}>0," · LJ "&'
+              f'(INT(({c}${U_HJ}-1)/2)+1),""))',
               font=f(10, color=FORMEL_TXT), bg=FORMEL_BG, align=MITTE,
               border=RAHMEN_ZART)
         setze(ws, f"{c}{U_PUNKTE}",

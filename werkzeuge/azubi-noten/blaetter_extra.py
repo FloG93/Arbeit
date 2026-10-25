@@ -258,12 +258,11 @@ SCHRITTE = [
     ("h", "1. Eine Note eintragen"),
     ("s", "Auf der Startseite in der Liste „Übungen“ auf den Namen der "
           "Übung klicken."),
-    ("s", "Der Azubi steht in einer Spalte, die Bewertungsparameter stehen "
-          "untereinander. In seiner Spalte für jeden Parameter die Punkte "
-          "eintragen – bei vielen Parametern einfach nach unten scrollen."),
-    ("s", "Punkte, Prozent und IHK-Note stehen oben über der Spalte, farbig "
-          "hinterlegt. Der Kopfbereich bleibt beim Scrollen stehen, Sie "
-          "sehen die Note also immer mitlaufen."),
+    ("s", "Der Azubi steht in einer Spalte, die Bewertungsparameter "
+          "untereinander. In seiner Spalte je Parameter die Punkte "
+          "eintragen."),
+    ("s", "Punkte, Prozent und IHK-Note stehen oben über der Spalte und "
+          "laufen beim Scrollen mit."),
     ("s", "Ist die Übung fertig bewertet, oben im Kopf den Status auf "
           "„abgeschlossen“ stellen. Erst dann zählt sie für das Halbjahr."),
     ("h", "2. Eine neue Übung anlegen"),
@@ -273,20 +272,22 @@ SCHRITTE = [
     ("s", "Links in der Zeile auf den Blattnamen klicken."),
     ("s", "Im Kopf des Blattes eintragen: Art (Praxis oder Theorie), Datum, "
           "Status und Ihr Kürzel bei „Bewertet von“."),
-    ("s", "Untereinander in der Spalte „Bewertungsparameter“ die Prüfpunkte "
-          "eintragen, daneben den Bewertungshorizont (zum Beispiel „10 von "
-          "10 Bohrungen korrekt“). Die Höchstpunktzahl in Spalte D steht "
-          "automatisch auf dem Wert aus den Einstellungen und kann "
+    ("s", "Untereinander die Prüfpunkte eintragen, daneben den "
+          "Bewertungshorizont (z. B. „10 von 10 Bohrungen korrekt“). Die "
+          "Höchstpunktzahl in Spalte D kommt aus den Einstellungen und darf "
           "überschrieben werden. Platz ist für 25 Parameter."),
     ("h", "3. Einen Azubi aufnehmen"),
     ("s", "Startseite > „Stammdaten“ öffnen."),
     ("s", "In der ersten freien Zeile Name, Vorname, Beruf und "
           "Ausbildungsstart (meist der 01.09.) eintragen, Status „aktiv“."),
-    ("s", "Jahrgang, Lehrjahr und Halbjahr berechnet die Datei selbst. Der "
-          "neue Azubi erscheint sofort auf allen Übungsblättern."),
+    ("s", "Jahrgang, Lehrjahr und Halbjahr rechnet die Datei selbst. Der "
+          "Azubi erscheint sofort als Spalte auf allen Übungsblättern. "
+          "Mehrere Lehrjahre dürfen gemischt untereinander stehen."),
+    ("s", "Zeilen nie sortieren, einfügen oder löschen: jede Zeile gehört "
+          "fest zu einer Spalte der Übungsblätter, beim Sortieren wandern "
+          "die Noten zum falschen Azubi."),
     ("s", "Verlässt jemand die Ausbildung: nichts löschen, nur den Status "
-          "auf „ausgeschieden“ oder „fertig“ setzen. Alle bisherigen "
-          "Bewertungen bleiben erhalten."),
+          "auf „ausgeschieden“ oder „fertig“ setzen."),
     ("h", "4. Nicht-Teilnahme eintragen"),
     ("s", "War ein Azubi bei einzelnen Prüfpunkten nicht dabei: in das "
           "Punktefeld „n.b.“ schreiben. Dieser Punkt fällt dann aus Summe "
@@ -390,7 +391,7 @@ def baue_anleitung(ws):
                   align=MITTE)
             zeilen = max(1, (len(text) + 85) // 86)
             setze(ws, f"C{r}", text, font=f(10.5), align=LINKS_UM)
-            hoehen(ws, {r: 14 * zeilen + 4})
+            hoehen(ws, {r: 13 * zeilen + 4})
             r += 1
 
     ws.print_area = f"A3:D{r}"
