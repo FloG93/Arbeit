@@ -42,6 +42,9 @@ Mappe: Excel rechnet beim Öffnen einmal alles durch.
 
 Bewertungsparameter stehen untereinander (Zeilen 11–35, bis zu 25 Stück),
 Azubis nebeneinander (Spalten E–AC, fest an die Stammdaten-Zeile gebunden).
+Über jeder Spalte steht das Lehrjahr, in dem der Azubi zum Zeitpunkt *dieser*
+Übung stand (aus dem Halbjahr gerechnet, nicht aus TODAY) – so lassen sich
+mehrere Jahrgänge in einer Liste führen, ohne die Spalten zu verwechseln.
 Bei vielen Parametern scrollt man damit nach unten statt zur Seite, und der
 Bewertungshorizont bekommt eine eigene, lesbare Spalte.
 
@@ -100,6 +103,11 @@ Zwei Zählflaggen, weil zwei Fragen zu beantworten sind:
   30 Zeichen). Die Spalte kann nicht breiter werden, ohne die 1200-px-Grenze
   für das SharePoint-Webpart zu reißen; der volle Name steht auf dem
   Übungsblatt und in der Übungsliste.
+* **Die Stammdaten dürfen nicht sortiert werden.** Zeile 7 der Stammdaten
+  gehört fest zu Spalte E der Übungsblätter. Das schützt beim Statuswechsel,
+  hält aber einem Sortieren nicht stand: dabei wandern die Namen, die Noten
+  bleiben. Erkennen lässt sich das hinterher nicht, deshalb steht die Warnung
+  auf dem Blatt selbst und in der Anleitung.
 * **Wiederholungsketten** werden zwei Ebenen tief aufgelöst (Wiederholung
   einer Wiederholung). Tiefer verschachtelt wäre ohne Makro nicht mehr
   nachvollziehbar.
