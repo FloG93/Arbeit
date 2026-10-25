@@ -31,31 +31,36 @@ M_STATUS, M_GEW, M_WDHN, M_WDHI, M_HEAD = 8, 9, 10, 11, 12
 M_NPARAM, M_LASTREP, M_GSIZE = 13, 14, 15
 M_UNVOLL, M_OHNEGRUND, M_OHNEKUERZEL = 16, 17, 18
 
-B_PCT, B_EVAL, B_HJ, B_PKT, B_MAX = 20, 50, 80, 110, 140
-B_GRUND, B_RULEIN, B_ENTERED = 170, 200, 230
-B_GLAST, B_GBEST, B_GBESTNR, B_RULE = 260, 290, 320, 350
-B_CNT, B_CNTA = 380, 410
+# Jedes Band ist so hoch wie die Azubi-Zahl. Die Zeilennummern werden
+# daraus gerechnet, damit die Mappe mit MAX_AZUBIS mitwächst, ohne dass
+# irgendwo eine Zahl von Hand nachgezogen werden muss.
+_ABST = MAX_AZUBIS + 5
+_B0 = 20
+(B_PCT, B_EVAL, B_HJ, B_PKT, B_MAX, B_GRUND, B_RULEIN, B_ENTERED,
+ B_GLAST, B_GBEST, B_GBESTNR, B_RULE, B_CNT, B_CNTA, B_BEM,
+ B_CNTV) = [_B0 + k * _ABST for k in range(16)]
 
-HJ_HEAD = 439
-HJ_ANZ, HJ_ANZP, HJ_ANZT = 440, 470, 500
-HJ_P, HJ_T, HJ_G = 530, 560, 590
+HJ_HEAD = _B0 + 16 * _ABST + 3
+(HJ_ANZ, HJ_ANZP, HJ_ANZT,
+ HJ_P, HJ_T, HJ_G) = [HJ_HEAD + 1 + k * _ABST for k in range(6)]
 
-R_KEYGES = 614       # gewertete Übungen des Gesprächs-Halbjahres
-R_KEYLAUF = 615      # laufende Übungen (Schlüsselzeile)
-R_KEYCHART = 616     # bewertete Übungen des gewählten Azubis
-R_SELJAHR = 617      # Jahrgang des gewählten Azubis
-R_SELNAME = 618      # Azubi-Ansicht: gewählter Anzeigename
-R_SELIDX = 619       # Azubi-Ansicht: Nummer des Azubis
-R_GNAME = 620        # Gesprächsseite: gewählter Anzeigename
-R_GIDX = 621
-R_GHJ = 622
-R_NFILTER = 623      # Anzahl Azubis im Filter
+_NACH_HJ = HJ_HEAD + 1 + 6 * _ABST
+R_KEYGES = _NACH_HJ + 1      # gewertete Übungen des Gesprächs-Halbjahres
+R_KEYLAUF = _NACH_HJ + 2     # laufende Übungen (Schlüsselzeile)
+R_KEYCHART = _NACH_HJ + 3    # bewertete Übungen des gewählten Azubis
+R_SELJAHR = _NACH_HJ + 4     # Jahrgang des gewählten Azubis
+R_SELNAME = _NACH_HJ + 5     # Azubi-Ansicht: gewählter Anzeigename
+R_SELIDX = _NACH_HJ + 6      # Azubi-Ansicht: Nummer des Azubis
+R_GNAME = _NACH_HJ + 7       # Gesprächsseite: gewählter Anzeigename
+R_GIDX = _NACH_HJ + 8
+R_GHJ = _NACH_HJ + 9
+R_NFILTER = _NACH_HJ + 10    # Anzahl Azubis im Filter
 
-AKT = 630
-LST_AZ, LST_JAHR, LST_BERUF = 660, 690, 720
-B_BEM = 760          # Bemerkung je Azubi und Übung
-B_CNTV = 790         # zählt für die Halbjahreswertung (nur abgeschlossen)
-LST_AZA = 820        # alle aktiven Azubis, ohne Filter
+AKT = _NACH_HJ + 13
+LST_AZ = AKT + _ABST         # Azubis nach Filter
+LST_AZA = LST_AZ + _ABST     # alle aktiven Azubis, ohne Filter
+LST_JAHR = LST_AZA + _ABST
+LST_BERUF = LST_JAHR + _ABST + 2
 
 ERSTE_SP, LETZTE_SP = "C", "V"      # 20 Übungsspalten
 
@@ -225,15 +230,18 @@ def baue_daten(ws):
                 f'=COUNT({q}!{ca}${bb.U_P0}:{ca}${bb.U_P1})'
                 f'+COUNTIF({q}!{ca}${bb.U_P0}:{ca}${bb.U_P1},"n.b.")')
             put(B_GLAST,
-                f'=SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
-                f'({zeile(B_EVAL, i)})*{meta(M_NR)}))')
+                f'=IF({c}${M_GSIZE}<=1,0,'
+                f'SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
+                f'({zeile(B_EVAL, i)})*{meta(M_NR)})))')
             put(B_GBEST,
-                f'=SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
-                f'({zeile(B_EVAL, i)})*({zeile(B_PCT, i)})))')
+                f'=IF({c}${M_GSIZE}<=1,0,'
+                f'SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
+                f'({zeile(B_EVAL, i)})*({zeile(B_PCT, i)}))))')
             put(B_GBESTNR,
-                f'=SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
+                f'=IF({c}${M_GSIZE}<=1,0,'
+                f'SUMPRODUCT(MAX(({meta(M_HEAD)}={c}${M_HEAD})*'
                 f'({zeile(B_EVAL, i)})*(({zeile(B_PCT, i)})='
-                f'{c}{B_GBEST + i})*{meta(M_NR)}))')
+                f'{c}{B_GBEST + i})*{meta(M_NR)})))')
             put(B_RULE,
                 f'=IF({c}${M_LASTREP}=0,WdhStd,IF(INDEX({zeile(B_RULEIN, i)},'
                 f'{c}${M_LASTREP})="",WdhStd,INDEX({zeile(B_RULEIN, i)},'
@@ -668,6 +676,12 @@ def baue_start(ws):
               border=RAHMEN_ZART)
         hoehen(ws, {r: 20})
     ampel_regeln(ws, "L21:M30", "$L21")
+    # Bei 100 Azubis können mehr Fälle auftreten, als hier Zeilen stehen.
+    verbinde(ws, "J31:N31",
+             f'=IF(SUM({D}$G${AKT}:$G${AKT + MAX_AZUBIS - 1})>{N_WARN},'
+             f'"… und "&(SUM({D}$G${AKT}:$G${AKT + MAX_AZUBIS - 1})-{N_WARN})'
+             f'&" weitere – vollständige Liste im Blatt „Halbjahr“","")',
+             font=f(9.5, italic=True, color=TXT_HELL), align=LINKS)
     for r in range(10, 32):
         hoehen(ws, {r: 20})
 
@@ -1114,19 +1128,20 @@ def baue_halbjahr(ws):
               align=LINKS, border=RAHMEN_ZART)
         hoehen(ws, {r: 22})
 
+    letzte = 6 + MAX_AZUBIS
     for s_pct, s_note in (("H", "I"), ("K", "L"), ("M", "N")):
-        ampel_regeln(ws, f"{s_pct}7:{s_note}31", f"${s_pct}7")
+        ampel_regeln(ws, f"{s_pct}7:{s_note}{letzte}", f"${s_pct}7")
     ws.conditional_formatting.add(
-        "A7:G31",
+        f"A7:G{letzte}",
         FormulaRule(formula=[f"'Stammdaten'!$G{bb.SD0}<>\"aktiv\""],
                     font=f(10, italic=True, color="A6ADB8")))
 
-    verbinde(ws, "A33:G33", " Farblegende", font=f(11, bold=True,
-                                                   color=NAVY_700),
-             align=LINKS)
-    notenlegende(ws, "H33")
-    hoehen(ws, {32: 10, 33: 24})
-    verbinde(ws, "A35:P36",
+    rl, rn = letzte + 2, letzte + 4
+    verbinde(ws, f"A{rl}:G{rl}", " Farblegende",
+             font=f(11, bold=True, color=NAVY_700), align=LINKS)
+    notenlegende(ws, f"H{rl}")
+    hoehen(ws, {letzte + 1: 10, rl: 24})
+    verbinde(ws, f"A{rn}:P{rn + 1}",
              "Gesamt = Mittel der Prozentwerte aller gewerteten Übungen des "
              "Halbjahres, jede Übung mit ihrem Gewicht. Steht in den "
              "Einstellungen „Gewichtung Praxis/Theorie verwenden = ja“, "
@@ -1135,7 +1150,7 @@ def baue_halbjahr(ws):
              "Gespräch: Blatt „Gesprächsseite“ öffnen, Azubi und Halbjahr "
              "wählen, ausdrucken.",
              font=f(10, color=TXT), bg=BG, align=LINKS_UM)
-    aussenrahmen(ws, "A35:P36", LINIE_STARK, "thin")
-    hoehen(ws, {35: 22, 36: 22})
-    druck(ws, "A1:P36", quer=True, kopfzeilen="1:6")
+    aussenrahmen(ws, f"A{rn}:P{rn + 1}", LINIE_STARK, "thin")
+    hoehen(ws, {rn: 22, rn + 1: 22})
+    druck(ws, f"A1:P{rn + 1}", quer=True, kopfzeilen="1:6")
     ws.freeze_panes = "D7"
