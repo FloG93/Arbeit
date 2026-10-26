@@ -8,8 +8,6 @@ Login, jede läuft für sich.
 | [Übersicht](#übersicht) | `/` | Kacheln zu allen Apps, Einstieg der Seite |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 | [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
-| [Raumrechner](#umgezogen-raumrechner-und-poster-generator) | [Privat-Projekte `/raum/`](https://flog93.github.io/Privat-Projekte/raum/) | umgezogen |
-| [Musik-Poster-Generator](#umgezogen-raumrechner-und-poster-generator) | [Privat-Projekte `/poster/`](https://flog93.github.io/Privat-Projekte/poster/) | umgezogen |
 
 Live: https://flog93.github.io/Arbeit/ (Übersicht),
 https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent) und
