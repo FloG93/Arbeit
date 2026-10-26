@@ -4,7 +4,10 @@ Vier eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
 (`.github/workflows/pages.yml`): Übersicht (`start/`, Seitenwurzel) mit
 Kacheln zu Raumrechner (`app/` → `/raum/`), Musik-Poster-Generator
 (`poster/`, Kanäle `/poster/` und `/poster/beta/`), Prüfassistent für
-VDE-Prüfungen (`pruefung/`) und PPT-Konverter (`ppt/`). Beschreibung aller
+VDE-Prüfungen (`pruefung/`) und PPT-Konverter (`ppt/`). Dazu eine Kachel
+„Zum Herunterladen“ für die Excel-Mappe Azubi-Leistungen — eine Datei, keine
+App: Sie liegt einmal in `werkzeuge/azubi-noten/` (erzeugt von dessen
+`build.py`) und wird vom Workflow nach `/azubi/` kopiert. Beschreibung aller
 Apps in `README.md`. Quellordner und veröffentlichter Pfad sind nicht
 überall gleich — maßgeblich ist der Schritt „Assemble site" im Workflow.
 

@@ -5,7 +5,9 @@
 # Commit, und /poster/beta/ der aktuelle Stand des Branches. Freigeben heißt
 # damit: diesen Zeiger ändern — die Dateien liegen nur einmal im Repo. Der
 # Prüfassistent hat bewusst keinen Release-Kanal. Der PPT-Konverter liegt
-# unter /ppt/.
+# unter /ppt/. Die Excel-Mappe Azubi-Leistungen liegt unter /azubi/ zum
+# Herunterladen — als Datei, nicht als App; sie bleibt im Repo einmal in
+# werkzeuge/azubi-noten/.
 #
 # Alles ist reines HTML/CSS/JS ohne Build-Schritt; erzeugt wird lediglich je
 # Kanal eine build.js mit Version, Commit und Datum.
@@ -99,6 +101,12 @@ jobs:
           # PPT-Konverter: ebenfalls reiner Kopiervorgang.
           mkdir -p dist/ppt
           cp -r ppt/. dist/ppt/
+
+          # Azubi-Leistungen: nur die fertige Mappe, nicht den Generator. Eine
+          # Zeile, damit eine fehlende Datei den Lauf sichtbar scheitern lässt,
+          # statt eine Kachel zu veröffentlichen, die ins Leere führt.
+          mkdir -p dist/azubi
+          cp werkzeuge/azubi-noten/Azubi-Leistungen.xlsx dist/azubi/
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

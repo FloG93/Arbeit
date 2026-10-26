@@ -10,6 +10,7 @@ Login, jede läuft für sich.
 | [Musik-Poster-Generator](#musik-poster-generator) | `/poster/` | Aus Künstler/Album/Song ein druckreifes Poster bauen |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 | [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
+| [Azubi-Leistungen](#azubi-leistungen-excel) | `/azubi/Azubi-Leistungen.xlsx` | Excel-Mappe (kein Web-App): Übungen und Noten erfassen, Halbjahresgespräche vorbereiten |
 
 Live: https://flog93.github.io/Arbeit/ (Übersicht),
 https://flog93.github.io/Arbeit/raum/ (Raumrechner),
@@ -17,8 +18,14 @@ https://flog93.github.io/Arbeit/poster/ (Poster-Generator,
 freigegebene Fassung),
 https://flog93.github.io/Arbeit/poster/beta/ (derselbe
 Generator, aktueller Entwicklungsstand),
-https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent) und
-https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter).
+https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent),
+https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter) und
+https://flog93.github.io/Arbeit/azubi/Azubi-Leistungen.xlsx
+(Excel-Mappe zum Herunterladen).
+
+**Direkt herunterladen:**
+[Azubi-Leistungen.xlsx](https://github.com/FloG93/Arbeit/raw/main/werkzeuge/azubi-noten/Azubi-Leistungen.xlsx)
+— die Mappe liegt einmal im Repo, unabhängig davon, ob Pages eingeschaltet ist.
 
 ## Hosting
 
@@ -58,6 +65,27 @@ verlassen. Quelle ist `start/`, veröffentlicht an der Seitenwurzel.
   zwischengespeicherte Fassung des Raumrechners.
 - Kein eigenes Manifest: Wer eine App auf den Startbildschirm legt, tut das
   aus der App heraus.
+- Unter „Zum Herunterladen“ steht eine fünfte Kachel, die keine App öffnet,
+  sondern die Excel-Mappe lädt (`download`-Attribut). Sie hat bewusst einen
+  eigenen Abschnitt und ein Download-Symbol statt des Pfeils.
+
+## Azubi-Leistungen (Excel)
+
+Eine Excel-Mappe, keine Web-App: Übungen und Tests erfassen, nach
+IHK-Notenschlüssel bewerten, Halbjahresauswertung und druckfertige
+Gesprächsseite je Azubi. Gedacht für SharePoint mit mehreren Bearbeitern
+gleichzeitig; reines `.xlsx` ohne Makros.
+
+- Die fertige Datei liegt **einmal** in `werkzeuge/azubi-noten/`, zusammen mit
+  dem Generator (`build.py`) und den Rechentests. Der Workflow kopiert sie
+  beim Veröffentlichen nach `/azubi/` und legt sie dort nicht ein zweites Mal
+  ab — es gibt keine Kopie, die auseinanderlaufen könnte.
+- **Wer die Mappe ändert**, baut sie mit `build.py` neu und legt die
+  Ausgabe wieder nach `werkzeuge/azubi-noten/Azubi-Leistungen.xlsx`. Die Datei
+  ist Ausgabe des Generators, nicht von Hand zu pflegen; Aufbau, Grenzen und
+  Prüfung stehen in `werkzeuge/azubi-noten/README.md`.
+- Der Service Worker kennt die Datei nicht: Sie ist rund 1 MB und wird nur
+  einmal heruntergeladen, nicht für den Offline-Betrieb gebraucht.
 
 ## Raumrechner
 

@@ -9,7 +9,7 @@
 // Raumrechners aus, obwohl dort jetzt die Übersicht liegt.
 //
 // Bei jeder Dateiänderung die Version hochzählen und neue Dateien eintragen.
-const CACHE = 'start-v1';
+const CACHE = 'start-v2';
 const ASSETS = [
   './',
   './index.html',
