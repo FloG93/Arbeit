@@ -2,6 +2,7 @@
 """Stufe 1: Einstellungen, Stammdaten, Übungsliste, Übungsblätter, Vorlage."""
 
 from openpyxl.formatting.rule import FormulaRule
+from openpyxl.styles import Border
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -9,7 +10,8 @@ from openpyxl.worksheet.properties import PageSetupProperties
 
 from stil import (BG, EINGABE_BG, EINGABE_RAND, FMT_DATUM, FMT_HJ, FMT_PROZ,
                   FMT_PUNKT, FORMEL_BG, FORMEL_TXT, GESPERRT_BG, LINIE,
-                  LINIE_STARK, LINKS, LINKS_UM, MAX_AZUBIS, MAX_PARAM, MITTE,
+                  AZUBIS_JE_JAHRGANG, kante, LINIE_STARK, LINKS, LINKS_UM,
+                  MAX_AZUBIS, MAX_PARAM, MITTE,
                   MITTE_UM, N_UEBUNGEN, NAVY_100, NAVY_500, NAVY_700, PANEL,
                   RAHMEN_EINGABE, RAHMEN_ZART, TEAL, TEAL_100, TXT, TXT_HELL,
                   TXT_WEISS, UEB_BLATT, ampel_regeln, aussenrahmen, bereich,
@@ -63,14 +65,40 @@ UV0 = 6                                     # erste Zeile der Übungsliste
 UV1 = UV0 + N_UEBUNGEN - 1
 
 
+AZ_TRENN = AZUBIS_JE_JAHRGANG
+N_BLOECKE = (MAX_AZUBIS + AZ_TRENN - 1) // AZ_TRENN
+
+
 def az_sp(i):
-    """Spaltenbuchstabe des i-ten Azubis (0-basiert)."""
-    return get_column_letter(AZ0 + i)
+    """Spaltenbuchstabe des i-ten Azubis (0-basiert).
+
+    Hinter jedem Jahrgangsblock bleibt eine schmale Spalte frei. Sie trennt
+    die Jahrgänge sichtbar und trägt die Gliederungsschaltfläche, mit der
+    sich ein ganzer Jahrgang zuklappen lässt.
+    """
+    return get_column_letter(AZ0 + i + i // AZ_TRENN)
+
+
+def trenn_sp(b):
+    """Trennspalte hinter dem b-ten Jahrgangsblock (0-basiert)."""
+    return get_column_letter(AZ0 + (b + 1) * AZ_TRENN + b)
+
+
+def az_bereiche(r1, r2):
+    """Azubi-Spalten als ein A1-Bereich je Block, ohne die Trennspalten."""
+    teile = []
+    for b in range(N_BLOECKE):
+        erste = b * AZ_TRENN
+        letzte = min(MAX_AZUBIS, erste + AZ_TRENN) - 1
+        if erste <= letzte:
+            teile.append(f"{az_sp(erste)}{r1}:{az_sp(letzte)}{r2}")
+    return teile
 
 
 AZ_ERSTE = az_sp(0)
 AZ_LETZTE = az_sp(MAX_AZUBIS - 1)
-DRUCK_SPALTEN = min(MAX_AZUBIS, 25)         # ein Jahrgangsblock je Ausdruck
+BLATT_LETZTE = trenn_sp(N_BLOECKE - 1)      # letzte Spalte des Blattes
+DRUCK_SPALTEN = min(MAX_AZUBIS, AZ_TRENN)   # ein Jahrgangsblock je Ausdruck
 
 
 # ============================================================ Einstellungen ==
@@ -215,18 +243,20 @@ def einstellungen_namen(wb):
 
 # =============================================================== Stammdaten ==
 def baue_stammdaten(ws):
-    blattkopf(ws, "L", "Azubi-Stammdaten",
+    blattkopf(ws, "M", "Azubi-Stammdaten",
               "Eine Zeile je Azubi, fest mit den Übungsblättern verbunden – "
               "nicht sortieren, nichts löschen, nur den Status ändern")
     breiten(ws, {"A": 6, "B": 18, "C": 16, "D": 32, "E": 10, "F": 16,
-                 "G": 15, "H": 10, "I": 10, "J": 26, "K": 30, "L": 3})
-    legende_eingabe(ws, "A3:L3")
+                 "G": 15, "H": 10, "I": 10, "J": 26, "K": 26, "L": 24,
+                 "M": 3})
+    legende_eingabe(ws, "A3:M3")
     hoehen(ws, {3: 24, 4: 10})
 
     kopf = [("A", "Nr."), ("B", "Name"), ("C", "Vorname"),
             ("D", "Ausbildungsberuf"), ("E", "Jahrgang"),
             ("F", "Ausbildungsstart"), ("G", "Status"), ("H", "Lehrjahr"),
-            ("I", "akt. HJ"), ("J", "Anzeigename"), ("K", "Bemerkung")]
+            ("I", "akt. HJ"), ("J", "Anzeigename"), ("K", "Bemerkung"),
+            ("L", "Platz im Übungsblatt")]
     for sp, t in kopf:
         setze(ws, f"{sp}5", t, font=f(10.5, bold=True, color=TXT_WEISS),
               bg=NAVY_500, align=MITTE_UM, border=rahmen(PANEL))
@@ -258,7 +288,23 @@ def baue_stammdaten(ws):
         setze(ws, f"J{r}", f'=IF($B{r}="","",$B{r}&", "&$C{r})',
               font=f(11, color=FORMEL_TXT), bg=FORMEL_BG, align=LINKS,
               border=RAHMEN_ZART)
+        # Zeigt, wo dieser Azubi auf jedem Übungsblatt steht. ADDRESS baut
+        # den Spaltenbuchstaben; die Trennspalte je Block wird mitgezählt.
+        setze(ws, f"L{r}",
+              f'="Block "&(INT((ROW()-{SD0})/{AZUBIS_JE_JAHRGANG})+1)&'
+              f'" · Spalte "&SUBSTITUTE(ADDRESS(1,ROW()-{SD0 - AZ0}+'
+              f'INT((ROW()-{SD0})/{AZUBIS_JE_JAHRGANG}),4),"1","")',
+              font=f(10, color=TXT_HELL), bg=FORMEL_BG, align=MITTE,
+              border=RAHMEN_ZART)
         hoehen(ws, {r: 22})
+        if (i % AZUBIS_JE_JAHRGANG) == 0:
+            # Linie zwischen den Jahrgangsblöcken
+            for sp in "ABCDEFGHIJKL":
+                z = ws[f"{sp}{r}"]
+                alt_r = z.border
+                z.border = Border(left=alt_r.left, right=alt_r.right,
+                                  bottom=alt_r.bottom,
+                                  top=kante(LINIE_STARK, "medium"))
 
     dv_beruf = DataValidation(type="list", formula1="Berufe", allow_blank=True,
                               showErrorMessage=True,
@@ -306,24 +352,26 @@ def baue_stammdaten(ws):
                                                 color="C0392B"),
                     stopIfTrue=True))
     ws.conditional_formatting.add(
-        f"A{SD0}:K{SD1}",
+        f"A{SD0}:L{SD1}",
         FormulaRule(formula=[f'$G{SD0}="ausgeschieden"'],
                     font=f(11, italic=True, color=TXT_HELL)))
 
     verbinde(
-    ws, f"A{SD1 + 2}:K{SD1 + 4}",
+    ws, f"A{SD1 + 2}:L{SD1 + 4}",
     "Wichtig: Jede Zeile ist fest mit einer Spalte auf den Übungsblättern "
     "verbunden. Bitte keine Zeilen sortieren, einfügen oder löschen – sonst "
     "wandern vorhandene Noten zum falschen Azubi. Neue Azubis kommen in die "
-    "nächste freie Zeile; wer die Ausbildung verlässt, behält seine Zeile und "
-    "bekommt nur einen anderen Status. Mehrere Jahrgänge dürfen gemischt in "
-    "dieser Liste stehen – auf den Übungsblättern steht über jeder Spalte das "
-    "Lehrjahr zum Zeitpunkt der Übung. Mehr als 100 Azubis: siehe Blatt "
-    "„Anleitung“, Abschnitt 7.",
+    f"nächste freie Zeile; wer die Ausbildung verlässt, behält seine Zeile "
+    f"und bekommt nur einen anderen Status. Je {AZUBIS_JE_JAHRGANG} Zeilen "
+    f"bilden einen Jahrgangsblock – die Linien zeigen, wo einer anfängt. "
+    f"Tragen Sie einen neuen Jahrgang am besten in den nächsten freien Block "
+    f"ein: auf den Übungsblättern steht er dann als geschlossener Spalten"
+    f"block, den man mit einem Klick zuklappen kann. Mehr als "
+    f"{MAX_AZUBIS} Azubis: siehe Blatt „Anleitung“, Abschnitt 7.",
     font=f(10, color=TXT), bg=BG, align=LINKS_UM)
-    aussenrahmen(ws, f"A{SD1 + 2}:K{SD1 + 4}", LINIE_STARK, "thin")
+    aussenrahmen(ws, f"A{SD1 + 2}:L{SD1 + 4}", LINIE_STARK, "thin")
     hoehen(ws, {SD1 + 2: 20, SD1 + 3: 20, SD1 + 4: 20})
-    druck(ws, f"A1:K{SD1 + 3}", quer=True, kopfzeilen="1:5")
+    druck(ws, f"A1:L{SD1 + 4}", quer=True, kopfzeilen="1:5")
     ws.freeze_panes = "B6"
 
 
@@ -444,8 +492,14 @@ def baue_uebungsblatt(ws, nr):
     ws.sheet_view.showGridLines = False
     breiten(ws, {"A": 4, "B": 22, "C": 24, "D": 9})
     for i in range(MAX_AZUBIS):
+        sp_dim = ws.column_dimensions[az_sp(i)]
         # 15 Einheiten: gerade breit genug für „3 – befriedigend“
-        ws.column_dimensions[az_sp(i)].width = 15
+        sp_dim.width = 15
+        # Gliederungsebene 1: Excel setzt über jeden Block eine Schaltfläche,
+        # weil die Trennspalten dazwischen auf Ebene 0 bleiben.
+        sp_dim.outlineLevel = 1
+    for b in range(N_BLOECKE):
+        ws.column_dimensions[trenn_sp(b)].width = 2
     hoehen(ws, {U_TITEL: 22, U_BANNER: 16, U_K1: 18, U_K2: 18, U_NAME: 20,
                 U_VORNAME: 15, U_PUNKTE: 15, U_PROZ: 18, U_NOTE: 24,
                 U_THEAD: 24})
@@ -478,7 +532,7 @@ def _uebung_kopf(ws, nr, vorlage, vr):
     verbinde(ws, f"A{U_TITEL}:L{U_TITEL}", titel,
              font=f(16, bold=True, color=TXT_WEISS), bg=NAVY_700,
              align=Alignment(horizontal="left", vertical="center", indent=1))
-    bereich(ws, f"A{U_TITEL}:{AZ_LETZTE}{U_TITEL}", bg=NAVY_700)
+    bereich(ws, f"A{U_TITEL}:{BLATT_LETZTE}{U_TITEL}", bg=NAVY_700)
     verbinde(ws, f"M{U_TITEL}:Q{U_TITEL}")
     link_zelle(ws, f"M{U_TITEL}", "Start!A1", "«  Zurück zur Startseite",
                font=f(10, bold=True, color=TXT_WEISS, underline="single"),
@@ -501,12 +555,12 @@ def _uebung_kopf(ws, nr, vorlage, vr):
             f'&IF(COUNTIF({Z_PMAX},">0")=0," · noch keine Parameter",'
             f'" · "&COUNTIF({Z_PMAX},">0")&" Parameter, max. "'
             f'&SUM({Z_PMAX})&" Punkte"))')
-    verbinde(ws, f"A{U_BANNER}:{AZ_LETZTE}{U_BANNER}", banner,
+    verbinde(ws, f"A{U_BANNER}:{BLATT_LETZTE}{U_BANNER}", banner,
              font=f(9.5, bold=True, color=TXT_WEISS), bg=TEAL,
              align=Alignment(horizontal="left", vertical="center", indent=1))
     if not vorlage:
         ws.conditional_formatting.add(
-            f"A{U_BANNER}:{AZ_LETZTE}{U_BANNER}",
+            f"A{U_BANNER}:{BLATT_LETZTE}{U_BANNER}",
             FormulaRule(formula=[f'{Z_NAME}=""'], fill=fill("E8A33D"),
                         font=f(9.5, bold=True, color="3A2A05"),
                         stopIfTrue=True))
@@ -531,9 +585,11 @@ def _uebung_kopf(ws, nr, vorlage, vr):
     eingabe(f"H{U_K1}:I{U_K1}", align=MITTE)
     label(f"J{U_K1}:K{U_K1}", " Datum")
     eingabe(f"L{U_K1}:M{U_K1}", fmt=FMT_DATUM, align=MITTE)
-    verbinde(ws, f"N{U_K1}:{AZ_LETZTE}{U_K1}",
-             "Bewertungsparameter untereinander, Azubis nebeneinander – zum "
-             "Eintragen nach unten scrollen.", font=f(9, color=TXT_HELL), align=LINKS)
+    verbinde(ws, f"N{U_K1}:{BLATT_LETZTE}{U_K1}",
+             f"Bewertungsparameter untereinander, Azubis nebeneinander. Je "
+             f"{AZUBIS_JE_JAHRGANG} Spalten bilden einen Jahrgangsblock; über "
+             f"den Schaltflächen am oberen Rand lässt sich ein Block "
+             f"zuklappen.", font=f(9, color=TXT_HELL), align=LINKS)
 
     label(f"A{U_K2}:B{U_K2}", " Status")
     eingabe(f"C{U_K2}:E{U_K2}")
@@ -543,7 +599,7 @@ def _uebung_kopf(ws, nr, vorlage, vr):
     eingabe(f"L{U_K2}:M{U_K2}", 1, fmt="0.##", align=MITTE)
     label(f"N{U_K2}:P{U_K2}", " Wiederholung von")
     eingabe(f"Q{U_K2}:S{U_K2}")
-    verbinde(ws, f"T{U_K2}:{AZ_LETZTE}{U_K2}",
+    verbinde(ws, f"T{U_K2}:{BLATT_LETZTE}{U_K2}",
              "Nur ausfüllen, wenn dies der Nachhol- oder Wiederholtermin "
              "einer anderen Übung ist.", font=f(9, color=TXT_HELL),
              align=LINKS)
@@ -675,7 +731,7 @@ def _uebung_kriterien(ws):
 
 
 def _uebung_fuss(ws, vorlage):
-    legende_eingabe(ws, f"A{U_LEG}:{AZ_LETZTE}{U_LEG}")
+    legende_eingabe(ws, f"A{U_LEG}:{BLATT_LETZTE}{U_LEG}")
     hoehen(ws, {U_LEG: 22, U_FARB: 22})
     verbinde(ws, f"A{U_FARB}:B{U_FARB}", " Farblegende",
              font=f(10, bold=True, color=NAVY_700), align=LINKS)
@@ -683,14 +739,14 @@ def _uebung_fuss(ws, vorlage):
         ws, [f"C{U_FARB}:D{U_FARB}", f"E{U_FARB}:F{U_FARB}",
              f"G{U_FARB}:H{U_FARB}", f"I{U_FARB}:J{U_FARB}",
              f"K{U_FARB}:L{U_FARB}", f"M{U_FARB}:N{U_FARB}"])
-    verbinde(ws, f"O{U_FARB}:{AZ_LETZTE}{U_FARB}",
+    verbinde(ws, f"O{U_FARB}:{BLATT_LETZTE}{U_FARB}",
              f"Farbe und Zahl sagen dasselbe – der Ausdruck in Schwarz-Weiß "
-             f"bleibt lesbar. Gedruckt werden die ersten {DRUCK_SPALTEN} "
-             f"Azubi-Spalten; für einen anderen Jahrgang die Spalten "
-             f"markieren und „Auswahl drucken“ wählen.",
+             f"bleibt lesbar. Gedruckt wird der erste Jahrgangsblock "
+             f"({DRUCK_SPALTEN} Spalten); für einen anderen Block dessen "
+             f"Spalten markieren und „Auswahl drucken“ wählen.",
              font=f(9, color=TXT_HELL), align=LINKS_UM)
     verbinde(
-        ws, f"A{U_HINW}:{AZ_LETZTE}{U_HINW + 1}",
+        ws, f"A{U_HINW}:{BLATT_LETZTE}{U_HINW + 1}",
         "Nicht bewertet: Einzelne Punktefelder mit „n.b.“ fallen aus Summe "
         "und Höchstpunktzahl heraus. Steht in der ganzen Spalte eines Azubis "
         "nur „n.b.“, zählt die Übung für ihn nirgends mit – weder als "
@@ -698,7 +754,7 @@ def _uebung_fuss(ws, vorlage):
         "Warnübersicht. Bitte zusätzlich unten in der Zeile „Grund (n.b.)“ "
         "den Grund wählen.",
         font=f(10, color=TXT), bg=BG, align=LINKS_UM)
-    aussenrahmen(ws, f"A{U_HINW}:{AZ_LETZTE}{U_HINW + 1}", LINIE_STARK,
+    aussenrahmen(ws, f"A{U_HINW}:{BLATT_LETZTE}{U_HINW + 1}", LINIE_STARK,
                  "thin")
     hoehen(ws, {U_HINW: 20, U_HINW + 1: 20})
 
@@ -773,11 +829,11 @@ def _uebung_pruefungen(ws, vorlage):
     # alles darunter ab und halten die übrigen Regeln an.
     if not vorlage:
         ws.conditional_formatting.add(
-            f"A{U_NAME}:{L}{U_WERT}",
+            f"A{U_NAME}:{BLATT_LETZTE}{U_WERT}",
             FormulaRule(formula=[f'{Z_NAME}=""'], fill=fill(GESPERRT_BG),
                         font=f(10, color="A6ADB8"), stopIfTrue=True))
     ws.conditional_formatting.add(
-        f"{E}{U_NAME}:{L}{U_WERT}",
+        " ".join(az_bereiche(U_NAME, U_WERT)),
         FormulaRule(formula=[f'{E}${U_NAME}=""'], fill=fill(GESPERRT_BG),
                     font=f(10, color="C2C8D0"), stopIfTrue=True))
     ws.conditional_formatting.add(

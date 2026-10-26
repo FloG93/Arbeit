@@ -41,17 +41,34 @@ Mappe: Excel rechnet beim Öffnen einmal alles durch.
 ## Das Übungsblatt
 
 Bewertungsparameter stehen untereinander (Zeilen 11–35, bis zu 25 Stück),
-Azubis nebeneinander (Spalten E–AC, fest an die Stammdaten-Zeile gebunden).
+Azubis nebeneinander, fest an die Stammdaten-Zeile gebunden.
 Über jeder Spalte steht das Lehrjahr, in dem der Azubi zum Zeitpunkt *dieser*
 Übung stand (aus dem Halbjahr gerechnet, nicht aus TODAY) – so lassen sich
 mehrere Jahrgänge in einer Liste führen, ohne die Spalten zu verwechseln.
 Bei vielen Parametern scrollt man damit nach unten statt zur Seite, und der
 Bewertungshorizont bekommt eine eigene, lesbare Spalte.
 
-Der Druckbereich deckt bewusst nur die ersten 25 Azubi-Spalten ab, also einen
-Jahrgangsblock: alle 100 zu drucken ergäbe rund 40 Seiten. Für einen anderen
-Jahrgang markiert man die Spalten und druckt die Auswahl; der Hinweis steht
-auch auf dem Blatt.
+## Jahrgangsblöcke
+
+Je 25 Azubis bilden einen Block (`AZUBIS_JE_JAHRGANG`), weil pro 01.09. rund
+25 eingestellt werden. `az_sp(i)` lässt deshalb hinter jedem Block eine
+Spalte frei: E–AC, AE–BC, BE–CC, CE–DC. Die Trennspalten sind zwei Einheiten
+breit und bleiben auf Gliederungsebene 0, während alle Azubi-Spalten auf
+Ebene 1 stehen. Erst dadurch entstehen in Excel **vier getrennte Gruppen**
+statt einer einzigen — ein Klick auf das Minus über einem Block klappt einen
+ganzen Jahrgang weg.
+
+Gesetzt wird das über `outlineLevel` an den einzelnen `ColumnDimension`s,
+nicht über `column_dimensions.group()`: dessen Hilfsfunktion fasst den
+Bereich zu einer Dimension zusammen und nimmt die Spaltenbreiten mit.
+
+Die Stammdaten zeigen dieselbe Gliederung: eine kräftige Linie alle 25 Zeilen
+und die Spalte „Platz im Übungsblatt“, die per `ADDRESS` ausrechnet, wo ein
+Azubi auf den Übungsblättern steht — inklusive der mitgezählten Trennspalten.
+
+Der Druckbereich deckt bewusst nur den ersten Block ab: alle 100 Spalten zu
+drucken ergäbe rund 40 Seiten. Für einen anderen Jahrgang markiert man dessen
+Spalten und druckt die Auswahl; der Hinweis steht auch auf dem Blatt.
 
 Fixiert ist alles bis Zeile 10 (`E11`): Name, Punkte, Prozent und IHK-Note
 bleiben stehen, während unten eingetragen wird — rund 253 px hoch und 463 px
@@ -104,7 +121,7 @@ Zwei Zählflaggen, weil zwei Fragen zu beantworten sind:
   Zelle. Ohne Makros lässt sich eine Füllfarbe nicht aus einem Zellwert
   steuern. Die *Prozentgrenzen* dagegen kommen über `INDEX(NGrenze,k)` aus dem
   Einstellungsblatt — eine geänderte Grenze färbt die ganze Mappe sofort um.
-* **100 Azubis, 20 Übungen, 25 Bewertungsparameter** stecken als Konstanten in
+* **100 Azubis (4 × 25), 20 Übungen, 25 Bewertungsparameter** als Konstanten in
   `stil.py` — vier Jahrgänge zu je 25 Einstellungen. Alle Rasterzeilen des
   Rechenblattes werden daraus gerechnet, Erhöhen heißt also: Konstante ändern
   und neu bauen. Der Preis dafür steht unten unter „Größe“.
