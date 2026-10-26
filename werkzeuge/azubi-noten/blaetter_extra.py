@@ -261,6 +261,8 @@ SCHRITTE = [
     ("s", "Der Azubi steht in einer Spalte, die Bewertungsparameter "
           "untereinander. In seiner Spalte je Parameter die Punkte "
           "eintragen."),
+    ("s", "Nicht gebrauchte Jahrgänge zuklappen: über jedem Block sitzt "
+          "oben eine Schaltfläche mit Minus, Plus holt ihn zurück."),
     ("s", "Punkte, Prozent und IHK-Note stehen oben über der Spalte und "
           "laufen beim Scrollen mit."),
     ("s", "Ist die Übung fertig bewertet, oben im Kopf den Status auf "
@@ -274,8 +276,7 @@ SCHRITTE = [
           "Status und Ihr Kürzel bei „Bewertet von“."),
     ("s", "Untereinander die Prüfpunkte eintragen, daneben den "
           "Bewertungshorizont (z. B. „10 von 10 Bohrungen korrekt“). Die "
-          "Höchstpunktzahl in Spalte D kommt aus den Einstellungen und darf "
-          "überschrieben werden. Platz ist für 25 Parameter."),
+          "Höchstpunktzahl in Spalte D darf überschrieben werden."),
     ("h", "3. Einen Azubi aufnehmen"),
     ("s", "Startseite > „Stammdaten“ öffnen."),
     ("s", "In der ersten freien Zeile Name, Vorname, Beruf und "
@@ -286,6 +287,8 @@ SCHRITTE = [
     ("s", "Zeilen nie sortieren, einfügen oder löschen: jede Zeile gehört "
           "fest zu einer Spalte der Übungsblätter, beim Sortieren wandern "
           "die Noten zum falschen Azubi."),
+    ("s", "Je 25 Zeilen bilden einen Jahrgangsblock (siehe Linien). Neuen "
+          "Jahrgang in den nächsten freien Block eintragen."),
     ("s", "Verlässt jemand die Ausbildung: nichts löschen, nur den Status "
           "auf „ausgeschieden“ oder „fertig“ setzen."),
     ("h", "4. Nicht-Teilnahme eintragen"),
@@ -297,9 +300,8 @@ SCHRITTE = [
     ("s", "Unter dem Parameterblock in der Zeile „Grund (n.b.)“ krank, "
           "Urlaub, Berufsschule oder sonstiges wählen; eine Zeile tiefer "
           "steht „Bemerkung“ für eine Notiz."),
-    ("s", "Die Übung zählt für diesen Azubi dann nirgends mit – weder als "
-          "0 Punkte noch im Durchschnitt, in der Halbjahresnote oder in der "
-          "Warnübersicht."),
+    ("s", "Die Übung zählt für ihn dann nirgends mit – auch nicht als "
+          "0 Punkte."),
     ("h", "5. Eine frühere Version zurückholen (SharePoint)"),
     ("s", "Ist etwas durcheinandergeraten, ist nichts verloren: SharePoint "
           "speichert jede Version."),

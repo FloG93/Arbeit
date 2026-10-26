@@ -12,6 +12,7 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 
 # ---------------------------------------------------------------- Grundmaße --
 MAX_AZUBIS = 100         # 4 Jahrgänge à 25 Einstellungen je 01.09.
+AZUBIS_JE_JAHRGANG = 25  # bildet je einen Block auf den Übungsblättern
 MAX_PARAM = 25           # Bewertungskriterien je Übung (Zeilen)
 N_UEBUNGEN = 20          # vorbereitete Übungsblätter
 MAX_HJ = 8               # dargestellte Halbjahre (3,5 Jahre Ausbildung = 7)
