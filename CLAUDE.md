@@ -23,7 +23,8 @@ nächste freigegebene Aufgabe.
 
 - Reines HTML/CSS/JavaScript, **kein Build-Schritt, keine npm-Abhängigkeiten
   im Repo**. Hilfsskripte liegen in `werkzeuge/` und installieren, was sie
-  brauchen, außerhalb.
+  brauchen, außerhalb. Ausgenommen ist `.claude/skills/`: Agent Skills für
+  Claude Code, kein Code der Seite — wird nicht veröffentlicht.
 - Jede App läuft offline über ihren eigenen Service Worker. Der Worker
   beantwortet nur die eigenen Pfade (`SHELL`) und löscht beim Aktivieren nur
   Caches mit dem eigenen Namenspräfix, weil alle Apps auf derselben Herkunft
