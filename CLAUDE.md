@@ -2,11 +2,11 @@
 
 Zwei eigenständige Web-Apps in einem Repo, veröffentlicht über GitHub Pages
 (`.github/workflows/pages.yml`): Prüfassistent für VDE-Prüfungen (`pruefung/`)
-und PPT-Konverter (`ppt/`), dazu die Übersicht (`start/`, Seitenwurzel). Die
-Übersicht hat außerdem eine Kachel „Zum Herunterladen“ für die Excel-Mappe
-Azubi-Leistungen — eine Datei, keine App: Sie liegt einmal in
-`werkzeuge/azubi-noten/` (erzeugt von dessen `build.py`) und wird vom Workflow
-nach `/azubi/` kopiert. Beschreibung aller Apps in `README.md`.
+und PPT-Konverter (`ppt/`), dazu die Übersicht (`start/`, Seitenwurzel).
+Beschreibung aller Apps in `README.md`.
+
+Die Excel-Mappe Azubi-Leistungen wird **nicht mehr veröffentlicht**: Kachel und
+Pfad `/azubi/` sind entfallen. Der Generator bleibt in `werkzeuge/azubi-noten/`.
 
 **Raumrechner und Musik-Poster-Generator sind nach `FloG93/Privat-Projekte`
 umgezogen** (Adressen `/raum/` und `/poster/` dort, mit Release- und Beta-Kanal).

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Arbeit — Übersicht</title>
-<meta name="description" content="Einstieg zu den Web-Apps dieses Repos: Prüfassistent und PPT-Konverter. Dazu die Excel-Mappe Azubi-Leistungen zum Herunterladen.">
+<meta name="description" content="Einstieg zu den Web-Apps dieses Repos: Prüfassistent und PPT-Konverter.">
 <meta name="theme-color" content="#0a0c10">
 <!-- Kein Manifest: Diese Seite ist der Einstieg, nicht die fünfte App. Wer
      eine App auf den Startbildschirm legt, tut das aus der App heraus. -->
@@ -55,38 +55,6 @@
       <span class="chevron" aria-hidden="true">›</span>
     </a>
   </nav>
-
-  <!-- Keine App, sondern eine Datei: Die Kachel öffnet nichts, sie lädt
-       herunter. Darum eigener Abschnitt und ein Download-Symbol statt des
-       Pfeils der Apps. Die Datei liegt einmal im Repo unter
-       werkzeuge/azubi-noten/; der Workflow kopiert sie nach /azubi/. -->
-  <section aria-labelledby="dl-titel">
-    <h2 class="section-label" id="dl-titel">Zum Herunterladen</h2>
-    <nav class="grid" aria-label="Downloads">
-      <a class="tile" href="azubi/Azubi-Leistungen.xlsx" download style="--tile:var(--coral);--tile-hc:var(--coral-hc)">
-        <span class="icon" aria-hidden="true">
-          <!-- Tabelle mit Noten-Haken -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4h16v16H4z"/>
-            <path d="M4 9h16M4 14h16M10 4v16"/>
-            <path d="M13 17l1.5 1.5L18 15"/>
-          </svg>
-        </span>
-        <span class="txt">
-          <span class="name">Azubi-Leistungen</span>
-          <span class="desc">Excel-Mappe zur Erfassung von Übungen, Noten und Halbjahresgesprächen</span>
-          <span class="path">Azubi-Leistungen.xlsx</span>
-        </span>
-        <span class="chevron" aria-hidden="true">
-          <!-- Pfeil nach unten auf eine Ablagelinie -->
-          <svg class="dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 4v11m0 0-4-4m4 4 4-4"/>
-            <path d="M5 20h14"/>
-          </svg>
-        </span>
-      </a>
-    </nav>
-  </section>
 
   <footer class="foot">
     Reines HTML, CSS und JavaScript, kein Build-Schritt.
