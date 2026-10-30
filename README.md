@@ -8,24 +8,15 @@ Login, jede läuft für sich.
 | [Übersicht](#übersicht) | `/` | Kacheln zu allen Apps, Einstieg der Seite |
 | [Prüfassistent](#prüfassistent) | `/pruefung/` | Anlagen- und Geräteprüfung nach VDE: Assistent, Grenzwerte, Messwerte, Protokoll |
 | [PPT-Konverter](#ppt-konverter) | `/ppt/` | Alte PowerPoint-Dateien (`.ppt`) im Browser in `.pptx` umwandeln |
-| [Azubi-Leistungen](#azubi-leistungen-excel) | `/azubi/…xlsx` | Excel-Mappe (keine Web-App): Übungen und Noten erfassen, Halbjahresgespräche vorbereiten |
 
 Live: https://flog93.github.io/Arbeit/ (Übersicht),
 https://flog93.github.io/Arbeit/pruefung/ (Prüfassistent) und
 https://flog93.github.io/Arbeit/ppt/ (PPT-Konverter).
 
-**Excel-Mappe direkt herunterladen:**
-[Azubi-Leistungen.xlsx](https://github.com/FloG93/Arbeit/raw/main/werkzeuge/azubi-noten/Azubi-Leistungen.xlsx)
-(aus dem Repo, unabhängig von Pages) oder über die Kachel „Zum Herunterladen“
-auf der Übersicht, die nach dem Deploy auf
-https://flog93.github.io/Arbeit/azubi/Azubi-Leistungen.xlsx zeigt.
-
 ## Hosting
 
 `.github/workflows/pages.yml` veröffentlicht bei jedem Push auf GitHub Pages:
 `start/` an die Wurzel, `pruefung/` nach `/pruefung/` und `ppt/` nach `/ppt/`.
-Dazu die fertige Excel-Mappe `werkzeuge/azubi-noten/Azubi-Leistungen.xlsx`
-nach `/azubi/` zum Herunterladen.
 Ohne Build-Schritt — die Ordner werden nebeneinander in ein Artefakt kopiert.
 
 **Einmalig von Hand nötig**, bevor der erste Deploy durchläuft:
@@ -64,22 +55,12 @@ verlassen. Quelle ist `start/`, veröffentlicht an der Seitenwurzel.
 
 ## Azubi-Leistungen (Excel)
 
-Eine Excel-Mappe, keine Web-App: Übungen und Tests erfassen, nach
-IHK-Notenschlüssel bewerten, Halbjahresauswertung und druckfertige
-Gesprächsseite je Azubi. Gedacht für SharePoint mit mehreren Bearbeitern
-gleichzeitig; reines `.xlsx` ohne Makros.
+**Nicht mehr auf der Seite veröffentlicht.** Die Kachel „Zum Herunterladen“ und
+der Pfad `/azubi/` sind entfallen; der Workflow kopiert nichts mehr dorthin.
 
-- Die fertige Datei liegt **einmal** in `werkzeuge/azubi-noten/`, zusammen mit
-  dem Generator (`build.py`) und den Rechentests. Der Workflow kopiert sie beim
-  Veröffentlichen nach `/azubi/` — keine zweite Kopie, die auseinanderlaufen
-  könnte.
-- **Wer die Mappe ändert**, baut sie mit `build.py` neu und legt die Ausgabe
-  wieder nach `werkzeuge/azubi-noten/Azubi-Leistungen.xlsx`. Aufbau, Grenzen und
-  Prüfung stehen in `werkzeuge/azubi-noten/README.md`.
-- Der Service Worker cacht die Datei nicht: rund 1 MB, nur einmal geladen.
-- Das Repo ist öffentlich. Die mitgelieferte Mappe enthält nur Beispieldaten
-  (erfundene Namen). Ausgefüllte Dateien mit echten Azubi-Daten gehören auf
-  SharePoint, nicht ins Repo.
+Der Generator bleibt im Repo unter `werkzeuge/azubi-noten/` (`build.py`,
+Rechentests, eigene `README.md`) und lässt sich dort unverändert ausführen.
+Ausgefüllte Mappen mit echten Azubi-Daten gehören auf SharePoint, nicht ins Repo.
 
 ---
 
